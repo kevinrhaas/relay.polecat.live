@@ -41,6 +41,8 @@ export const Sync = new (class extends Emitter{
     this.log = [];
     this.stats = { sent:0, received:0, applied:0, sessions:0 };
     this.meshOn = false;
+    this.chat = this._loadChat();   // light P2P messaging history
+    this._seenChat = new Set(this.chat.map(m=>m.id));
   }
 
   // ---- lifecycle -------------------------------------------------------
@@ -93,6 +95,8 @@ export const Sync = new (class extends Emitter{
         this._pushTo(from, transport, m.entities); break;
       case 'push':
         this._onPush(from, m.records); break;
+      case 'chat':
+        this._recvChat(m.msg); break;
     }
   }
   _reply(to, transport, msg){
@@ -190,6 +194,31 @@ export const Sync = new (class extends Emitter{
     else this._sync(`Received ${records.length} record${records.length>1?'s':''} (no changes) from ${this.peers.get(from)?.name||from.slice(0,6)}`);
     this.emit('stats');
   }
+
+  // ---- light P2P messaging --------------------------------------------
+  _loadChat(){ try{ return JSON.parse(localStorage.getItem('relay.chat')||'[]'); }catch{ return []; } }
+  _saveChat(){ try{ localStorage.setItem('relay.chat', JSON.stringify(this.chat.slice(-200))); }catch{} }
+  sendChat(text){
+    text=String(text||'').trim(); if(!text) return;
+    const msg={ id:uuid(), from:this.selfId, name:Store.identity.name, text:text.slice(0,2000), ts:Date.now() };
+    this._store(msg);
+    // broadcast to every connected peer (mesh in one shot, webrtc per-peer)
+    if(this.meshOn) this._say('*', { kind:'chat', msg });
+    for(const [id,r] of this.rtc){ if(r?.dc?.readyState==='open') this._rtcSendRaw(r.dc,{ kind:'chat', msg, from:this.selfId, to:id }); }
+    this.emit('chat', msg);
+  }
+  _recvChat(msg){
+    if(!msg || !msg.id || this._seenChat.has(msg.id)) return;   // dedupe (mesh + webrtc)
+    this._store(msg);
+    this.emit('chat', msg);
+  }
+  _store(msg){
+    this._seenChat.add(msg.id);
+    this.chat.push(msg);
+    if(this.chat.length>200){ this.chat=this.chat.slice(-200); }
+    this._saveChat();
+  }
+  clearChat(){ this.chat=[]; this._seenChat.clear(); this._saveChat(); this.emit('chat', null); }
 
   // ---- WebRTC manual signaling ----------------------------------------
   _iceServers(){

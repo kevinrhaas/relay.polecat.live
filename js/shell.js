@@ -12,13 +12,15 @@ export const SECTIONS = [
   { group:'Workspace' },
   { key:'home',     label:'Home',     icon:'home' },
   { key:'table',    label:'Tables',   icon:'table' },
+  { key:'messages', label:'Messages', icon:'chat' },
   { key:'peers',    label:'Peers',    icon:'peers' },
   { key:'activity', label:'Activity', icon:'activity' },
   { group:'System' },
+  { key:'admin',    label:'Admin',    icon:'key', admin:true },
   { key:'settings', label:'Settings', icon:'settings' },
 ];
 
-export function buildRail(rail, { onNav }){
+export function buildRail(rail, { onNav, isAdmin=false }){
   const open0 = localStorage.getItem(K_OPEN)==='1';
   const w = clampW(parseInt(localStorage.getItem(K_WIDTH)||'232',10));
   document.documentElement.style.setProperty('--rail-w-open', w+'px');
@@ -35,6 +37,7 @@ export function buildRail(rail, { onNav }){
   const scroll=el('div',{class:'rail-scroll'});
   SECTIONS.forEach(s=>{
     if(s.group){ scroll.append(el('div',{class:'rail-sec-label', text:s.group})); return; }
+    if(s.admin && !isAdmin) return;   // Admin section only when unlocked
     const item=el('button',{class:'rail-item', 'data-sec':s.key, title:s.label,
       html:`${icon(s.icon)}<span class="lbl">${s.label}</span><span class="badge" hidden></span>`,
       onclick:()=>onNav(s.key)});

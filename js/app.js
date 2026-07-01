@@ -2,6 +2,7 @@
 import { Store } from './store.js';
 import { Sync } from './sync.js';
 import { Rendezvous } from './rendezvous.js';
+import { Access } from './access.js';
 import { applyTheme, getThemePref, setTheme } from './theme.js';
 import { buildRail, SECTIONS } from './shell.js';
 import { el, $, escapeHtml, toast, modal, avatarColor, initials } from './ui.js';
@@ -11,15 +12,23 @@ import { renderTable, currentEntity } from './views/table.js';
 import { renderPeers } from './views/peers.js';
 import { renderActivity, pushLogLine } from './views/activity.js';
 import { renderSettings, importWorkspace, exportWorkspace } from './views/settings.js';
+import { renderMessages } from './views/messages.js';
+import { renderAdmin } from './views/admin.js';
 
-const TITLES = { home:'Home', table:'Tables', peers:'Peers', activity:'Activity', settings:'Settings' };
-const RENDERERS = { home:renderHome, table:renderTable, peers:renderPeers, activity:renderActivity, settings:renderSettings };
+const TITLES = { home:'Home', table:'Tables', messages:'Messages', peers:'Peers', activity:'Activity', admin:'Admin', settings:'Settings' };
+const RENDERERS = { home:renderHome, table:renderTable, messages:renderMessages, peers:renderPeers, activity:renderActivity, admin:renderAdmin, settings:renderSettings };
 
 let rail, view, topTitle, presence, avatars;
 let currentSection='home', currentParams={};
+let unread=0;
 
-function boot(){
+async function boot(){
   applyTheme();
+
+  // invite-only gate: consume ?invite= then require access
+  const gate = await Access.init();
+  if(!gate.granted){ renderGate(gate.inviteError); return; }
+
   Sync.start();
   Rendezvous.autostart();
 
@@ -31,7 +40,7 @@ function boot(){
   main.append(topbar, view);
   app.append(rail, main);
 
-  window.__rail = buildRail(rail, { onNav:(s)=>go(s) });
+  window.__rail = buildRail(rail, { onNav:(s)=>go(s), isAdmin:Access.isAdmin() });
 
   wireEvents();
   // route from hash
@@ -65,12 +74,18 @@ function go(section, params={}){
   location.hash=section;
   topTitle.textContent=TITLES[section]||'Relay';
   window.__rail.setActive(section);
+  if(section==='messages'){ unread=0; refreshBadges(); }
   render();
 }
 function render(){
   RENDERERS[currentSection](view, ctx, currentParams);
 }
-function refresh(){ render(); refreshBadges(); refreshPresence(); }
+function refresh(){
+  // rebuild rail so the Admin item reflects unlock state, then re-render
+  window.__rail = buildRail(rail, { onNav:(s)=>go(s), isAdmin:Access.isAdmin() });
+  window.__rail.setActive(currentSection);
+  render(); refreshBadges(); refreshPresence();
+}
 
 // context handed to every view
 const ctx = {
@@ -111,6 +126,7 @@ function newEntity(){
 // ---- live glue -----------------------------------------------------------
 function refreshBadges(){
   window.__rail.setBadge('peers', Sync.onlineCount());
+  window.__rail.setBadge('messages', unread);
 }
 function refreshPresence(){
   const n=Sync.onlineCount();
@@ -128,6 +144,9 @@ function wireEvents(){
   Sync.on('perms', ()=>{ if(currentSection==='peers') render(); });
   Rendezvous.on('state', ()=>{ if(['peers','settings'].includes(currentSection)) render(); });
   Sync.on('log', (line)=>{ if(currentSection==='activity') pushLogLine(line); });
+  Sync.on('chat', (m)=>{
+    if(m && m.from!==Sync.selfId && currentSection!=='messages'){ unread++; refreshBadges(); }
+  });
 
   Store.on('entities', ()=>{ if(['table','home'].includes(currentSection)) render(); });
   Store.on('change', (c)=>{
@@ -144,6 +163,35 @@ function wireEvents(){
     const s=location.hash.replace('#','');
     if(s && s!==currentSection && RENDERERS[s]) go(s);
   });
+}
+
+// ---- invite-only gate screen --------------------------------------------
+function renderGate(errMsg){
+  const app=$('#app');
+  app.innerHTML='';
+  const g=el('div',{class:'gate'});
+  const card=el('div',{class:'gate-card'});
+  card.innerHTML=`
+    <img src="/assets/logo.svg" width="48" height="48" alt=""/>
+    <h1>Relay preview</h1>
+    <p class="muted">This is an invite-only preview. Paste an invite code or your admin token to continue — or open the invite link someone sent you.</p>`;
+  const ta=el('textarea',{class:'input', rows:'3', placeholder:'Paste invite code or admin token…', spellcheck:'false'});
+  const err=el('div',{class:'gate-err'+(errMsg?'':' hide'), text: errMsg?`That invite is ${errMsg}.`:''});
+  const btn=el('button',{class:'btn primary', style:'width:100%', html:`${icon('shield')} Unlock`, onclick:enter});
+  const back=el('a',{class:'link tiny', href:'/', text:'← Back to relay.polecat.live'});
+  card.append(ta, err, btn, back);
+  g.append(card); app.append(g);
+  async function enter(){
+    const v=ta.value.trim(); if(!v) return;
+    btn.disabled=true; err.classList.add('hide');
+    if(await Access.verifyAdminToken(v)){ await Access.unlockAdmin(v); location.reload(); return; }
+    const r=await Access.verifyInvite(v);
+    if(r.ok){ Access.grant('invite', r.payload.label||''); location.reload(); return; }
+    btn.disabled=false; err.textContent = r.reason==='expired' ? 'That invite has expired.' : 'That code is not valid.';
+    err.classList.remove('hide');
+  }
+  ta.addEventListener('keydown',e=>{ if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); enter(); } });
+  setTimeout(()=>ta.focus(),50);
 }
 
 document.addEventListener('DOMContentLoaded', boot);
