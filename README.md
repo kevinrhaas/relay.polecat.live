@@ -60,17 +60,21 @@ for pure LAN / fully-serverless mode.
 No build step, no bundler, no framework. Serve the folder statically:
 
 ```bash
-python3 -m http.server 8137   # then open http://localhost:8137
+python3 -m http.server 8137   # landing → http://localhost:8137
+                              # app     → http://localhost:8137/app/
 ```
 
-Open it in a second tab to watch local-mesh discovery and sync in real time.
+Open the app in a second tab to watch local-mesh discovery and sync in real time.
 
 ## Layout
 
 ```
-index.html            # shell + aurora + theme bootstrap
-css/styles.css        # full design system (ported polecat palette)
+index.html            # marketing landing page (front door at /)
+css/landing.css       # landing styles
+app/index.html        # the app shell (served at /app/)
+css/styles.css        # full app design system (ported polecat palette)
 assets/logo.svg       # relay mark
+assets/screenshot-app.png
 js/
   app.js              # controller: boot, routing, topbar, cross-view glue
   shell.js            # collapsible / draggable rail navigation

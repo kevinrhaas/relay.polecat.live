@@ -27,7 +27,7 @@ export function buildRail(rail, { onNav }){
   rail.innerHTML='';
   // brand
   const brand=el('button',{class:'rail-brand', title:'Relay — home',
-    html:`<img src="assets/logo.svg" alt=""/><span class="bt"><b>Relay</b><small>polecat.live</small></span>`,
+    html:`<img src="/assets/logo.svg" alt=""/><span class="bt"><b>Relay</b><small>polecat.live</small></span>`,
     onclick:()=>onNav('home')});
   rail.append(brand);
 
