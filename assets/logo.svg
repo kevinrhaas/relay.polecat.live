@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" fill="none" role="img" aria-label="Relay">
+  <defs>
+    <linearGradient id="relayGrad" x1="8" y1="8" x2="56" y2="56" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#d4773b"/>
+      <stop offset=".55" stop-color="#9333ea"/>
+      <stop offset="1" stop-color="#F4A6A6"/>
+    </linearGradient>
+  </defs>
+  <!-- relay mesh: three peers linked through a hub -->
+  <g stroke="url(#relayGrad)" stroke-width="3.2" stroke-linecap="round">
+    <path d="M32 20 L18 42"/>
+    <path d="M32 20 L46 42"/>
+    <path d="M18 42 L46 42"/>
+  </g>
+  <g fill="url(#relayGrad)">
+    <circle cx="32" cy="18" r="7"/>
+    <circle cx="17" cy="44" r="7"/>
+    <circle cx="47" cy="44" r="7"/>
+  </g>
+  <circle cx="32" cy="18" r="2.6" fill="#0a0a0f"/>
+  <circle cx="17" cy="44" r="2.6" fill="#0a0a0f"/>
+  <circle cx="47" cy="44" r="2.6" fill="#0a0a0f"/>
+</svg>
