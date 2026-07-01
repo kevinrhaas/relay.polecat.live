@@ -31,6 +31,7 @@ export const ICONS = {
   clock:     'M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20ZM12 7v5l3 2',
   filter:    'M3 5h18l-7 8v6l-4-2v-4L3 5Z',
   menu:      'M4 6h16M4 12h16M4 18h16',
+  chat:      'M21 12a8 8 0 0 1-8 8H7l-4 2 1.3-4.2A8 8 0 1 1 21 12ZM8 11h.01M12 11h.01M16 11h.01',
 };
 
 export function icon(name, cls){

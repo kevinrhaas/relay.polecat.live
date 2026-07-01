@@ -84,7 +84,36 @@ function signalingModal(){
   seg.append(bCreate,bJoin);
   const pane=el('div');
   body.append(seg,pane);
-  const {hide}=modal({ title:'Connect a peer over WebRTC', icon:'link', wide:true, body });
+  const { hide, overlay } = modal({ title:'Connect a peer over WebRTC', icon:'link', wide:true, body });
+
+  // Watch for the data channel actually opening, then celebrate. Any webrtc
+  // peer that becomes connected after the modal opened is "the one".
+  const before = new Set(Sync.peerList().filter(p=>p.transport==='webrtc'&&p.state==='connected').map(p=>p.id));
+  const off = Sync.on('peers', ()=>{
+    if(!document.body.contains(overlay)){ off(); return; }   // modal closed elsewhere
+    const fresh = Sync.peerList().find(p=>p.transport==='webrtc'&&p.state==='connected'&&!before.has(p.id));
+    if(fresh) showConnected(fresh);
+  });
+  const done=()=>{ off(); hide(); };
+
+  function showConnected(peer){
+    seg.classList.add('hide');
+    pane.innerHTML='';
+    const box=el('div',{class:'connected-box'});
+    box.innerHTML=`<div class="ok-badge">${icon('check')}</div>
+      <h3>Connected to ${escapeHtml(peer.name)}</h3>
+      <p class="muted tiny">You're syncing directly, peer-to-peer. Manage permissions on their card.</p>`;
+    const btns=el('div',{style:'display:flex;gap:10px;justify-content:center;margin-top:8px'});
+    btns.append(
+      el('button',{class:'btn primary', html:`${icon('check')} Done`, onclick:done}),
+      el('button',{class:'btn', html:`${icon('plus')} Connect another`, onclick:()=>{
+        before.add(peer.id);                 // don't re-trigger on this one
+        seg.classList.remove('hide');
+        bCreate.classList.add('on'); bJoin.classList.remove('on'); showCreate();
+      }}));
+    box.append(btns); pane.append(box);
+    toast(`Connected to ${peer.name}`,{kind:'ok'});
+  }
 
   const help=(t)=>el('p',{class:'muted tiny', html:t});
   const ta=(ph)=>el('textarea',{class:'input', rows:'4', placeholder:ph, spellcheck:'false'});
@@ -102,7 +131,8 @@ function signalingModal(){
         gen.disabled=false; gen.innerHTML=`${icon('refresh')} Regenerate`; }});
     const ansIn=ta('Paste the answer blob from your peer…');
     const complete=el('button',{class:'btn', html:`${icon('check')} Complete connection`,
-      onclick:async()=>{ try{ await Sync.acceptAnswer(ansIn.value); toast('Connecting…',{kind:'ok'}); hide(); }
+      onclick:async()=>{ try{ await Sync.acceptAnswer(ansIn.value); complete.disabled=true;
+          complete.innerHTML=`${icon('refresh')} Connecting…`; }
         catch(e){ toast('Could not complete',{body:e.message,kind:'err'}); } }});
     pane.append(field('Your offer', out, copyBtn(()=>out.value), gen),
       field('Their answer', ansIn, complete));

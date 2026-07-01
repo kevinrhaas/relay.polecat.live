@@ -3,6 +3,7 @@
 import { Store } from '../store.js';
 import { Sync } from '../sync.js';
 import { Rendezvous } from '../rendezvous.js';
+import { Access } from '../access.js';
 import { el, escapeHtml, toast, confirmDialog, avatarColor, initials } from '../ui.js';
 import { icon } from '../icons.js';
 import { setTheme, getThemePref } from '../theme.js';
@@ -94,6 +95,14 @@ export function renderSettings(root, ctx){
     }}));
   dataCard.append(btns);
   wrap.append(dataCard);
+
+  // ---- admin / invites -------------------------------------------------
+  const admCard=el('div',{class:'card', style:'margin-top:16px'});
+  admCard.innerHTML=`<div class="section-title" style="margin-top:0"><h2 style="font-size:14px">Admin &amp; invites</h2></div>
+    <p class="muted tiny">${Access.isAdmin()?'Admin is unlocked on this device — mint invite links to share.':'Hold an admin token? Unlock the admin area to mint invite links for others.'}</p>`;
+  admCard.append(el('button',{class:'btn'+(Access.isAdmin()?' primary':''),
+    html:`${icon('key')} ${Access.isAdmin()?'Open admin area':'Unlock admin'}`, onclick:()=>ctx.go('admin')}));
+  wrap.append(admCard);
 
   root.append(wrap);
 }
