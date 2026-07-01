@@ -101,13 +101,26 @@ export const Store = new (class extends Emitter{
     const key = label.toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'') || 'entity_'+uuid().slice(0,4);
     if(this.data.entities[key]) throw new Error('An entity with that name already exists');
     this.data.entities[key] = { label, icon:iconName, records:{} };
-    this._persist(); this.emit('entities'); this.emit('change',{type:'entity',key});
+    this._persist(); this.emit('entities'); this.emit('change',{type:'entity',key,origin:'local'});
     return key;
   }
   deleteEntity(key){
     delete this.data.entities[key];
     this.data.pinned = (this.data.pinned||[]).filter(k=>k!==key);
-    this._persist(); this.emit('entities'); this.emit('change',{type:'entity',key});
+    this._persist(); this.emit('entities'); this.emit('change',{type:'entity',key,origin:'local'});
+  }
+  // entity DEFINITIONS (label+icon) for sync, so empty tables propagate and
+  // arrive with the creator's chosen name/icon (not a generic guess)
+  entityDefs(filter){
+    return Object.entries(this.data.entities)
+      .filter(([k])=>!filter || filter.includes(k))
+      .map(([key,e])=>({ key, label:e.label, icon:e.icon||'table' }));
+  }
+  ensureEntity(def){
+    if(!def || !def.key || this.data.entities[def.key]) return false;
+    this.data.entities[def.key] = { label:def.label||def.key, icon:def.icon||'table', records:{} };
+    this._persist(); this.emit('entities'); this.emit('change',{type:'entity',key:def.key,origin:'remote'});
+    return true;
   }
 
   // ---- records ---------------------------------------------------------

@@ -54,8 +54,12 @@ export const Sync = new (class extends Emitter{
   // ---- lifecycle -------------------------------------------------------
   start(){
     this._startMesh();
-    // reflect local edits outward to connected peers (auto-sync)
-    Store.on('change', (c)=>{ if(c.origin==='local' && c.type==='record') this._pushEntity(c.entity); });
+    // reflect local edits AND new/removed tables outward to connected peers
+    Store.on('change', (c)=>{
+      if(c.origin!=='local') return;
+      if(c.type==='record') this._pushEntity(c.entity);
+      else if(c.type==='entity' && c.key) this._pushEntity(c.key);
+    });
     window.addEventListener('beforeunload', ()=>this._say('*',{kind:'bye', id:this.selfId}));
     this._info('Sync engine online');
   }
@@ -100,7 +104,7 @@ export const Sync = new (class extends Emitter{
       case 'sync-req':
         this._pushTo(from, transport, m.entities); break;
       case 'push':
-        this._onPush(from, m.records); break;
+        this._onPush(from, m.records, m.entities); break;
       case 'chat':
         this._recvChat(m.msg); break;
     }
@@ -166,7 +170,9 @@ export const Sync = new (class extends Emitter{
     }
     return this.perms[uid];
   }
-  can(uid, mode, entity){ return !!this.permFor(uid)[mode]?.[entity]; }
+  // default-ALLOW: entities not explicitly set (e.g. created after first
+  // contact) are shared unless the user has revoked them
+  can(uid, mode, entity){ const v=this.permFor(uid)[mode]?.[entity]; return v===undefined ? true : !!v; }
   setPerm(uid, mode, entity, val){
     const p=this.permFor(uid); (p[mode]||={})[entity]=val; this._savePerms();
     this._perm(`${val?'granted':'revoked'} ${mode} · ${entity} · ${this.nameForUid(uid)}`);
@@ -202,12 +208,16 @@ export const Sync = new (class extends Emitter{
     const share=(entities||Store.entityNames()).filter(e=>this.can(uid,'read',e));
     if(!share.length) return;
     const records=Store.snapshot(share);
-    if(!records.length) return;
-    this._reply(peerId, transport, { kind:'push', records });
+    // send table definitions too, so empty tables propagate with their name/icon
+    this._reply(peerId, transport, { kind:'push', records, entities:Store.entityDefs(share) });
     this.stats.sent += records.length; this.emit('stats');
   }
-  _onPush(from, records){
+  _onPush(from, records, entityDefs){
     const uid=this._peerUid(from);
+    const name=this.peers.get(from)?.name||from.slice(0,6);
+    // create any shared tables we don't have yet (structure, not data)
+    if(entityDefs) for(const d of entityDefs){ if(Store.ensureEntity(d)) this._sync(`New table “${d.label}” shared by ${name}`); }
+    records=records||[];
     this.stats.received += records.length;
     let applied=0;
     for(const rec of records){
@@ -215,8 +225,8 @@ export const Sync = new (class extends Emitter{
       if(Store.merge(rec)) applied++;
     }
     this.stats.applied += applied;
-    if(applied) this._ok(`Applied ${applied} record${applied>1?'s':''} from ${this.peers.get(from)?.name||from.slice(0,6)}`);
-    else this._sync(`Received ${records.length} record${records.length>1?'s':''} (no changes) from ${this.peers.get(from)?.name||from.slice(0,6)}`);
+    if(applied) this._ok(`Applied ${applied} record${applied>1?'s':''} from ${name}`);
+    else if(records.length) this._sync(`Received ${records.length} record${records.length>1?'s':''} (no changes) from ${name}`);
     this.emit('stats');
   }
 
