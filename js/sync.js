@@ -18,6 +18,7 @@ import { Store } from './store.js';
 import { clock, uuid } from './ui.js';
 
 const PERM_KEY = 'relay.perms.v1';
+const KNOWN_KEY = 'relay.knownpeers.v1';
 const MESH = 'relay-mesh-v1';
 
 class Emitter{
@@ -34,10 +35,15 @@ export const Sync = new (class extends Emitter{
     // still discover each other over the local mesh. Store.identity.name
     // still travels with every message for display.
     this.selfId = uuid();
-    this.peers = new Map();       // peerId -> {id,name,transport,state,lastSeen,offers}
-    this.rtc = new Map();         // peerId -> {pc, dc}
+    // Stable identity id (persisted in localStorage). Permissions and the
+    // known-peers registry are keyed by THIS, not selfId, so peer definitions
+    // survive reloads and deploys. selfId is only the per-tab wire address.
+    this.uid = Store.identity.id;
+    this.peers = new Map();       // sessionId -> {id,uid,name,transport,state,lastSeen,offers}
+    this.rtc = new Map();         // sessionId -> {pc, dc}
     this.pendingOffer = null;     // {pc, dc} awaiting an answer
     this.perms = this._loadPerms();
+    this.known = this._loadKnown(); // uid -> {uid,name,lastSeen} — durable peer registry
     this.log = [];
     this.stats = { sent:0, received:0, applied:0, sessions:0 };
     this.meshOn = false;
@@ -65,7 +71,7 @@ export const Sync = new (class extends Emitter{
     this.emit('peers');
   }
   _hello(){
-    this._say('*', { kind:'hello', id:this.selfId, name:Store.identity.name,
+    this._say('*', { kind:'hello', id:this.selfId, uid:this.uid, name:Store.identity.name,
       offers:this._readableEntities('*') });
   }
   _say(to, msg){ if(this.meshOn) this.mesh.postMessage({ ...msg, from:this.selfId, to }); }
@@ -81,14 +87,14 @@ export const Sync = new (class extends Emitter{
     switch(m.kind){
       case 'hello':{
         const known=this.peers.has(from);
-        this._seePeer(from, m.name, transport, m.offers);
+        this._seePeer(from, m.name, transport, m.offers, m.uid);
         if(!known){ this._conn(`${m.name} appeared on the network`); }
         // reply so the newcomer learns about us too
         if(m.to==='*' || !known) this._reply(from, transport,{ kind:'welcome',
-          id:this.selfId, name:Store.identity.name, offers:this._readableEntities(from) });
+          id:this.selfId, uid:this.uid, name:Store.identity.name, offers:this._readableEntities(from) });
         break; }
       case 'welcome':
-        this._seePeer(from, m.name, transport, m.offers); break;
+        this._seePeer(from, m.name, transport, m.offers, m.uid); break;
       case 'bye':
         this._dropPeer(from); break;
       case 'sync-req':
@@ -105,16 +111,31 @@ export const Sync = new (class extends Emitter{
   }
 
   // ---- peer registry ---------------------------------------------------
-  _seePeer(id, name, transport, offers){
+  _seePeer(id, name, transport, offers, uid){
     const p = this.peers.get(id) || { id, transport };
     p.name = name || p.name || id.slice(0,6);
     p.transport = transport;
     p.state = transport==='webrtc' ? 'connected' : 'connected';
     p.lastSeen = Date.now();
     p.offers = offers || p.offers || [];
+    if(uid) p.uid = uid;
     this.peers.set(id, p);
+    if(p.uid) this._rememberPeer(p.uid, p.name);
     this.emit('peers');
   }
+  _peerUid(sessionId){ return this.peers.get(sessionId)?.uid || sessionId; }
+
+  // durable known-peers registry (survives reloads/deploys)
+  _loadKnown(){ try{ return JSON.parse(localStorage.getItem(KNOWN_KEY))||{}; }catch{ return {}; } }
+  _saveKnown(){ try{ localStorage.setItem(KNOWN_KEY, JSON.stringify(this.known)); }catch{} }
+  _rememberPeer(uid, name){
+    if(!uid || uid===this.uid) return;
+    this.known[uid] = { uid, name: name || this.known[uid]?.name || uid.slice(0,6), lastSeen: Date.now() };
+    this._saveKnown();
+  }
+  knownPeers(){ return Object.values(this.known); }
+  forgetPeer(uid){ delete this.known[uid]; delete this.perms[uid]; this._saveKnown(); this._savePerms(); this.emit('peers'); this.emit('perms'); }
+  nameForUid(uid){ return this.known[uid]?.name || uid?.slice(0,6) || 'peer'; }
   _dropPeer(id){
     const p=this.peers.get(id);
     if(p){ this._conn(`${p.name} left the network`); }
@@ -131,30 +152,32 @@ export const Sync = new (class extends Emitter{
   peerList(){ return [...this.peers.values()].sort((a,b)=>(a.name||'').localeCompare(b.name||'')); }
   onlineCount(){ return [...this.peers.values()].filter(p=>p.state==='connected').length; }
 
-  // ---- permissions -----------------------------------------------------
+  // ---- permissions (keyed by stable uid — durable across reloads) ------
   _loadPerms(){ try{ return JSON.parse(localStorage.getItem(PERM_KEY))||{}; }catch{ return {}; } }
   _savePerms(){ try{ localStorage.setItem(PERM_KEY, JSON.stringify(this.perms)); }catch{} }
   // NOTE: new peers default to read+write on all entities so demos "just
   // work"; revoke per-entity in the Peers panel at any time.
-  permFor(peerId){
-    if(!this.perms[peerId]){
+  permFor(uid){
+    if(!this.perms[uid]){
       const all=Store.entityNames();
-      this.perms[peerId]={ read:Object.fromEntries(all.map(e=>[e,true])),
-                           write:Object.fromEntries(all.map(e=>[e,true])) };
+      this.perms[uid]={ read:Object.fromEntries(all.map(e=>[e,true])),
+                        write:Object.fromEntries(all.map(e=>[e,true])) };
       this._savePerms();
     }
-    return this.perms[peerId];
+    return this.perms[uid];
   }
-  can(peerId, mode, entity){ return !!this.permFor(peerId)[mode]?.[entity]; }
-  setPerm(peerId, mode, entity, val){
-    const p=this.permFor(peerId); (p[mode]||={})[entity]=val; this._savePerms();
-    this._perm(`${val?'granted':'revoked'} ${mode} · ${entity} · ${this.peers.get(peerId)?.name||peerId.slice(0,6)}`);
+  can(uid, mode, entity){ return !!this.permFor(uid)[mode]?.[entity]; }
+  setPerm(uid, mode, entity, val){
+    const p=this.permFor(uid); (p[mode]||={})[entity]=val; this._savePerms();
+    this._perm(`${val?'granted':'revoked'} ${mode} · ${entity} · ${this.nameForUid(uid)}`);
     this.emit('perms');
     if(mode==='read'&&val) this._pushEntity(entity);
   }
-  _readableEntities(peerId){
-    if(peerId==='*') return Store.entityNames(); // advertise everything; enforcement happens on push
-    return Store.entityNames().filter(e=>this.can(peerId,'read',e));
+  // called with a session id from the sync paths; translate to uid
+  _readableEntities(sessionId){
+    if(sessionId==='*') return Store.entityNames(); // advertise everything; enforcement happens on push
+    const uid=this._peerUid(sessionId);
+    return Store.entityNames().filter(e=>this.can(uid,'read',e));
   }
 
   // ---- sync operations -------------------------------------------------
@@ -175,7 +198,8 @@ export const Sync = new (class extends Emitter{
   _pushEntity(entity){ for(const p of this.peerList()) this._pushTo(p.id,p.transport,[entity]); }
 
   _pushTo(peerId, transport, entities){
-    const share=(entities||Store.entityNames()).filter(e=>this.can(peerId,'read',e));
+    const uid=this._peerUid(peerId);
+    const share=(entities||Store.entityNames()).filter(e=>this.can(uid,'read',e));
     if(!share.length) return;
     const records=Store.snapshot(share);
     if(!records.length) return;
@@ -183,10 +207,11 @@ export const Sync = new (class extends Emitter{
     this.stats.sent += records.length; this.emit('stats');
   }
   _onPush(from, records){
+    const uid=this._peerUid(from);
     this.stats.received += records.length;
     let applied=0;
     for(const rec of records){
-      if(!this.can(from,'write',rec.entity)) continue;   // permission gate
+      if(!this.can(uid,'write',rec.entity)) continue;   // permission gate (stable uid)
       if(Store.merge(rec)) applied++;
     }
     this.stats.applied += applied;
@@ -198,19 +223,33 @@ export const Sync = new (class extends Emitter{
   // ---- light P2P messaging --------------------------------------------
   _loadChat(){ try{ return JSON.parse(localStorage.getItem('relay.chat')||'[]'); }catch{ return []; } }
   _saveChat(){ try{ localStorage.setItem('relay.chat', JSON.stringify(this.chat.slice(-200))); }catch{} }
-  sendChat(text){
+  // toUid null = broadcast to everyone; otherwise a 1:1 direct message.
+  sendChat(text, toUid=null){
     text=String(text||'').trim(); if(!text) return;
-    const msg={ id:uuid(), from:this.selfId, name:Store.identity.name, text:text.slice(0,2000), ts:Date.now() };
+    const msg={ id:uuid(), from:this.selfId, uid:this.uid, name:Store.identity.name,
+      text:text.slice(0,2000), ts:Date.now(), to:toUid||null };
     this._store(msg);
-    // broadcast to every connected peer (mesh in one shot, webrtc per-peer)
-    if(this.meshOn) this._say('*', { kind:'chat', msg });
-    for(const [id,r] of this.rtc){ if(r?.dc?.readyState==='open') this._rtcSendRaw(r.dc,{ kind:'chat', msg, from:this.selfId, to:id }); }
+    if(toUid){
+      let delivered=0;
+      for(const [sid,p] of this.peers){ if(p.uid===toUid){ this._reply(sid, p.transport, { kind:'chat', msg }); delivered++; } }
+      if(!delivered) this._warn(`${this.nameForUid(toUid)} is offline — message saved, will not deliver until they're online`);
+    }else{
+      if(this.meshOn) this._say('*', { kind:'chat', msg });
+      for(const [id,r] of this.rtc){ if(r?.dc?.readyState==='open') this._rtcSendRaw(r.dc,{ kind:'chat', msg, from:this.selfId, to:id }); }
+    }
     this.emit('chat', msg);
   }
   _recvChat(msg){
-    if(!msg || !msg.id || this._seenChat.has(msg.id)) return;   // dedupe (mesh + webrtc)
+    if(!msg || !msg.id || this._seenChat.has(msg.id)) return;         // dedupe (mesh + webrtc)
+    if(msg.to && msg.to!==this.uid && msg.uid!==this.uid) return;     // a DM that isn't ours
     this._store(msg);
     this.emit('chat', msg);
+  }
+  // conversation a message belongs to: 'general' for broadcast, else the
+  // OTHER participant's uid
+  threadKey(msg){
+    if(!msg.to) return 'general';
+    return msg.uid===this.uid ? msg.to : msg.uid;
   }
   _store(msg){
     this._seenChat.add(msg.id);
@@ -237,7 +276,7 @@ export const Sync = new (class extends Emitter{
     const wire=()=>{
       this._seePeer(peerId, peerName, 'webrtc', Store.entityNames());
       this._conn(`WebRTC channel open with ${peerName||peerId.slice(0,6)} (auto)`);
-      this._rtcSendRaw(dc,{ kind:'hello', id:this.selfId, name:Store.identity.name,
+      this._rtcSendRaw(dc,{ kind:'hello', id:this.selfId, uid:this.uid, name:Store.identity.name,
         to:'*', from:this.selfId, offers:Store.entityNames() });
     };
     if(dc.readyState==='open') wire(); else dc.addEventListener('open', wire);
@@ -285,7 +324,7 @@ export const Sync = new (class extends Emitter{
       const id=peerId||dc._peerId;
       this._conn(`WebRTC channel open with ${peerName||id?.slice(0,6)||'peer'}`);
       if(id){ this._seePeer(id, peerName, 'webrtc', Store.entityNames()); this.rtc.get(id)&&(this.rtc.get(id).dc=dc); }
-      this._rtcSendRaw(dc,{kind:'hello',id:this.selfId,name:Store.identity.name,to:'*',from:this.selfId,offers:Store.entityNames()});
+      this._rtcSendRaw(dc,{kind:'hello',id:this.selfId,uid:this.uid,name:Store.identity.name,to:'*',from:this.selfId,offers:Store.entityNames()});
     };
     dc.onmessage=(e)=>{ try{ const m=JSON.parse(e.data); this._route(m.from,m,'webrtc'); }catch{} };
     dc.onclose=()=>{ if(peerId){ const p=this.peers.get(peerId); if(p){p.state='offline';this.emit('peers');} } };

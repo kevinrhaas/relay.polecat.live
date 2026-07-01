@@ -145,4 +145,20 @@ footer{border-top:1px solid var(--border);padding:40px 0;position:relative;z-ind
 .foot-links{margin-left:auto;display:flex;gap:24px}
 .foot-links a{color:var(--text-2);transition:.15s}.foot-links a:hover{color:var(--text)}
 
+@media(max-width:640px){
+  .nav-in{padding:12px 0}
+  .hero{padding:48px 0 26px}
+  .hero-cta{flex-direction:column;align-items:stretch}
+  .hero-cta .btn{width:100%;justify-content:center}
+  .shot{margin-top:34px;border-radius:16px}
+  .shot .bar .url{max-width:none}
+  section{padding:46px 0}
+  .band{padding:30px 20px}
+  .arch{gap:12px}
+  .node .b{width:70px;height:70px}
+  .step{gap:14px}
+  .step .n{width:38px;height:38px;font-size:15px}
+  .foot-in{flex-direction:column;align-items:flex-start;gap:12px}
+  .foot-links{margin-left:0;flex-wrap:wrap}
+}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}

@@ -1,6 +1,7 @@
 // Admin area: unlock with the admin token, then mint invite links to send
 // to people. Everything is local + client-side (see access.js).
 import { Access } from '../access.js';
+import { Rendezvous } from '../rendezvous.js';
 import { el, escapeHtml, toast, ago, confirmDialog } from '../ui.js';
 import { icon } from '../icons.js';
 
@@ -45,13 +46,36 @@ export function renderAdmin(root, ctx){
   const lf=el('div',{class:'field'}); lf.append(el('label',{text:'Label'}), label);
   const ef=el('div',{class:'field'}); ef.append(el('label',{text:'Expires'}), exp);
   const row=el('div',{style:'display:flex;gap:14px'}); lf.style.flex='1'; row.append(lf, ef);
+
+  // auto-connect (rendezvous) option — only if the admin has one configured
+  const rdvReady = Rendezvous.configured();
+  const autoWrap=el('label',{class:'perm-row', style:'cursor:pointer;border:0;padding:6px 0'});
+  const auto=el('input',{type:'checkbox'}); if(rdvReady) auto.checked=true; else auto.disabled=true;
+  autoWrap.append(auto, el('span',{class:'muted tiny', html: rdvReady
+    ? `Include <b>auto-connect</b> — invitee joins room <span class="kbd">${escapeHtml(Rendezvous.room)}</span> and connects automatically`
+    : `Auto-connect unavailable — set up a rendezvous in <b>Settings</b> first`}));
   const gen=el('button',{class:'btn primary', html:`${icon('plus')} Generate invite link`, onclick:async()=>{
-    try{ await Access.mintInvite({ label:label.value.trim(), days:parseInt(exp.value,10) });
+    try{
+      const opts={ label:label.value.trim(), days:parseInt(exp.value,10) };
+      if(rdvReady && auto.checked){ opts.rdv=Rendezvous.url; opts.room=Rendezvous.room; }
+      await Access.mintInvite(opts);
       label.value=''; toast('Invite created',{kind:'ok'}); renderAdmin(root,ctx); }
     catch(e){ toast('Could not create',{body:e.message,kind:'err'}); }
   }});
-  mint.append(row, gen);
+  mint.append(row, autoWrap, gen);
   wrap.append(mint);
+
+  // revocation blocklist helper
+  if(Access.blocklist().length){
+    const rev=el('div',{class:'card', style:'margin-top:16px'});
+    rev.innerHTML=`<div class="section-title" style="margin-top:0"><h2 style="font-size:14px">Revoked invites</h2></div>
+      <p class="muted tiny">Revoked invites are blocked instantly on this device. To block them for <b>everyone</b>, paste the list below into <span class="kbd">js/revoked.js</span> and redeploy.</p>`;
+    const code=el('textarea',{class:'input', rows:'2', readonly:'', spellcheck:'false',
+      value:`export const REVOKED = ${JSON.stringify(Access.blocklist())};`});
+    rev.append(code, el('button',{class:'btn sm', style:'margin-top:8px', html:`${icon('copy')} Copy blocklist`,
+      onclick:()=>navigator.clipboard?.writeText(code.value).then(()=>toast('Blocklist copied',{kind:'ok'}))}));
+    wrap.append(rev);
+  }
 
   // minted list
   const list=Access.minted();
@@ -67,17 +91,25 @@ export function renderAdmin(root, ctx){
 }
 
 function inviteRow(inv, root, ctx){
-  const c=el('div',{class:'card', style:'display:flex;align-items:center;gap:12px;padding:14px 16px'});
+  const revoked = inv.jti && Access.isRevoked(inv.jti);
+  const c=el('div',{class:'card invite-row', style:revoked?'opacity:.6':''});
   const expTxt = inv.exp ? `expires ${new Date(inv.exp).toLocaleDateString()}` : 'never expires';
+  const tags = [inv.jti?`id ${inv.jti}`:'', expTxt, inv.rdv?'auto-connect':'', revoked?'REVOKED':''].filter(Boolean).join(' · ');
   c.innerHTML=`<div style="flex:1;min-width:0">
       <b>${escapeHtml(inv.label||'Untitled invite')}</b>
-      <div class="muted tiny">created ${ago(inv.iat)} · ${expTxt}</div>
+      <div class="muted tiny">created ${ago(inv.iat)} · ${tags}</div>
     </div>`;
-  const copy=el('button',{class:'btn sm', html:`${icon('copy')} Copy link`, onclick:()=>{
-    navigator.clipboard?.writeText(inv.link).then(()=>toast('Invite link copied',{kind:'ok'})); }});
-  const del=el('button',{class:'btn ghost icon sm', html:icon('trash'), title:'Remove from list', onclick:async()=>{
-    if(await confirmDialog('Remove invite','This only removes it from your local list; a link already sent still works until it expires.',{danger:true,okLabel:'Remove'})){
-      Access.forget(inv.iat); renderAdmin(root,ctx); } }});
-  c.append(copy, del);
+  const btns=el('div',{class:'invite-actions'});
+  btns.append(el('button',{class:'btn sm', html:`${icon('copy')} Copy link`, onclick:()=>{
+    navigator.clipboard?.writeText(inv.link).then(()=>toast('Invite link copied',{kind:'ok'})); }}));
+  if(inv.jti && !revoked){
+    btns.append(el('button',{class:'btn sm danger', html:`${icon('shield')} Revoke`, onclick:async()=>{
+      if(await confirmDialog('Revoke invite','Blocks this invite instantly on this device. To block it everywhere, copy the blocklist into js/revoked.js and redeploy.',{danger:true,okLabel:'Revoke'})){
+        Access.revoke(inv.jti); toast('Invite revoked',{kind:'ok'}); renderAdmin(root,ctx); } }}));
+  }
+  btns.append(el('button',{class:'btn ghost icon sm', html:icon('trash'), title:'Remove from list', onclick:async()=>{
+    if(await confirmDialog('Remove invite','This only removes it from your local list; the link keeps working unless revoked or expired.',{danger:true,okLabel:'Remove'})){
+      Access.forget(inv.iat); renderAdmin(root,ctx); } }}));
+  c.append(btns);
   return c;
 }

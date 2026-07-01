@@ -187,6 +187,8 @@ body{
 .topbar h1{margin:0;font-size:17px;font-weight:650;letter-spacing:.2px}
 .topbar .crumb{color:var(--text-3);font-size:12.5px}
 .topbar .sp{flex:1}
+.topbar .topbar-menu{display:none}         /* hamburger — mobile only */
+.rail-backdrop{display:none}               /* drawer backdrop — mobile only */
 
 .view{flex:1;min-height:0;overflow:auto;padding:26px}
 .view::-webkit-scrollbar{width:10px}
@@ -241,6 +243,7 @@ body{
   font-variant-numeric:tabular-nums}
 .stat .d{font-size:12px;color:var(--text-2)}
 .stat .spark{position:absolute;right:14px;bottom:12px;opacity:.5}
+.stat .spark svg{width:22px;height:22px}
 .stat .glow{position:absolute;top:-30px;right:-30px;width:90px;height:90px;
   border-radius:50%;filter:blur(30px);opacity:.35}
 
@@ -256,8 +259,11 @@ body{
 /* recents / pinned */
 .recents{grid-template-columns:repeat(auto-fill,minmax(210px,1fr))}
 .recent{cursor:pointer;display:flex;flex-direction:column;gap:8px}
-.recent .rt{display:flex;align-items:center;gap:9px}
+.recent .rt{display:flex;align-items:center;gap:10px}
 .recent .rt .dot{width:9px;height:9px;border-radius:50%;flex:0 0 auto}
+.recent-ic{width:28px;height:28px;border-radius:9px;flex:0 0 auto;color:#fff;
+  display:inline-flex;align-items:center;justify-content:center}
+.recent-ic svg{width:16px;height:16px}
 .recent b{font-size:13.5px}
 .recent .meta{font-size:11.5px;color:var(--text-3);display:flex;gap:10px}
 
@@ -273,6 +279,7 @@ body{
 .entity-tab{padding:6px 13px;border-radius:999px;border:1px solid var(--border);
   background:var(--surface-2);color:var(--text-2);cursor:pointer;font-size:12.5px;
   display:flex;align-items:center;gap:7px;transition:.15s}
+.entity-tab svg{width:15px;height:15px;flex:0 0 auto}
 .entity-tab:hover{color:var(--text)}
 .entity-tab.active{color:#fff;border-color:transparent;
   background:linear-gradient(135deg,var(--brand-b),var(--consensus))}
@@ -359,9 +366,10 @@ textarea{resize:vertical;font-family:var(--mono);font-size:12px}
 .search svg{position:absolute;left:11px;top:50%;transform:translateY(-50%);
   width:15px;height:15px;color:var(--text-3)}
 .search .input{padding-left:34px}
-.chip{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;
+.chip{display:inline-flex;align-items:center;gap:7px;padding:5px 11px;white-space:nowrap;
   border-radius:999px;background:var(--surface-2);border:1px solid var(--border);
-  font-size:11.5px;color:var(--text-2)}
+  font-size:11.5px;color:var(--text-2);line-height:1}
+.chip svg{width:14px;height:14px;flex:0 0 auto}
 
 .seg{display:inline-flex;background:var(--surface-2);border:1px solid var(--border);
   border-radius:999px;padding:3px}
@@ -440,6 +448,21 @@ a.link:hover{text-decoration:underline}
 
 /* ---- messaging --------------------------------------------------------- */
 .chat-wrap{display:flex;flex-direction:column;height:100%}
+.thread-tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;flex:0 0 auto}
+.thread-pill{display:inline-flex;align-items:center;gap:8px;padding:6px 13px 6px 8px;
+  border-radius:999px;border:1px solid var(--border);background:var(--surface-2);
+  color:var(--text-2);cursor:pointer;font-size:12.5px;font-family:inherit;transition:.15s;white-space:nowrap}
+.thread-pill:hover{color:var(--text)}
+.thread-pill.active{color:#fff;border-color:transparent;background:linear-gradient(135deg,var(--brand-b),var(--consensus))}
+.thread-pill svg{width:15px;height:15px;flex:0 0 auto;margin-left:5px}
+.thread-pill .tav{width:22px;height:22px;border-radius:50%;flex:0 0 auto;color:#fff;font-size:10px;
+  font-weight:700;display:flex;align-items:center;justify-content:center}
+.thread-pill .pdot{width:7px;height:7px;border-radius:50%;background:var(--text-3);flex:0 0 auto}
+.thread-pill .pdot.on{background:var(--success);box-shadow:0 0 7px var(--success)}
+
+/* invite rows (admin) */
+.invite-row{display:flex;align-items:center;gap:12px;padding:14px 16px}
+.invite-actions{display:flex;gap:8px;flex-wrap:wrap}
 .chat-feed{flex:1;min-height:0;overflow:auto;display:flex;flex-direction:column;gap:12px;
   padding:8px 2px 12px}
 .chat-feed .empty{margin:auto}
@@ -459,11 +482,53 @@ a.link:hover{text-decoration:underline}
 .composer{display:flex;gap:10px;align-items:flex-end;padding-top:12px;border-top:1px solid var(--border)}
 .composer textarea{max-height:120px}
 
+/* ---- mobile ------------------------------------------------------------ */
+@media (max-width:720px){
+  /* rail becomes an off-canvas drawer */
+  #rail{position:absolute;top:0;left:0;height:100%;box-shadow:var(--shadow);
+    --rail-w-open:min(78vw,300px)}
+  #rail:not(.open){width:0;border:0;overflow:hidden}
+  #rail.open{width:var(--rail-w-open)}
+  #rail .rail-item .lbl,#rail .rail-brand .bt,#rail .rail-sec-label{opacity:1!important;transform:none!important}
+  .rail-resize{display:none}                 /* no drag-resize on touch */
+  .rail-toggle{display:none}                  /* use the topbar hamburger instead */
+  #rail.open ~ .rail-backdrop{display:block;position:fixed;inset:0;z-index:15;
+    background:rgba(5,5,10,.55);backdrop-filter:blur(2px)}
+
+  .topbar .topbar-menu{display:inline-flex}
+  .topbar{padding:11px 14px;gap:8px}
+  .topbar h1{font-size:15px}
+  .topbar .avatars,.topbar .presence,.topbar-sync{display:none}  /* condense */
+
+  .view{padding:16px 14px}
+  .wrap{max-width:100%}
+
+  /* single-column grids */
+  .grid.quick,.grid.stats,.grid.recents,.peer-grid{grid-template-columns:1fr!important}
+
+  /* full-width primary actions in dialogs */
+  .modal{border-radius:16px}
+  .modal-foot{flex-wrap:wrap}
+  .modal-foot .btn{flex:1}
+  .connected-box .btn{flex:1}
+
+  /* chat + composer fit small screens */
+  .msg{max-width:92%}
+  .composer{gap:8px}
+  .composer .btn{padding:9px 12px}
+
+  /* tables stay usable via horizontal scroll; keep headers tight */
+  table.data th,table.data td{padding:9px 11px}
+
+  #toasts{left:14px;right:14px;bottom:14px}
+  .toast{max-width:none}
+}
+@media (max-width:420px){
+  .topbar-sync{display:none}
+  .btn.sm{padding:6px 9px}
+  .entity-tab{font-size:12px;padding:6px 11px}
+}
+
 @media (prefers-reduced-motion: reduce){
   *{animation:none!important;transition:none!important}
-}
-@media (max-width:720px){
-  #rail{position:absolute;height:100%;box-shadow:var(--shadow)}
-  #rail:not(.open){width:0;border:0}
-  .view{padding:18px}
 }
