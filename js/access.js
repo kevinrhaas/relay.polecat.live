@@ -12,12 +12,15 @@
 // clean invite flow, which is what "invite-only preview" needs.
 // -----------------------------------------------------------------------
 
+import { REVOKED } from './revoked.js';
+
 const PUBLIC_KEY_B64 =
   'MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEOUTaQ0eaaGrWF/5ndq9AuGv8J8UtFy38bvHg5jN1QeEjNPM5lP4sJi1dd1dQnRkNdtRLEKEFLmJnf27afbC/cg==';
 
 const A_KEY = 'relay.access';     // { grantedAt, via, label }
 const ADM_KEY = 'relay.adminkey'; // admin private key (pkcs8 b64), admin device only
 const INV_KEY = 'relay.invites';  // locally-kept list of minted invites
+const REV_KEY = 'relay.revoked';  // locally-revoked jti list (instant, this device)
 
 const enc = new TextEncoder();
 const dec = new TextDecoder();
@@ -57,9 +60,18 @@ export const Access = new (class {
       if(!okSig) return { ok:false, reason:'bad signature' };
       const payload = JSON.parse(dec.decode(b64ToBuf(unb64url(p))));
       if(payload.exp && Date.now() > payload.exp) return { ok:false, reason:'expired', payload };
+      if(payload.jti && this.isRevoked(payload.jti)) return { ok:false, reason:'revoked', payload };
       return { ok:true, payload };
     }catch(e){ return { ok:false, reason:'invalid' }; }
   }
+
+  // ---- revocation ------------------------------------------------------
+  localRevoked(){ try{ return JSON.parse(localStorage.getItem(REV_KEY)||'[]'); }catch{ return []; } }
+  isRevoked(jti){ return REVOKED.includes(jti) || this.localRevoked().includes(jti); }
+  revoke(jti){ const l=new Set(this.localRevoked()); l.add(jti); try{ localStorage.setItem(REV_KEY, JSON.stringify([...l])); }catch{}
+    const inv=this.minted().map(x=>x.jti===jti?{...x,revoked:true}:x); try{ localStorage.setItem(INV_KEY, JSON.stringify(inv)); }catch{} }
+  // full blocklist (embedded + local) for pasting into js/revoked.js
+  blocklist(){ return [...new Set([...REVOKED, ...this.localRevoked()])]; }
 
   // Is this string the admin private key that matches our public key?
   async verifyAdminToken(token){
@@ -78,19 +90,22 @@ export const Access = new (class {
   }
 
   // ---- invite minting (admin only) ------------------------------------
-  async mintInvite({ label='', days=0 }={}){
+  // opts.rdv / opts.room embed a rendezvous so the invitee auto-connects.
+  async mintInvite({ label='', days=0, rdv='', room='' }={}){
     const token = localStorage.getItem(ADM_KEY);
     if(!token) throw new Error('Admin is locked');
     const priv = await importPriv(token);
     const iat = Date.now();
     const exp = days>0 ? iat + days*86400000 : 0;
-    const nonce = bufToB64(crypto.getRandomValues(new Uint8Array(6)).buffer);
-    const p = b64url(bufToB64(enc.encode(JSON.stringify({ v:1, label, iat, exp, nonce }))));
+    const jti = bufToB64(crypto.getRandomValues(new Uint8Array(6)).buffer).replace(/[^a-zA-Z0-9]/g,'').slice(0,8);
+    const body = { v:1, label, iat, exp, jti };
+    if(rdv && room){ body.rdv = rdv; body.room = room; }
+    const p = b64url(bufToB64(enc.encode(JSON.stringify(body))));
     const sig = await crypto.subtle.sign({ name:'ECDSA', hash:'SHA-256' }, priv, enc.encode(p));
     const code = p + '.' + b64url(bufToB64(sig));
     const link = `${location.origin}/app/?invite=${encodeURIComponent(code)}`;
-    this._remember({ label, iat, exp, code, link });
-    return { code, link, iat, exp, label };
+    this._remember({ label, iat, exp, jti, code, link, rdv: body.rdv||'', room: body.room||'' });
+    return { code, link, iat, exp, label, jti };
   }
   minted(){ try{ return JSON.parse(localStorage.getItem(INV_KEY)||'[]'); }catch{ return []; } }
   _remember(rec){ const l=this.minted(); l.unshift(rec); try{ localStorage.setItem(INV_KEY, JSON.stringify(l.slice(0,50))); }catch{} }
@@ -102,7 +117,17 @@ export const Access = new (class {
     const invite = params.get('invite');
     if(invite){
       const r = await this.verifyInvite(invite);
-      if(r.ok){ this.grant('invite', r.payload.label||''); }
+      if(r.ok){
+        this.grant('invite', r.payload.label||'');
+        // if the invite carries a rendezvous, wire auto-connect for the invitee
+        if(r.payload.rdv && r.payload.room){
+          try{
+            localStorage.setItem('relay.rdv.url', r.payload.rdv);
+            localStorage.setItem('relay.rdv.room', r.payload.room);
+            localStorage.setItem('relay.rdv.on', '1');
+          }catch{}
+        }
+      }
       // strip the token from the address bar either way
       params.delete('invite');
       const clean = location.pathname + (params.toString()?`?${params}`:'') + location.hash;

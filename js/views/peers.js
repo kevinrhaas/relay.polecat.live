@@ -27,14 +27,21 @@ export function renderPeers(root, ctx){
     el('button',{class:'btn sm primary', html:`${icon('link')} WebRTC invite`, onclick:()=>signalingModal()}));
   wrap.append(bar);
 
-  const peers=Sync.peerList();
-  if(!peers.length){
+  // Merge live peers with the durable known-peers registry so definitions
+  // (and their permissions) persist across reloads/deploys — even offline.
+  const online=Sync.peerList();
+  const byUid=new Map();
+  online.forEach(p=>{ if(p.uid) byUid.set(p.uid, { ...p, online:true }); });
+  Sync.knownPeers().forEach(k=>{ if(!byUid.has(k.uid)) byUid.set(k.uid, { uid:k.uid, name:k.name, state:'offline', transport:'—', online:false, lastSeen:k.lastSeen }); });
+  const list=[...byUid.values()].sort((a,b)=>(b.online-a.online)||(a.name||'').localeCompare(b.name||''));
+
+  if(!list.length){
     wrap.append(el('div',{class:'empty', html:`${icon('peers')}
       <div><b>No peers yet.</b><br>Open Relay in another browser tab to see local-mesh discovery,
       or send a WebRTC invite to connect across the internet.</div>`}));
   }else{
     const grid=el('div',{class:'grid peer-grid'});
-    peers.forEach(p=>grid.append(peerCard(p, ctx)));
+    list.forEach(p=>grid.append(peerCard(p, ctx)));
     wrap.append(grid);
   }
   root.append(wrap);
@@ -45,24 +52,25 @@ function peerCard(p, ctx){
   const state = p.state==='connected'?'conn-connected':p.state==='connecting'?'conn-connecting':'conn-offline';
   const head=el('div',{class:'peer-head'});
   head.innerHTML=`
-    <div class="peer-av" style="background:${avatarColor(p.id)}">${initials(p.name)}</div>
+    <div class="peer-av" style="background:${avatarColor(p.uid||p.id)}">${initials(p.name)}</div>
     <div style="flex:1;min-width:0">
       <b>${escapeHtml(p.name)}</b>
-      <div class="pid">${shortId(p.id)} · ${p.transport}</div>
+      <div class="pid">${shortId(p.uid||p.id)} · ${p.online?p.transport:'saved'}</div>
     </div>
     <span class="conn-state ${state}"><span class="dot"></span>${p.state}</span>`;
   c.append(head);
 
-  // permissions
+  // permissions — keyed by the STABLE uid so they survive reloads
+  const uid=p.uid||p.id;
   const perms=el('div');
   Store.entityNames().forEach(ent=>{
     const e=Store.entity(ent);
     const row=el('div',{class:'perm-row'});
     row.innerHTML=`<span class="en">${escapeHtml(e.label)}</span>`;
     ['read','write'].forEach(mode=>{
-      const on=Sync.can(p.id,mode,ent);
+      const on=Sync.can(uid,mode,ent);
       const t=el('button',{class:'toggle'+(on?' on':''), title:`${mode==='read'?'Peer can read this from you':'Peer can write this to you'}`,
-        onclick:()=>{ Sync.setPerm(p.id,mode,ent,!Sync.can(p.id,mode,ent)); renderPeers(document.querySelector('#view'), ctx); }});
+        onclick:()=>{ Sync.setPerm(uid,mode,ent,!Sync.can(uid,mode,ent)); renderPeers(document.querySelector('#view'), ctx); }});
       const lbl=el('span',{class:'muted tiny', style:'width:38px;text-align:right', text:mode});
       row.append(lbl, t);
     });
@@ -70,8 +78,20 @@ function peerCard(p, ctx){
   });
   c.append(perms);
 
-  c.append(el('button',{class:'btn sm', style:'margin-top:12px', html:`${icon('refresh')} Sync with ${escapeHtml(p.name.split('-')[0])}`,
-    onclick:()=>{ Sync.syncPeer(p.id); toast('Synced with '+p.name,{kind:'ok'}); }}));
+  const actions=el('div',{style:'display:flex;gap:8px;margin-top:12px'});
+  if(p.online){
+    actions.append(
+      el('button',{class:'btn sm', style:'flex:1', html:`${icon('refresh')} Sync`,
+        onclick:()=>{ Sync.syncPeer(p.id); toast('Synced with '+p.name,{kind:'ok'}); }}),
+      el('button',{class:'btn sm', html:`${icon('chat')} Message`,
+        onclick:()=>ctx.go('messages')}));
+  }else{
+    actions.append(
+      el('span',{class:'muted tiny', style:'flex:1;align-self:center', text:'Saved peer · permissions kept'}),
+      el('button',{class:'btn sm ghost', html:`${icon('trash')} Forget`,
+        onclick:()=>{ Sync.forgetPeer(uid); toast('Peer forgotten',{kind:'ok'}); renderPeers(document.querySelector('#view'), ctx); }}));
+  }
+  c.append(actions);
   return c;
 }
 

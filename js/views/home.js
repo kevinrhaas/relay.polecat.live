@@ -83,7 +83,7 @@ function entityCard(key, ctx, pinned, at){
   const c = el('div',{class:'card hover recent', onclick:()=>ctx.go('table',{entity:key})});
   const pin = el('button',{class:'pin-btn'+(Store.isPinned(key)?' on':''), title:'Pin to home',
     html:icon('star'), onclick:(ev)=>{ev.stopPropagation();Store.togglePin(key);toast(Store.isPinned(key)?'Pinned':'Unpinned',{kind:'ok'});ctx.refresh&&ctx.refresh();}});
-  c.innerHTML = `<div class="rt"><span class="dot" style="background:${avatarColor(key)}"></span>
+  c.innerHTML = `<div class="rt"><span class="recent-ic" style="background:${avatarColor(key)}">${icon(e.icon||'table')}</span>
     <b>${escapeHtml(e.label)}</b></div>
     <div class="meta"><span>${n} record${n!==1?'s':''}</span>${at?`<span>${ago(at)}</span>`:''}</div>`;
   c.querySelector('.rt').append(pin);

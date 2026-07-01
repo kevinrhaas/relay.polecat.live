@@ -38,7 +38,10 @@ async function boot(){
   const topbar=buildTopbar();
   view=el('div',{class:'view', id:'view'});
   main.append(topbar, view);
-  app.append(rail, main);
+  // backdrop sits between rail and main so `#rail.open ~ .rail-backdrop`
+  // shows it on mobile; tapping it closes the drawer
+  const backdrop=el('div',{class:'rail-backdrop', onclick:()=>window.__rail.setOpen(false)});
+  app.append(rail, backdrop, main);
 
   window.__rail = buildRail(rail, { onNav:(s)=>go(s), isAdmin:Access.isAdmin() });
 
@@ -51,12 +54,14 @@ async function boot(){
 
 function buildTopbar(){
   const bar=el('div',{class:'topbar'});
+  const menuBtn=el('button',{class:'btn icon ghost topbar-menu', title:'Menu', 'aria-label':'Open navigation',
+    html:icon('menu'), onclick:()=>window.__rail.setOpen(!rail.classList.contains('open'))});
   topTitle=el('h1',{text:'Home'});
-  bar.append(topTitle, el('span',{class:'sp'}));
+  bar.append(menuBtn, topTitle, el('span',{class:'sp'}));
 
   avatars=el('div',{class:'avatars'});
   presence=el('div',{class:'presence', html:`<span class="dot"></span><span class="txt">offline</span>`});
-  const syncBtn=el('button',{class:'btn sm', html:`${icon('refresh')} Sync`, title:'Sync with all peers',
+  const syncBtn=el('button',{class:'btn sm topbar-sync', html:`${icon('refresh')} Sync`, title:'Sync with all peers',
     onclick:()=>{ Sync.syncAll(); }});
   const themeBtn=el('button',{class:'btn icon ghost', title:'Toggle theme',
     html:icon(getThemePref()==='light'?'moon':'sun'),
@@ -75,6 +80,7 @@ function go(section, params={}){
   topTitle.textContent=TITLES[section]||'Relay';
   window.__rail.setActive(section);
   if(section==='messages'){ unread=0; refreshBadges(); }
+  if(window.innerWidth<=720) window.__rail.setOpen(false);   // close drawer on mobile
   render();
 }
 function render(){
@@ -112,7 +118,7 @@ function newEntity(){
     el('div',{class:'field'},null),
     (()=>{ const f=el('div',{class:'field'}); f.append(el('label',{text:'Entity name'}), name); return f; })(),
     (()=>{ const f=el('div',{class:'field'}); f.append(el('label',{text:'Icon'}), picker); return f; })(),
-    el('p',{class:'muted tiny', text:'An entity is a shared table of UUID-keyed JSON rows. Fields are fully dynamic — add columns as you go.'}));
+    el('p',{class:'muted tiny', text:'An entity is a shared table. Every row gets a globally-unique id and fully dynamic fields — add columns as you go.'}));
   const {hide}=modal({ title:'New entity', icon:'plus', body,
     foot:[ el('button',{class:'btn', text:'Cancel', onclick:()=>hide()}),
       el('button',{class:'btn primary', text:'Create', onclick:()=>{
