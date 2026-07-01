@@ -44,33 +44,43 @@ export function renderSettings(root, ctx){
   appCard.append(el('div',{class:'field', html:'<label>Theme</label>'}), seg);
   wrap.append(appCard);
 
-  // ---- transport -------------------------------------------------------
-  const txCard=el('div',{class:'card', style:'margin-top:16px'});
-  txCard.innerHTML=`<div class="section-title" style="margin-top:0"><h2 style="font-size:14px">P2P transport</h2></div>
-    <p class="muted tiny">Local mesh discovery uses <span class="kbd">BroadcastChannel</span> and needs no configuration.
-    WebRTC uses a STUN server only to discover your public address for NAT traversal — it never relays your data.
-    Leave blank for pure LAN / serverless mode.</p>`;
+  // ---- Advanced (collapsed): transport + optional auto-discovery -------
+  // Relay is fully serverless by default; nothing in here is required. This
+  // is tucked away so the everyday flow stays simple.
+  const st = Rendezvous.state;
+  const adv=el('details',{class:'card adv', style:'margin-top:16px'});
+  const sum=el('summary', {html:`
+    <span class="adv-title"><span class="adv-ic">${icon('settings')}</span> Advanced · connection &amp; auto-discovery</span>
+    ${st==='online'?'<span class="conn-state conn-connected"><span class="dot"></span>auto-connect on</span>':'<span class="muted tiny">optional</span>'}
+    <span class="adv-chevron">${icon('chevron')}</span>`});
+  adv.append(sum);
+  adv.append(el('p',{class:'muted tiny', html:`Relay is <b>fully serverless by default</b> — you don't need anything here.
+    Tabs on the same machine discover each other automatically, and across the internet you connect by pasting a one-time
+    WebRTC invite. Everything syncs either way.<br><br>
+    If you'd rather <b>skip the copy/paste</b>, you can point Relay at a tiny signaling relay — a Cloudflare Worker you deploy
+    (see the <span class="kbd">rendezvous/</span> folder in the repo). Then peers who open the same room connect automatically.
+    The relay only introduces two browsers to each other; it <b>never sees, stores, or relays your data</b>.`}));
+
+  // -- STUN (NAT traversal helper) --
+  adv.append(el('div',{class:'section-title', style:'margin:18px 0 4px', html:'<h2 style="font-size:13px">STUN server</h2>'}));
+  adv.append(el('p',{class:'muted tiny', html:'Only helps WebRTC discover your public address for NAT traversal — it never relays data. Leave blank for pure LAN / serverless mode.'}));
   const stun=el('input',{class:'input', placeholder:'stun:stun.l.google.com:19302',
     value: localStorage.getItem('relay.stun') ?? 'stun:stun.l.google.com:19302'});
-  const stunField=el('div',{class:'field'});
+  const stunField=el('div',{class:'field', style:'margin-top:8px'});
   stunField.append(el('label',{text:'STUN server (optional)'}), stun);
   const saveStun=el('button',{class:'btn sm', html:`${icon('check')} Save`,
     onclick:()=>{ localStorage.setItem('relay.stun', stun.value.trim()); toast('Transport updated',{kind:'ok'}); }});
-  txCard.append(stunField, saveStun);
-  wrap.append(txCard);
+  adv.append(stunField, saveStun, el('div',{class:'divider'}));
 
-  // ---- rendezvous (auto-discovery) ------------------------------------
-  const st = Rendezvous.state;
+  // -- Rendezvous (auto-discovery) --
   const stColor = st==='online'?'var(--success)':st==='connecting'?'var(--warning)':st==='error'?'var(--danger)':'var(--text-3)';
-  const rdvCard=el('div',{class:'card', style:'margin-top:16px'});
-  rdvCard.innerHTML=`<div class="section-title" style="margin-top:0">
-      <h2 style="font-size:14px">Auto-discovery (rendezvous)</h2><div class="sp"></div>
-      <span class="conn-state" style="color:${stColor}"><span class="dot" style="background:${stColor}"></span>${st}</span>
-    </div>
-    <p class="muted tiny">Optional. Point Relay at a signaling relay (see <span class="kbd">/rendezvous</span>) and peers in the same room connect automatically — no copy/paste. The relay only carries the WebRTC handshake; your records still sync directly peer-to-peer.</p>`;
+  adv.append(el('div',{class:'section-title', style:'margin:4px 0 4px', html:`
+    <h2 style="font-size:13px">Auto-discovery (rendezvous)</h2><div class="sp"></div>
+    <span class="conn-state" style="color:${stColor}"><span class="dot" style="background:${stColor}"></span>${st}</span>`}));
+  adv.append(el('p',{class:'muted tiny', html:'Point Relay at your deployed relay URL and pick a shared room. Peers in the same room auto-connect — no invite blobs to exchange.'}));
   const rurl=el('input',{class:'input', placeholder:'wss://relay-rendezvous.you.workers.dev', value:Rendezvous.url});
   const rroom=el('input',{class:'input', placeholder:'team-polecat', value:Rendezvous.room});
-  const uf=el('div',{class:'field'}); uf.append(el('label',{text:'Rendezvous URL'}), rurl);
+  const uf=el('div',{class:'field', style:'margin-top:8px'}); uf.append(el('label',{text:'Rendezvous URL'}), rurl);
   const rf=el('div',{class:'field'}); rf.append(el('label',{text:'Room'}), rroom);
   const connected = st==='online'||st==='connecting';
   const actionBtn = connected
@@ -78,8 +88,10 @@ export function renderSettings(root, ctx){
     : el('button',{class:'btn primary', html:`${icon('broadcast')} Connect`, onclick:()=>{
         if(!rurl.value.trim()||!rroom.value.trim()){ toast('URL and room required',{kind:'err'}); return; }
         Rendezvous.connect(rurl.value, rroom.value); toast('Connecting to rendezvous…',{kind:'ok'}); renderSettings(root,ctx); }});
-  rdvCard.append(uf, rf, actionBtn);
-  wrap.append(rdvCard);
+  adv.append(uf, rf, actionBtn);
+  // keep it open if the user already configured it, so state is visible
+  if(Rendezvous.configured()||connected) adv.open=true;
+  wrap.append(adv);
 
   // ---- data ------------------------------------------------------------
   const dataCard=el('div',{class:'card', style:'margin-top:16px'});

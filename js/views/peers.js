@@ -18,11 +18,16 @@ export function renderPeers(root, ctx){
   const bar=el('div',{class:'tbl-toolbar'});
   const mesh=el('span',{class:'chip', html:`${icon('broadcast')} Local mesh ${Sync.meshOn?'active':'off'}`});
   const you=el('span',{class:'chip', html:`${icon('shield')} You: ${escapeHtml(Store.identity.name)}`});
+  bar.append(mesh, you);
+  // auto-discovery is an advanced/optional feature — only surface it here
+  // when it's actually running (configured in Settings → Advanced)
   const rst=Rendezvous.state;
-  const rColor=rst==='online'?'var(--success)':rst==='connecting'?'var(--warning)':'var(--text-3)';
-  const rdv=el('span',{class:'chip', style:`cursor:pointer;color:${rColor}`, title:'Configure in Settings',
-    html:`${icon('link')} Rendezvous ${Rendezvous.configured()?rst:'off'}`, onclick:()=>ctx.go('settings')});
-  bar.append(mesh, you, rdv, el('div',{style:'flex:1'}),
+  if(rst==='online'||rst==='connecting'){
+    const rColor=rst==='online'?'var(--success)':'var(--warning)';
+    bar.append(el('span',{class:'chip', style:`cursor:pointer;color:${rColor}`, title:'Manage in Settings → Advanced',
+      html:`${icon('link')} Auto-connect ${rst==='online'?'on':'…'}`, onclick:()=>ctx.go('settings')}));
+  }
+  bar.append(el('div',{style:'flex:1'}),
     el('button',{class:'btn sm', html:`${icon('refresh')} Sync all`, onclick:()=>{Sync.syncAll();}}),
     el('button',{class:'btn sm primary', html:`${icon('link')} WebRTC invite`, onclick:()=>signalingModal()}));
   wrap.append(bar);

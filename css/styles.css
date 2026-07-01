@@ -463,6 +463,18 @@ a.link:hover{text-decoration:underline}
 /* invite rows (admin) */
 .invite-row{display:flex;align-items:center;gap:12px;padding:14px 16px}
 .invite-actions{display:flex;gap:8px;flex-wrap:wrap}
+
+/* advanced disclosure (settings) */
+.adv summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:12px}
+.adv summary::-webkit-details-marker{display:none}
+.adv summary::marker{content:''}
+.adv .adv-title{display:flex;align-items:center;gap:10px;flex:1;font-weight:600;font-size:14px}
+.adv .adv-ic{display:inline-flex}
+.adv .adv-ic svg{width:18px;height:18px;color:var(--brand-b)}
+.adv .adv-chevron{display:inline-flex;color:var(--text-2)}
+.adv .adv-chevron svg{width:16px;height:16px;transition:transform .2s}
+.adv[open] .adv-chevron svg{transform:rotate(90deg)}
+.adv[open] summary{margin-bottom:8px}
 .chat-feed{flex:1;min-height:0;overflow:auto;display:flex;flex-direction:column;gap:12px;
   padding:8px 2px 12px}
 .chat-feed .empty{margin:auto}
