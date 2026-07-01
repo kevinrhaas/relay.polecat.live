@@ -1,6 +1,7 @@
 // app.js — main controller: boot, routing, topbar, cross-view glue.
 import { Store } from './store.js';
 import { Sync } from './sync.js';
+import { Rendezvous } from './rendezvous.js';
 import { applyTheme, getThemePref, setTheme } from './theme.js';
 import { buildRail, SECTIONS } from './shell.js';
 import { el, $, escapeHtml, toast, modal, avatarColor, initials } from './ui.js';
@@ -20,6 +21,7 @@ let currentSection='home', currentParams={};
 function boot(){
   applyTheme();
   Sync.start();
+  Rendezvous.autostart();
 
   const app=$('#app');
   rail=el('nav',{id:'rail','aria-label':'Navigation'});
@@ -124,6 +126,7 @@ function wireEvents(){
   Sync.on('peers', ()=>{ refreshBadges(); refreshPresence(); if(currentSection==='peers') render(); if(currentSection==='home') render(); });
   Sync.on('stats', ()=>{ if(currentSection==='activity'||currentSection==='home') render(); });
   Sync.on('perms', ()=>{ if(currentSection==='peers') render(); });
+  Rendezvous.on('state', ()=>{ if(['peers','settings'].includes(currentSection)) render(); });
   Sync.on('log', (line)=>{ if(currentSection==='activity') pushLogLine(line); });
 
   Store.on('entities', ()=>{ if(['table','home'].includes(currentSection)) render(); });

@@ -35,6 +35,7 @@ Two transports, one protocol:
 |-----------|-----------|-----|
 | **Local mesh** (`BroadcastChannel`) | Automatic | Other tabs/windows of the same browser — zero config. |
 | **WebRTC data channel** | Manual copy/paste signaling | Real cross-internet P2P, **no signaling server** — you exchange one offer/answer blob over any channel (chat, email). |
+| **WebRTC + rendezvous** | Automatic | Point Relay at the optional [`/rendezvous`](rendezvous/) relay and peers in the same room auto-connect over WebRTC — no copy/paste. The relay carries only the handshake; your records still sync directly peer-to-peer. |
 
 WebRTC optionally uses a public **STUN** server purely to discover your public
 address for NAT traversal — it never relays your data. Leave it blank in Settings
@@ -60,17 +61,21 @@ for pure LAN / fully-serverless mode.
 No build step, no bundler, no framework. Serve the folder statically:
 
 ```bash
-python3 -m http.server 8137   # then open http://localhost:8137
+python3 -m http.server 8137   # landing → http://localhost:8137
+                              # app     → http://localhost:8137/app/
 ```
 
-Open it in a second tab to watch local-mesh discovery and sync in real time.
+Open the app in a second tab to watch local-mesh discovery and sync in real time.
 
 ## Layout
 
 ```
-index.html            # shell + aurora + theme bootstrap
-css/styles.css        # full design system (ported polecat palette)
+index.html            # marketing landing page (front door at /)
+css/landing.css       # landing styles
+app/index.html        # the app shell (served at /app/)
+css/styles.css        # full app design system (ported polecat palette)
 assets/logo.svg       # relay mark
+assets/screenshot-app.png
 js/
   app.js              # controller: boot, routing, topbar, cross-view glue
   shell.js            # collapsible / draggable rail navigation

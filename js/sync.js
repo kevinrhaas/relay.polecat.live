@@ -197,6 +197,29 @@ export const Sync = new (class extends Emitter{
     if(s==='') return [];
     return [{ urls: s || 'stun:stun.l.google.com:19302' }];
   }
+  // exposed for the rendezvous transport (automatic signaling)
+  rtcConfig(){ return { iceServers:this._iceServers() }; }
+
+  // Adopt a data channel negotiated elsewhere (e.g. the rendezvous relay)
+  // into Sync's peer registry + message routing. Reuses the same protocol
+  // as the mesh and manual WebRTC paths.
+  adoptChannel(peerId, peerName, pc, dc){
+    this.rtc.set(peerId, { pc, dc });
+    const wire=()=>{
+      this._seePeer(peerId, peerName, 'webrtc', Store.entityNames());
+      this._conn(`WebRTC channel open with ${peerName||peerId.slice(0,6)} (auto)`);
+      this._rtcSendRaw(dc,{ kind:'hello', id:this.selfId, name:Store.identity.name,
+        to:'*', from:this.selfId, offers:Store.entityNames() });
+    };
+    if(dc.readyState==='open') wire(); else dc.addEventListener('open', wire);
+    dc.addEventListener('message', (e)=>{ try{ const m=JSON.parse(e.data); this._route(m.from,m,'webrtc'); }catch{} });
+    dc.addEventListener('close', ()=>{ const p=this.peers.get(peerId); if(p){ p.state='offline'; this.emit('peers'); } });
+    pc.addEventListener('connectionstatechange', ()=>{
+      if(['failed','disconnected','closed'].includes(pc.connectionState)){
+        const p=this.peers.get(peerId); if(p){ p.state='offline'; this.emit('peers'); }
+      }
+    });
+  }
   async createOffer(){
     const pc=new RTCPeerConnection({iceServers:this._iceServers()});
     const dc=pc.createDataChannel('relay',{ordered:true});

@@ -2,6 +2,7 @@
 // signaling, no server), and manage per-entity read/write permissions.
 import { Store } from '../store.js';
 import { Sync } from '../sync.js';
+import { Rendezvous } from '../rendezvous.js';
 import { el, escapeHtml, ago, shortId, avatarColor, initials, toast, modal } from '../ui.js';
 import { icon } from '../icons.js';
 
@@ -17,7 +18,11 @@ export function renderPeers(root, ctx){
   const bar=el('div',{class:'tbl-toolbar'});
   const mesh=el('span',{class:'chip', html:`${icon('broadcast')} Local mesh ${Sync.meshOn?'active':'off'}`});
   const you=el('span',{class:'chip', html:`${icon('shield')} You: ${escapeHtml(Store.identity.name)}`});
-  bar.append(mesh, you, el('div',{style:'flex:1'}),
+  const rst=Rendezvous.state;
+  const rColor=rst==='online'?'var(--success)':rst==='connecting'?'var(--warning)':'var(--text-3)';
+  const rdv=el('span',{class:'chip', style:`cursor:pointer;color:${rColor}`, title:'Configure in Settings',
+    html:`${icon('link')} Rendezvous ${Rendezvous.configured()?rst:'off'}`, onclick:()=>ctx.go('settings')});
+  bar.append(mesh, you, rdv, el('div',{style:'flex:1'}),
     el('button',{class:'btn sm', html:`${icon('refresh')} Sync all`, onclick:()=>{Sync.syncAll();}}),
     el('button',{class:'btn sm primary', html:`${icon('link')} WebRTC invite`, onclick:()=>signalingModal()}));
   wrap.append(bar);

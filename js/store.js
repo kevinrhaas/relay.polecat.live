@@ -62,13 +62,17 @@ export const Store = new (class extends Emitter{
   }
 
   // ---- seed demo content ----------------------------------------------
+  // IMPORTANT: seed rows use STABLE ids + STABLE metadata (not random UUIDs
+  // or Date.now()). Every fresh install therefore shares byte-identical demo
+  // records, so when two peers sync the demo rows merge by id instead of
+  // duplicating. (Random per-device ids on identical demo rows was the cause
+  // of the "double-created records" bug.) Rows the user creates still get a
+  // real uuid() — one row, one id, deduped everywhere.
   _seed(){
-    const now = Date.now();
-    const me = this.identity.id;
-    const mk = (entity, fields, dt) => {
-      const id = uuid();
-      return [id, { id, entity, fields, _meta:{ rev:1, updatedAt:now-dt, updatedBy:me, deleted:false } }];
-    };
+    const BASE = 1735689600000;   // fixed epoch, identical on every peer
+    const by = 'seed';            // fixed author so LWW is deterministic
+    const mk = (id, entity, fields, dt) =>
+      ({ id, entity, fields, _meta:{ rev:1, updatedAt:BASE-dt, updatedBy:by, deleted:false } });
     const data = {
       entities: {
         contacts: { label:'Contacts', icon:'peers', records:{} },
@@ -79,13 +83,13 @@ export const Store = new (class extends Emitter{
       pinned: ['contacts'],
     };
     [
-      ['contacts',{name:'Ada Lovelace', role:'Engineer', email:'ada@relay.dev', status:'active'}, 8.6e6],
-      ['contacts',{name:'Alan Turing', role:'Researcher', email:'alan@relay.dev', status:'active'}, 3.2e6],
-      ['contacts',{name:'Grace Hopper', role:'Architect', email:'grace@relay.dev', status:'away'}, 6e5],
-      ['tasks',{title:'Ship P2P sync', owner:'Ada', priority:'high', done:false}, 4e6],
-      ['tasks',{title:'Design rail nav', owner:'Grace', priority:'medium', done:true}, 9e5],
-      ['assets',{name:'logo.svg', type:'image', size:'2.1kb', tags:'brand'}, 1.1e6],
-    ].forEach(([e,f,dt])=>{ const [id,rec]=mk(e,f,dt); data.entities[e].records[id]=rec; });
+      mk('seed-contact-ada',   'contacts',{name:'Ada Lovelace', role:'Engineer', email:'ada@relay.dev', status:'active'}, 8.6e6),
+      mk('seed-contact-alan',  'contacts',{name:'Alan Turing', role:'Researcher', email:'alan@relay.dev', status:'active'}, 3.2e6),
+      mk('seed-contact-grace', 'contacts',{name:'Grace Hopper', role:'Architect', email:'grace@relay.dev', status:'away'}, 6e5),
+      mk('seed-task-sync',     'tasks',{title:'Ship P2P sync', owner:'Ada', priority:'high', done:false}, 4e6),
+      mk('seed-task-nav',      'tasks',{title:'Design rail nav', owner:'Grace', priority:'medium', done:true}, 9e5),
+      mk('seed-asset-logo',    'assets',{name:'logo.svg', type:'image', size:'2.1kb', tags:'brand'}, 1.1e6),
+    ].forEach(rec=>{ data.entities[rec.entity].records[rec.id]=rec; });
     return data;
   }
 
