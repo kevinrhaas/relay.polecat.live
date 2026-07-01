@@ -35,6 +35,7 @@ Two transports, one protocol:
 |-----------|-----------|-----|
 | **Local mesh** (`BroadcastChannel`) | Automatic | Other tabs/windows of the same browser — zero config. |
 | **WebRTC data channel** | Manual copy/paste signaling | Real cross-internet P2P, **no signaling server** — you exchange one offer/answer blob over any channel (chat, email). |
+| **WebRTC + rendezvous** | Automatic | Point Relay at the optional [`/rendezvous`](rendezvous/) relay and peers in the same room auto-connect over WebRTC — no copy/paste. The relay carries only the handshake; your records still sync directly peer-to-peer. |
 
 WebRTC optionally uses a public **STUN** server purely to discover your public
 address for NAT traversal — it never relays your data. Leave it blank in Settings

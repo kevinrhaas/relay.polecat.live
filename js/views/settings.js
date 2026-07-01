@@ -2,6 +2,7 @@
 // data export / import / reset.
 import { Store } from '../store.js';
 import { Sync } from '../sync.js';
+import { Rendezvous } from '../rendezvous.js';
 import { el, escapeHtml, toast, confirmDialog, avatarColor, initials } from '../ui.js';
 import { icon } from '../icons.js';
 import { setTheme, getThemePref } from '../theme.js';
@@ -56,6 +57,28 @@ export function renderSettings(root, ctx){
     onclick:()=>{ localStorage.setItem('relay.stun', stun.value.trim()); toast('Transport updated',{kind:'ok'}); }});
   txCard.append(stunField, saveStun);
   wrap.append(txCard);
+
+  // ---- rendezvous (auto-discovery) ------------------------------------
+  const st = Rendezvous.state;
+  const stColor = st==='online'?'var(--success)':st==='connecting'?'var(--warning)':st==='error'?'var(--danger)':'var(--text-3)';
+  const rdvCard=el('div',{class:'card', style:'margin-top:16px'});
+  rdvCard.innerHTML=`<div class="section-title" style="margin-top:0">
+      <h2 style="font-size:14px">Auto-discovery (rendezvous)</h2><div class="sp"></div>
+      <span class="conn-state" style="color:${stColor}"><span class="dot" style="background:${stColor}"></span>${st}</span>
+    </div>
+    <p class="muted tiny">Optional. Point Relay at a signaling relay (see <span class="kbd">/rendezvous</span>) and peers in the same room connect automatically — no copy/paste. The relay only carries the WebRTC handshake; your records still sync directly peer-to-peer.</p>`;
+  const rurl=el('input',{class:'input', placeholder:'wss://relay-rendezvous.you.workers.dev', value:Rendezvous.url});
+  const rroom=el('input',{class:'input', placeholder:'team-polecat', value:Rendezvous.room});
+  const uf=el('div',{class:'field'}); uf.append(el('label',{text:'Rendezvous URL'}), rurl);
+  const rf=el('div',{class:'field'}); rf.append(el('label',{text:'Room'}), rroom);
+  const connected = st==='online'||st==='connecting';
+  const actionBtn = connected
+    ? el('button',{class:'btn danger', html:`${icon('x')} Disconnect`, onclick:()=>{ Rendezvous.disconnect(); toast('Left rendezvous',{kind:'ok'}); renderSettings(root,ctx); }})
+    : el('button',{class:'btn primary', html:`${icon('broadcast')} Connect`, onclick:()=>{
+        if(!rurl.value.trim()||!rroom.value.trim()){ toast('URL and room required',{kind:'err'}); return; }
+        Rendezvous.connect(rurl.value, rroom.value); toast('Connecting to rendezvous…',{kind:'ok'}); renderSettings(root,ctx); }});
+  rdvCard.append(uf, rf, actionBtn);
+  wrap.append(rdvCard);
 
   // ---- data ------------------------------------------------------------
   const dataCard=el('div',{class:'card', style:'margin-top:16px'});
