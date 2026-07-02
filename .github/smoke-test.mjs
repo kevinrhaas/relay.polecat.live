@@ -52,6 +52,21 @@ try {
   });
   const $ = (s) => page.$(s);
   const count = (s) => page.$$eval(s, (e) => e.length).catch(() => 0);
+  // Dismiss any open modal/sheet and WAIT for its overlay to actually detach.
+  // A modal's hide() drops `.show` then removes the node ~220ms later; a blind
+  // fixed wait races that under CI load and a lingering full-screen overlay
+  // then intercepts the next click. Escape first; if something still lingers,
+  // click the backdrop corner as a fallback.
+  const OVERLAYS = '.overlay, .sheet-overlay';
+  const closeModal = async () => {
+    await page.keyboard.press('Escape');
+    const gone = () => page.waitForFunction(
+      (sel) => !document.querySelector(sel), OVERLAYS, { timeout: 4000 }).then(() => true).catch(() => false);
+    if (await gone()) return;
+    const ov = await $(OVERLAYS);
+    if (ov) await ov.click({ position: { x: 4, y: 4 } }).catch(() => {});
+    await gone();
+  };
 
   console.log('Landing');
   await page.goto(`${base}/`, { waitUntil: 'networkidle', timeout: 30000 });
@@ -107,13 +122,13 @@ try {
   await check('edit-table modal (rename/delete) opens', async () => {
     await page.click('button:has-text("Edit table")'); await page.waitForTimeout(300);
     const has = !!(await page.$('.modal button:has-text("Delete table")'));
-    await page.keyboard.press('Escape'); await page.waitForTimeout(200); return has;
+    await closeModal(); return has;
   });
   await check('field (column header) modal opens', async () => {
     const th = await $('th.col-head'); if (!th) return false;
     await th.click(); await page.waitForTimeout(300);
     const has = !!(await page.$('.modal button:has-text("Delete field")'));
-    await page.keyboard.press('Escape'); await page.waitForTimeout(200); return has;
+    await closeModal(); return has;
   });
   await check('delete a table (store + UI update)', async () => {
     await page.evaluate(async () => {
@@ -185,7 +200,7 @@ try {
     if (!/\bCT$/.test(dateText)) return false;
     await page.fill('.sheet .input', 'zzzznomatch'); await page.waitForTimeout(250);
     const none = (await count('.wn-entry')) === 0;
-    await page.keyboard.press('Escape'); await page.waitForTimeout(200);
+    await closeModal();
     return none;
   });
   // Fleet contract: other polecat apps ingest js/changelog.js by extracting the
