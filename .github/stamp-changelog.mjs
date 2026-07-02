@@ -38,7 +38,14 @@ for(const e of CHANGELOG){ e.date = fmtCT(e.ts); }
 const original = fs.readFileSync(FILE, 'utf8');
 const header = original.slice(0, original.indexOf('export const CHANGELOG'));
 
-const s = (v) => JSON.stringify(v);
+// Single-quoted JS string literals with apostrophes escaped as \' — matching
+// the fleet convention (see manager.polecat.live). Fleet changelog importers
+// sanitize JS→JSON by replacing ' with ", which corrupts apostrophes inside
+// double-quoted strings; single quotes with \'-escapes survive that transform.
+const s = (v) => "'" + String(v)
+  .replace(/\\/g, '\\\\')
+  .replace(/'/g, "\\'")
+  .replace(/\n/g, '\\n') + "'";
 const entry = (e) => `  {
     v: ${e.v},
     title: ${s(e.title)},

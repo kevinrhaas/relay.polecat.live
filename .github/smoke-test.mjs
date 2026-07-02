@@ -188,6 +188,32 @@ try {
     await page.keyboard.press('Escape'); await page.waitForTimeout(200);
     return none;
   });
+  // Fleet contract: other polecat apps ingest js/changelog.js by extracting the
+  // CHANGELOG array literal and converting it to strict JSON (see manager's
+  // ingest.js). That converter only requotes SINGLE-quoted strings, so a
+  // double-quoted entry (or a // inside a string) makes it unparseable. Guard
+  // it here with the same logic so a bad changelog can never ship.
+  await check('changelog.js is ingestible by the fleet importer', async () => {
+    const src = fs.readFileSync(path.join(ROOT, 'js/changelog.js'), 'utf8');
+    const m = src.match(/CHANGELOG\s*=\s*\[/); if (!m) return false;
+    const start = m.index + m[0].length - 1;
+    let depth = 0, inStr = null, esc = false, lit = null;
+    for (let i = start; i < src.length; i++) {
+      const c = src[i];
+      if (inStr) { if (esc) esc = false; else if (c === '\\') esc = true; else if (c === inStr) inStr = null; continue; }
+      if (c === '"' || c === "'" || c === '`') { inStr = c; continue; }
+      if (c === '[') depth++;
+      else if (c === ']') { depth--; if (depth === 0) { lit = src.slice(start, i + 1); break; } }
+    }
+    if (!lit) return false;
+    const json = lit
+      .replace(/\/\/[^\n]*$/gm, '')
+      .replace(/,\s*([}\]])/g, '$1')
+      .replace(/([{,]\s*)([A-Za-z_$][A-Za-z0-9_$]*)\s*:/g, '$1"$2":')
+      .replace(/'((?:\\.|[^'\\])*)'/g, (_, s) => '"' + s.replace(/\\'/g, "'").replace(/"/g, '\\"') + '"');
+    const arr = JSON.parse(json); // throws (→ check fails) if not ingestible
+    return Array.isArray(arr) && arr.length > 0 && arr.every((e) => e.v && e.title && e.ts);
+  });
 
   console.log('Settings');
   await page.evaluate(() => {
