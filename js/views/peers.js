@@ -28,9 +28,12 @@ export function renderPeers(root, ctx){
       html:`${icon('link')} Auto-connect ${rst==='online'?'on':'…'}`, onclick:()=>ctx.go('settings')}));
   }
   bar.append(el('div',{style:'flex:1'}),
-    el('button',{class:'btn sm', html:`${icon('refresh')} Sync all`, onclick:()=>{Sync.syncAll();}}),
+    el('button',{class:'btn sm ghost', title:'Sync is automatic — use only if something looks out of date',
+      html:`${icon('refresh')} Force resync`, onclick:()=>{Sync.syncAll();toast('Resynced with all peers',{kind:'ok'});}}),
     el('button',{class:'btn sm primary', html:`${icon('link')} WebRTC invite`, onclick:()=>signalingModal()}));
   wrap.append(bar);
+  wrap.append(el('div',{class:'muted tiny', style:'margin:-6px 0 10px',
+    html:'Changes sync automatically with connected peers — you don\'t need to press anything.'}));
 
   // Merge live peers with the durable known-peers registry so definitions
   // (and their permissions) persist across reloads/deploys — even offline.
@@ -86,8 +89,7 @@ function peerCard(p, ctx){
   const actions=el('div',{style:'display:flex;gap:8px;margin-top:12px'});
   if(p.online){
     actions.append(
-      el('button',{class:'btn sm', style:'flex:1', html:`${icon('refresh')} Sync`,
-        onclick:()=>{ Sync.syncPeer(p.id); toast('Synced with '+p.name,{kind:'ok'}); }}),
+      el('span',{class:'muted tiny', style:'flex:1;align-self:center', text:'Connected · syncing live'}),
       el('button',{class:'btn sm', html:`${icon('chat')} Message`,
         onclick:()=>ctx.go('messages')}));
   }else{
