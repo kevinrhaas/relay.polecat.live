@@ -1,0 +1,109 @@
+name: Hourly self-improvement
+
+# Runs Claude Code on a schedule to build the next roadmap item (or, every
+# 3rd run, do a general polish pass), gate it behind a smoke test, and open a
+# PR for review. It never pushes to main directly — you merge (deploy is on
+# merge to main). Pause any time by disabling this workflow or removing the
+# CLAUDE_CODE_OAUTH_TOKEN secret.
+on:
+  schedule:
+    - cron: '0 * * * *'   # top of every hour (UTC); GitHub may delay under load
+  workflow_dispatch: {}    # run manually from the Actions tab
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: self-improve
+  cancel-in-progress: false
+
+jobs:
+  improve:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # One improvement in flight at a time: if an auto PR is already open and
+      # awaiting review, skip this run so we don't pile up or clobber it.
+      - name: Skip if an improvement PR is already open
+        id: guard
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          open=$(gh pr list --head auto/self-improve --state open --json number --jq 'length')
+          if [ "$open" != "0" ]; then
+            echo "An improvement PR is already open — skipping this run."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Install Claude Code + test browser
+        if: steps.guard.outputs.skip == 'false'
+        run: |
+          npm install -g @anthropic-ai/claude-code
+          npm install -D playwright
+          npx playwright install --with-deps chromium
+
+      - name: Prepare branch (fresh from main)
+        if: steps.guard.outputs.skip == 'false'
+        run: |
+          git config user.name  "relay-bot"
+          git config user.email "bot@users.noreply.github.com"
+          git fetch origin main
+          git checkout -B auto/self-improve origin/main
+
+      - name: Pick mode
+        if: steps.guard.outputs.skip == 'false'
+        id: mode
+        run: |
+          if [ $(( ${{ github.run_number }} % 3 )) -eq 0 ]; then
+            echo "mode=polish"  >> "$GITHUB_OUTPUT"
+          else
+            echo "mode=feature" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Run Claude Code
+        if: steps.guard.outputs.skip == 'false'
+        env:
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          MODE: ${{ steps.mode.outputs.mode }}
+        run: |
+          PROMPT="$(cat .github/self-improve-prompt.md)
+          ---
+          This run's mode is: ${MODE}"
+          claude -p "$PROMPT" \
+            --dangerously-skip-permissions \
+            --max-turns 80 \
+            --allowedTools "Bash,Edit,Write,Read,Glob,Grep" || echo "claude exited non-zero (continuing to smoke test)"
+
+      - name: Smoke test (app must load with no errors)
+        if: steps.guard.outputs.skip == 'false'
+        run: node .github/smoke-test.mjs
+
+      - name: Commit + open PR
+        if: steps.guard.outputs.skip == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          MODE: ${{ steps.mode.outputs.mode }}
+        run: |
+          if [ -z "$(git status --porcelain)" ]; then
+            echo "No changes produced this run."; exit 0
+          fi
+          git add -A
+          git commit -m "auto: self-improvement (${MODE})" \
+            -m "Automated hourly improvement. Review the diff before merging."
+          git push -f origin auto/self-improve
+          gh pr view auto/self-improve >/dev/null 2>&1 || \
+            gh pr create --base main --head auto/self-improve \
+              --title "Automated improvements" \
+              --body "Hourly self-improvement run (\`${MODE}\` mode). The app passed the smoke test. Review before merging; merging deploys to production."

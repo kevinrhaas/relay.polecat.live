@@ -32,6 +32,7 @@ export const ICONS = {
   filter:    'M3 5h18l-7 8v6l-4-2v-4L3 5Z',
   menu:      'M4 6h16M4 12h16M4 18h16',
   chat:      'M21 12a8 8 0 0 1-8 8H7l-4 2 1.3-4.2A8 8 0 1 1 21 12ZM8 11h.01M12 11h.01M16 11h.01',
+  sparkle:   'M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9L12 3ZM19 15l.9 2.1L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.9L19 15Z',
 };
 
 export function icon(name, cls){

@@ -14,6 +14,7 @@ import { renderActivity, pushLogLine } from './views/activity.js';
 import { renderSettings, importWorkspace, exportWorkspace } from './views/settings.js';
 import { renderMessages } from './views/messages.js';
 import { renderAdmin } from './views/admin.js';
+import { openWhatsNew, hasUnread } from './views/whatsnew.js';
 
 const TITLES = { home:'Home', table:'Tables', messages:'Messages', peers:'Peers', activity:'Activity', admin:'Admin', settings:'Settings' };
 const RENDERERS = { home:renderHome, table:renderTable, messages:renderMessages, peers:renderPeers, activity:renderActivity, admin:renderAdmin, settings:renderSettings };
@@ -65,8 +66,11 @@ function buildTopbar(){
     html:icon(getThemePref()==='light'?'moon':'sun'),
     onclick:()=>{ const next=document.documentElement.getAttribute('data-theme')==='light'?'dark':'light';
       setTheme(next); themeBtn.innerHTML=icon(next==='light'?'moon':'sun'); }});
+  const whatsNewBtn=el('button',{class:'btn icon ghost wn-btn', title:"What's new",
+    html:icon('sparkle'), onclick:()=>{ openWhatsNew(); whatsNewBtn.classList.remove('has-unread'); }});
+  if(hasUnread()) whatsNewBtn.classList.add('has-unread');
   const newBtn=el('button',{class:'btn sm primary', html:`${icon('plus')} New`, onclick:()=>newEntity()});
-  bar.append(avatars, presence, themeBtn, newBtn);
+  bar.append(avatars, presence, whatsNewBtn, themeBtn, newBtn);
   return bar;
 }
 

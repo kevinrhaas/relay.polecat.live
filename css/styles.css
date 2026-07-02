@@ -429,6 +429,33 @@ a.link{color:var(--brand-b);text-decoration:none}
 a.link:hover{text-decoration:underline}
 .hide{display:none!important}
 
+/* ---- what's new (slide-in sheet) -------------------------------------- */
+.sheet-overlay{position:fixed;inset:0;z-index:1300;background:rgba(5,5,10,.5);
+  backdrop-filter:blur(3px);opacity:0;pointer-events:none;transition:.24s;
+  display:flex;justify-content:flex-end}
+.sheet-overlay.show{opacity:1;pointer-events:auto}
+.sheet{width:min(440px,100%);height:100%;background:var(--surface);
+  border-left:1px solid var(--border);box-shadow:var(--shadow);display:flex;
+  flex-direction:column;transform:translateX(100%);transition:transform .24s cubic-bezier(.2,.8,.2,1)}
+.sheet-overlay.show .sheet{transform:none}
+.sheet-head{display:flex;align-items:center;gap:12px;padding:20px 20px 12px;border-bottom:1px solid var(--border)}
+.sheet-head h3{margin:0;font-size:16px}
+.sheet-head .btn{margin-left:auto}
+.sheet-body{flex:1;min-height:0;overflow:auto;padding:4px 20px 24px}
+.wn-entry{padding:16px 0;border-bottom:1px solid var(--border)}
+.wn-entry:last-child{border-bottom:0}
+.wn-top{display:flex;align-items:center;gap:10px}
+.wn-top b{font-size:14.5px}
+.wn-badge{flex:0 0 auto;font-family:var(--mono);font-size:11px;font-weight:700;color:#fff;
+  padding:2px 8px;border-radius:999px;background:linear-gradient(135deg,var(--brand-b),var(--consensus))}
+.wn-date{font-size:11.5px;color:var(--text-3);margin:6px 0 0}
+.wn-entry ul{margin:8px 0 0;padding-left:18px;display:flex;flex-direction:column;gap:5px}
+.wn-entry li{font-size:13px;color:var(--text-2);line-height:1.5}
+.wn-btn{position:relative}
+.wn-btn.has-unread::after{content:"";position:absolute;top:5px;right:5px;width:8px;height:8px;
+  border-radius:50%;background:var(--brand-c);box-shadow:0 0 0 2px var(--surface),0 0 8px var(--brand-c)}
+@media(max-width:720px){ .sheet{width:100%} }
+
 /* ---- invite gate ------------------------------------------------------- */
 .gate{position:relative;z-index:1;height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
 .gate-card{width:min(440px,100%);background:color-mix(in srgb,var(--surface) 90%,transparent);
