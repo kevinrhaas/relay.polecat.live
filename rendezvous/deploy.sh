@@ -14,6 +14,14 @@ echo "▸ Deploying Relay rendezvous to Cloudflare Workers…"
 if [ -z "${CLOUDFLARE_API_TOKEN:-}" ]; then
   # ensure we're logged in (opens a browser once)
   npx --yes wrangler whoami >/dev/null 2>&1 || npx --yes wrangler login
+elif [ -z "${CLOUDFLARE_ACCOUNT_ID:-}" ]; then
+  # A scoped API token can't read /memberships, so wrangler can't auto-detect
+  # the account. Require the account id up front to avoid a confusing 9106.
+  echo "✗ CLOUDFLARE_API_TOKEN is set but CLOUDFLARE_ACCOUNT_ID is not."
+  echo "  A scoped token can't look up your account, so set it explicitly:"
+  echo "    export CLOUDFLARE_ACCOUNT_ID=<your account id>   # dashboard → Workers & Pages → Account ID"
+  echo "  then re-run ./deploy.sh"
+  exit 1
 fi
 
 # deploy and capture output
