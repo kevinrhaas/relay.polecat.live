@@ -9,6 +9,7 @@
 // -----------------------------------------------------------------------
 import { Sync } from './sync.js';
 import { Store } from './store.js';
+import { DEFAULT_RENDEZVOUS } from './config.js';
 
 const K_URL = 'relay.rdv.url';
 const K_ROOM = 'relay.rdv.room';
@@ -24,8 +25,9 @@ export const Rendezvous = new (class extends Emitter{
     super();
     this.state = 'off';           // off | connecting | online | error
     this.ws = null;
-    this.url = localStorage.getItem(K_URL) || '';
-    this.room = localStorage.getItem(K_ROOM) || '';
+    // per-user config wins; otherwise fall back to the site default (config.js)
+    this.url = localStorage.getItem(K_URL) || DEFAULT_RENDEZVOUS.url || '';
+    this.room = localStorage.getItem(K_ROOM) || DEFAULT_RENDEZVOUS.room || '';
     this.pcs = new Map();         // remoteId -> { pc, pending:[] }
     this._retry = null;
     this._want = false;           // user intent to stay connected
@@ -33,9 +35,13 @@ export const Rendezvous = new (class extends Emitter{
 
   configured(){ return !!(this.url && this.room); }
 
-  // auto-connect on boot if the user previously configured + enabled it
+  // auto-connect on boot: if the user enabled it, OR a site default exists and
+  // the user hasn't explicitly turned it off
   autostart(){
-    if(this.configured() && localStorage.getItem('relay.rdv.on')==='1') this.connect();
+    if(!this.configured()) return;
+    const on = localStorage.getItem('relay.rdv.on');
+    if(on==='0') return;                                  // user opted out
+    if(on==='1' || DEFAULT_RENDEZVOUS.url) this.connect(); // user opted in, or baked-in default
   }
 
   save(url, room){

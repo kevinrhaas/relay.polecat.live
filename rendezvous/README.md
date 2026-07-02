@@ -17,6 +17,15 @@ never touches it.
 
 ## Deploy
 
+One command (handles login, deploy, health check, and prints a ready setup link):
+
+```bash
+cd rendezvous
+./deploy.sh
+```
+
+Or manually:
+
 ```bash
 cd rendezvous
 npx wrangler login        # once

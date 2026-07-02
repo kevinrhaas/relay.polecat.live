@@ -134,6 +134,17 @@ export const Access = new (class {
       history.replaceState(null, '', clean);
       if(!r.ok) return { granted:this.isGranted(), inviteError:r.reason };
     }
+    // setup link: ?rdv=<wss url>&room=<name> configures + enables auto-discovery
+    const rdv = params.get('rdv');
+    if(rdv){
+      try{
+        localStorage.setItem('relay.rdv.url', rdv);
+        if(params.get('room')) localStorage.setItem('relay.rdv.room', params.get('room'));
+        localStorage.setItem('relay.rdv.on', '1');
+      }catch{}
+      params.delete('rdv'); params.delete('room');
+      history.replaceState(null, '', location.pathname + (params.toString()?`?${params}`:'') + location.hash);
+    }
     return { granted:this.isGranted() };
   }
 })();
