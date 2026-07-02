@@ -194,6 +194,29 @@ export const Sync = new (class extends Emitter{
     this.emit('perms');
     if(mode==='read'&&val) this._pushEntity(entity);
   }
+  // 'all' | 'none' | 'custom' — summarizes a peer's per-entity read+write
+  // grid into the single state the compact peer card shows.
+  sharingState(uid){
+    const ents=Store.entityNames();
+    if(!ents.length) return 'none';
+    let allOn=true, allOff=true;
+    for(const e of ents){
+      const r=this.can(uid,'read',e), w=this.can(uid,'write',e);
+      if(r||w) allOff=false;
+      if(!r||!w) allOn=false;
+    }
+    return allOn?'all':allOff?'none':'custom';
+  }
+  // bulk-grant/revoke read+write on every entity — the "Everything"/"Nothing"
+  // shortcuts on the compact peer card. Logs one summary line, not one per cell.
+  setAllPerms(uid, val){
+    const p=this.permFor(uid);
+    Store.entityNames().forEach(e=>{ p.read[e]=val; p.write[e]=val; });
+    this._savePerms();
+    this._perm(`${val?'granted':'revoked'} read+write on everything · ${this.nameForUid(uid)}`);
+    this.emit('perms');
+    if(val) Store.entityNames().forEach(e=>this._pushEntity(e));
+  }
   // called with a session id from the sync paths; translate to uid
   _readableEntities(sessionId){
     if(sessionId==='*') return Store.entityNames(); // advertise everything; enforcement happens on push

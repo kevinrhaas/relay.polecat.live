@@ -3,6 +3,16 @@
 // user-visible change (bump `v`, short `title`, today's date, 1–4 `items`).
 export const CHANGELOG = [
   {
+    v: 11,
+    title: 'Calmer Peers page',
+    date: 'Jul 2, 2026, 11:15 PM CT',
+    items: [
+      'Each peer now shows one simple control — Everything / Custom / Nothing — instead of a full grid of toggles.',
+      '"Custom" opens a per-table sharing grid only when you need it.',
+      'Online and saved/offline peers are now grouped separately, so the page stays scannable as your network grows.',
+    ],
+  },
+  {
     v: 10,
     title: 'Landing page refresh',
     date: 'Jul 2, 2026, 10:05 PM CT',

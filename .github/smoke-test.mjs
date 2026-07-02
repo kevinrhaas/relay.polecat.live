@@ -112,6 +112,44 @@ try {
     return await page.$$eval('.msg .text', (m) => m.some((x) => x.textContent.includes('smoke hello')));
   });
 
+  console.log('Peers — progressive sharing controls');
+  await check('seed a known offline peer', async () => {
+    await page.evaluate(async () => {
+      const { Sync } = await import('/js/sync.js');
+      Sync._rememberPeer('smoke-peer-uid', 'Smoke Peer');
+    });
+    await page.goto(`${base}/app/`, { waitUntil: 'networkidle', timeout: 30000 });
+    await page.waitForTimeout(800);
+    await (await $('.rail-item[data-sec="peers"]')).click(); await page.waitForTimeout(300);
+    return await page.$$eval('.peer .peer-head b', (bs) => bs.some((b) => b.textContent === 'Smoke Peer'));
+  });
+  await check('sharing summary defaults to "Everything"', async () => {
+    const card = await $('.peer'); if (!card) return false;
+    const btns = await card.$$('.sharing-seg button');
+    if (btns.length !== 3) return false;
+    return await btns[0].evaluate((b) => b.classList.contains('on') && b.textContent.trim() === 'Everything');
+  });
+  await check('clicking "Nothing" revokes all sharing for that peer', async () => {
+    const btns = await (await $('.peer')).$$('.sharing-seg button');
+    await btns[2].click(); await page.waitForTimeout(300);
+    const btns2 = await (await $('.peer')).$$('.sharing-seg button');
+    const nothingOn = await btns2[2].evaluate((b) => b.classList.contains('on') && b.textContent.trim() === 'Nothing');
+    const canRead = await page.evaluate(async () => {
+      const { Sync } = await import('/js/sync.js'); return Sync.can('smoke-peer-uid', 'read', 'tasks');
+    });
+    return nothingOn && canRead === false;
+  });
+  await check('"Custom" expands the per-table grid and toggles persist', async () => {
+    const btns = await (await $('.peer')).$$('.sharing-seg button');
+    await btns[1].click(); await page.waitForTimeout(300);
+    const rows = await (await $('.peer')).$$('.perm-grid .perm-row');
+    if (!rows.length) return false;
+    const toggles = await (await $('.peer')).$$('.perm-grid .perm-row:first-child .toggle');
+    await toggles[0].click(); await page.waitForTimeout(300);
+    const btns2 = await (await $('.peer')).$$('.sharing-seg button');
+    return await btns2[1].evaluate((b) => b.classList.contains('on'));
+  });
+
   console.log('What\'s new');
   await check('what\'s new panel opens, lists entries, searches', async () => {
     await (await $('.wn-btn')).click(); await page.waitForTimeout(300);

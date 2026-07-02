@@ -6,6 +6,11 @@ import { Rendezvous } from '../rendezvous.js';
 import { el, escapeHtml, ago, shortId, avatarColor, initials, toast, modal } from '../ui.js';
 import { icon } from '../icons.js';
 
+// which peer cards have "Manage sharing" expanded — persists across
+// re-renders of this view (e.g. after toggling a permission) but resets on
+// navigation away, which is fine since it's just a UI convenience.
+const expanded=new Set();
+
 export function renderPeers(root, ctx){
   root.innerHTML='';
   const wrap=el('div',{class:'wrap'});
@@ -48,12 +53,25 @@ export function renderPeers(root, ctx){
       <div><b>No peers yet.</b><br>Open Relay in another browser tab to see local-mesh discovery,
       or send a WebRTC invite to connect across the internet.</div>`}));
   }else{
-    const grid=el('div',{class:'grid peer-grid'});
-    list.forEach(p=>grid.append(peerCard(p, ctx)));
-    wrap.append(grid);
+    const isOnline=p=>p.online;
+    const onlineList=list.filter(isOnline), offlineList=list.filter(p=>!isOnline(p));
+    if(onlineList.length){
+      wrap.append(el('div',{class:'muted tiny', style:'margin:14px 0 8px;text-transform:uppercase;letter-spacing:.04em', text:`Online — ${onlineList.length}`}));
+      const grid=el('div',{class:'grid peer-grid'});
+      onlineList.forEach(p=>grid.append(peerCard(p, ctx)));
+      wrap.append(grid);
+    }
+    if(offlineList.length){
+      wrap.append(el('div',{class:'muted tiny', style:'margin:18px 0 8px;text-transform:uppercase;letter-spacing:.04em', text:`Saved · offline — ${offlineList.length}`}));
+      const grid=el('div',{class:'grid peer-grid'});
+      offlineList.forEach(p=>grid.append(peerCard(p, ctx)));
+      wrap.append(grid);
+    }
   }
   root.append(wrap);
 }
+
+const SHARING_LABEL={ all:'Everything', custom:'Custom', none:'Nothing' };
 
 function peerCard(p, ctx){
   const c=el('div',{class:'card peer'});
@@ -68,23 +86,50 @@ function peerCard(p, ctx){
     <span class="conn-state ${state}"><span class="dot"></span>${p.state}</span>`;
   c.append(head);
 
-  // permissions — keyed by the STABLE uid so they survive reloads
   const uid=p.uid||p.id;
-  const perms=el('div');
-  Store.entityNames().forEach(ent=>{
-    const e=Store.entity(ent);
-    const row=el('div',{class:'perm-row'});
-    row.innerHTML=`<span class="en">${escapeHtml(e.label)}</span>`;
-    ['read','write'].forEach(mode=>{
-      const on=Sync.can(uid,mode,ent);
-      const t=el('button',{class:'toggle'+(on?' on':''), title:`${mode==='read'?'Peer can read this from you':'Peer can write this to you'}`,
-        onclick:()=>{ Sync.setPerm(uid,mode,ent,!Sync.can(uid,mode,ent)); renderPeers(document.querySelector('#view'), ctx); }});
-      const lbl=el('span',{class:'muted tiny', style:'width:38px;text-align:right', text:mode});
-      row.append(lbl, t);
-    });
-    perms.append(row);
+  const rerender=()=>renderPeers(document.querySelector('#view'), ctx);
+
+  // ---- compact sharing summary: ONE control, three states --------------
+  // "Everything"/"Nothing" apply a bulk change directly; "Custom" opens the
+  // per-table grid below (whether the state is already mixed, or the user
+  // wants to hand-pick tables starting from a uniform state).
+  const sharing=el('div',{class:'sharing-row'});
+  const state0=Sync.sharingState(uid);
+  const isOpen=expanded.has(uid);
+  const activeKey=isOpen?'custom':state0;
+  const seg=el('div',{class:'seg sharing-seg'});
+  ['all','custom','none'].forEach(key=>{
+    const label=key==='custom'?`${SHARING_LABEL[key]} ${icon('chevron')}`:SHARING_LABEL[key];
+    const btn=el('button',{class:(key===activeKey?'on':'')+(key==='custom'?' seg-custom':''), html:label,
+      title:key==='all'?'Share every table, both ways':key==='none'?'Share nothing with this peer':'Choose per table below'});
+    if(key==='custom') btn.classList.toggle('open',isOpen);
+    btn.onclick=()=>{
+      if(key==='all'||key==='none'){ Sync.setAllPerms(uid,key==='all'); expanded.delete(uid); }
+      else{ isOpen?expanded.delete(uid):expanded.add(uid); }
+      rerender();
+    };
+    seg.append(btn);
   });
-  c.append(perms);
+  sharing.append(el('span',{class:'muted tiny', text:'Sharing'}), seg);
+  c.append(sharing);
+
+  if(isOpen){
+    const perms=el('div',{class:'perm-grid'});
+    Store.entityNames().forEach(ent=>{
+      const e=Store.entity(ent);
+      const row=el('div',{class:'perm-row'});
+      row.innerHTML=`<span class="en">${escapeHtml(e.label)}</span>`;
+      ['read','write'].forEach(mode=>{
+        const on=Sync.can(uid,mode,ent);
+        const t=el('button',{class:'toggle'+(on?' on':''), title:`${mode==='read'?'Peer can read this from you':'Peer can write this to you'}`,
+          onclick:()=>{ Sync.setPerm(uid,mode,ent,!Sync.can(uid,mode,ent)); rerender(); }});
+        const lbl=el('span',{class:'muted tiny', style:'width:38px;text-align:right', text:mode});
+        row.append(lbl, t);
+      });
+      perms.append(row);
+    });
+    c.append(perms);
+  }
 
   const actions=el('div',{style:'display:flex;gap:8px;margin-top:12px'});
   if(p.online){
@@ -96,7 +141,7 @@ function peerCard(p, ctx){
     actions.append(
       el('span',{class:'muted tiny', style:'flex:1;align-self:center', text:'Saved peer · permissions kept'}),
       el('button',{class:'btn sm ghost', html:`${icon('trash')} Forget`,
-        onclick:()=>{ Sync.forgetPeer(uid); toast('Peer forgotten',{kind:'ok'}); renderPeers(document.querySelector('#view'), ctx); }}));
+        onclick:()=>{ Sync.forgetPeer(uid); toast('Peer forgotten',{kind:'ok'}); rerender(); }}));
   }
   c.append(actions);
   return c;
