@@ -3,6 +3,17 @@
 // user-visible change (bump `v`, short `title`, today's date, 1–4 `items`).
 export const CHANGELOG = [
   {
+    v: 14,
+    title: 'Sync locations: S3-compatible storage',
+    date: 'Jul 3, 2026, 12:10 AM CT',
+    items: [
+      'Settings → Advanced → "Sync locations" now has an S3-compatible option — Cloudflare R2, Backblaze B2, AWS S3, MinIO, or anything else that speaks the S3 API.',
+      'Enter an endpoint, bucket, and a scoped access key; Relay signs requests itself (no SDK, no server) and keeps a live snapshot in the bucket.',
+      'Same convergence as every other sync location: it loads whatever changed on connect and re-writes a fresh snapshot after every local edit.',
+      'See docs/sync-providers.md for sign-up steps and the one CORS rule the bucket needs.',
+    ],
+  },
+  {
     v: 13,
     title: 'Screen-reader polish',
     date: 'Jul 2, 2026, 11:58 PM CT',

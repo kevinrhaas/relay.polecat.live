@@ -2,7 +2,7 @@
 import { Store } from './store.js';
 import { Sync } from './sync.js';
 import { Rendezvous } from './rendezvous.js';
-import { LocalFolder } from './storage/index.js';
+import { LocalFolder, S3Sync } from './storage/index.js';
 import { Access } from './access.js';
 import { applyTheme, getThemePref, setTheme } from './theme.js';
 import { buildRail, SECTIONS } from './shell.js';
@@ -34,6 +34,7 @@ async function boot(){
   Sync.start();
   Rendezvous.autostart();
   LocalFolder.autostart();
+  S3Sync.autostart();
 
   const app=$('#app');
   rail=el('nav',{id:'rail','aria-label':'Navigation'});
@@ -159,6 +160,8 @@ function wireEvents(){
   Rendezvous.on('state', ()=>{ if(['peers','settings'].includes(currentSection)) render(); });
   LocalFolder.on('state', ()=>{ if(currentSection==='settings') render(); });
   LocalFolder.on('synced', ()=>{ if(currentSection==='settings') render(); });
+  S3Sync.on('state', ()=>{ if(currentSection==='settings') render(); });
+  S3Sync.on('synced', ()=>{ if(currentSection==='settings') render(); });
   Sync.on('log', (line)=>{ if(currentSection==='activity') pushLogLine(line); });
   Sync.on('chat', (m)=>{
     if(m && m.from!==Sync.selfId && currentSection!=='messages'){ unread++; refreshBadges(); }

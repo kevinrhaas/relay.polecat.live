@@ -3,7 +3,7 @@
 import { Store } from '../store.js';
 import { Sync } from '../sync.js';
 import { Rendezvous } from '../rendezvous.js';
-import { LocalFolder } from '../storage/index.js';
+import { LocalFolder, S3Sync } from '../storage/index.js';
 import { Access } from '../access.js';
 import { el, escapeHtml, toast, confirmDialog, avatarColor, initials, ago } from '../ui.js';
 import { icon } from '../icons.js';
@@ -120,8 +120,52 @@ export function renderSettings(root, ctx){
   lfBlock.append(lfRow);
   adv.append(lfBlock);
 
+  // -- S3-compatible sync (sync locations, phase 2) --
+  adv.append(el('div',{class:'divider'}));
+  const s3Block=el('div',{class:'s3-block'});
+  const s3Status = { connected:['connected','var(--success)'], error:['error','var(--danger)'],
+    unsupported:['unsupported','var(--text-3)'], off:['off','var(--text-3)'] }[S3Sync.state] || [S3Sync.state,'var(--text-3)'];
+  s3Block.append(el('div',{class:'section-title', style:'margin:4px 0 4px', html:`
+    <h2 style="font-size:13px">Sync locations · S3-compatible</h2><div class="sp"></div>
+    <span class="conn-state" style="color:${s3Status[1]}"><span class="dot" style="background:${s3Status[1]}"></span>${s3Status[0]}</span>`}));
+  s3Block.append(el('p',{class:'muted tiny', html:`Point Relay at any S3-compatible bucket (Cloudflare R2, Backblaze B2, AWS S3...) — a snapshot syncs there on every change, signed
+    right from this browser (no server). See <span class="kbd">docs/sync-providers.md</span> for signup steps and the CORS rule the bucket needs.
+    ${S3Sync.isSupported()?'':' Needs a browser with Web Crypto support.'}`}));
+  if(S3Sync.state==='connected'){
+    const s3Row=el('div',{style:'display:flex;gap:10px;flex-wrap:wrap;align-items:center'});
+    s3Row.append(
+      el('span',{class:'chip', text:S3Sync.cfg.bucket}),
+      el('span',{class:'muted tiny', text: S3Sync.lastSync?`synced ${ago(S3Sync.lastSync)}`:'syncing…'}),
+      el('button',{class:'btn danger sm', html:`${icon('x')} Disconnect`, onclick:()=>{ S3Sync.disconnect(); renderSettings(root,ctx); }}));
+    s3Block.append(s3Row);
+  }else{
+    const cfg = S3Sync.cfg || {};
+    const epIn=el('input',{class:'input', placeholder:'https://<accountid>.r2.cloudflarestorage.com', value:cfg.endpoint||''});
+    const bkIn=el('input',{class:'input', placeholder:'my-relay-bucket', value:cfg.bucket||''});
+    const rgIn=el('input',{class:'input', placeholder:'auto', value:cfg.region||''});
+    const pfIn=el('input',{class:'input', placeholder:'(optional) team-workspace', value:cfg.prefix||''});
+    const akIn=el('input',{class:'input', placeholder:'access key id', value:cfg.accessKeyId||''});
+    const skIn=el('input',{class:'input', type:'password', placeholder:'secret access key', value:cfg.secretAccessKey||''});
+    const grid=el('div',{style:'display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px 12px'});
+    const field=(label,input)=>{ const f=el('div',{class:'field',style:'margin:0'}); f.append(el('label',{text:label}), input); return f; };
+    grid.append(
+      (()=>{ const f=field('Endpoint', epIn); f.style.gridColumn='1 / -1'; return f; })(),
+      field('Bucket', bkIn), field('Region', rgIn),
+      field('Access key ID', akIn), field('Secret access key', skIn),
+      (()=>{ const f=field('Prefix / folder', pfIn); f.style.gridColumn='1 / -1'; return f; })());
+    s3Block.append(grid);
+    s3Block.append(el('button',{class:'btn primary sm', style:'margin-top:4px', html:`${icon('broadcast')} Connect bucket`, disabled:!S3Sync.isSupported(),
+      onclick:async()=>{
+        const oks3=await S3Sync.connect({ endpoint:epIn.value.trim(), bucket:bkIn.value.trim(), region:rgIn.value.trim()||'auto',
+          prefix:pfIn.value.trim(), accessKeyId:akIn.value.trim(), secretAccessKey:skIn.value.trim() });
+        if(oks3) toast('Bucket connected — synced',{kind:'ok'});
+        renderSettings(root,ctx);
+      }}));
+  }
+  adv.append(s3Block);
+
   // keep it open if the user already configured it, so state is visible
-  if(Rendezvous.configured()||connected||LocalFolder.state!=='off') adv.open=true;
+  if(Rendezvous.configured()||connected||LocalFolder.state!=='off'||S3Sync.state!=='off') adv.open=true;
   wrap.append(adv);
 
   // ---- data ------------------------------------------------------------

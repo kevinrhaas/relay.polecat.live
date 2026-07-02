@@ -16,14 +16,13 @@ when you finish something, move it to **Done** with the date; add discoveries to
   (last-writer-wins; deletes use tombstones; entity/field ops sync).
 
 ## Now (highest value first)
-1. **Sync locations — remaining adapters.** Phase 1 (local folder) is done —
-   see Done below. Next adapters, same `js/storage/` contract (`isSupported`,
-   `connect`/`reconnect`/`disconnect`/`autostart`, `state`, snapshot merge via
-   `Store.import(json,{merge:true})`, debounced write via `Store.export()`):
-   1. **S3-compatible** (Cloudflare R2 / Backblaze B2 / AWS S3) via signed
-      `fetch` (SigV4) — key id + secret + bucket + endpoint.
-   2. **WebDAV** (Nextcloud, etc.) — URL + user + pass.
-   3. **Dropbox / Google Drive** (OAuth) — heavier; do last.
+1. **Sync locations — remaining adapters.** Phase 1 (local folder) and phase 2
+   (S3-compatible) are done — see Done below. Next adapters, same
+   `js/storage/` contract (`isSupported`, `connect`/`reconnect`/`disconnect`/
+   `autostart`, `state`, snapshot merge via `Store.import(json,{merge:true})`,
+   debounced write via `Store.export()`):
+   1. **WebDAV** (Nextcloud, etc.) — URL + user + pass.
+   2. **Dropbox / Google Drive** (OAuth) — heavier; do last.
    Settings → Advanced already hosts the "Sync locations" section; add each
    adapter as its own sub-card there. See `docs/sync-providers.md` for the
    signup/keys help to link from the UI. Note the client-side-credentials caveat
@@ -52,6 +51,13 @@ when you finish something, move it to **Done** with the date; add discoveries to
 - Multiple workspaces / workspace switcher.
 
 ## Done
+- 2026-07-02 — Sync locations, phase 2: S3-compatible object storage (Cloudflare
+  R2, Backblaze B2, AWS S3, MinIO...) via signed `fetch` requests (AWS SigV4,
+  computed locally with Web Crypto — no SDK, no server). Settings → Advanced →
+  "Sync locations" gained an S3-compatible sub-card (endpoint, bucket, region,
+  access key id, secret, optional prefix); same connect-on-load /
+  debounced-write-on-change contract as local folder sync, so it converges the
+  same way. `docs/sync-providers.md` updated with the exact UI location.
 - 2026-07-02 — Accessibility: icon-only buttons (modal close, delete row, pin,
   icon pickers, remove invite) now carry `aria-label`/`title` so screen readers
   announce their purpose instead of just "button"; pin/unpin state is announced

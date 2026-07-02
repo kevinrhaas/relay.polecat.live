@@ -27,10 +27,13 @@ still merges by last-writer-wins, so it plays nicely with live P2P sync.
 ---
 
 ## 1. S3-compatible object storage (best free/cheap cloud option)
-Relay talks to any S3-compatible API from the browser using signed requests.
-You need: **endpoint**, **region**, **bucket**, **access key id**, **secret**.
-You must enable **CORS** on the bucket (allow your Relay origin, methods
-GET/PUT/HEAD).
+Relay talks to any S3-compatible API from the browser using signed requests
+(AWS SigV4, computed locally with Web Crypto — no SDK). Available now in
+**Settings → Advanced → Sync locations → S3-compatible**. You need:
+**endpoint**, **bucket**, **access key id**, **secret** (region defaults to
+`auto`, which Cloudflare R2 accepts; set a real region for AWS S3/B2 if
+needed). You must enable **CORS** on the bucket (allow your Relay origin,
+methods GET/PUT/HEAD).
 
 | Provider | Free tier | Sign up → get keys | Notes |
 |---|---|---|---|

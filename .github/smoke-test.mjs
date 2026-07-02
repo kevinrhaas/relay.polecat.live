@@ -222,6 +222,56 @@ try {
     return !!(await details.$('.lf-block button:has-text("Choose folder")'));
   });
 
+  await page.evaluate(() => {
+    // stub fetch with an in-memory bucket so the S3-compatible sync-location
+    // flow (signed requests) can be driven headlessly (no real bucket in CI)
+    const objects = {};
+    window.__fakeS3Objects = objects;
+    const realFetch = window.fetch.bind(window);
+    window.fetch = async (url, opts = {}) => {
+      const u = new URL(url, location.href);
+      if (!u.hostname.includes('fake-s3-smoke')) return realFetch(url, opts);
+      if (!opts.headers || !opts.headers['Authorization']) return new Response('missing signature', { status: 403 });
+      const method = (opts.method || 'GET').toUpperCase();
+      if (method === 'PUT') { objects[u.pathname] = opts.body; return new Response('', { status: 200 }); }
+      if (method === 'GET') { const b = objects[u.pathname]; return b != null ? new Response(b, { status: 200 }) : new Response('', { status: 404 }); }
+      return new Response('', { status: 405 });
+    };
+  });
+  await check('S3 sync: connect signs a request and writes a snapshot', async () => {
+    let details = await $('details.adv'); if (!details) return false;
+    if (!(await details.evaluate((d) => d.open))) { await (await details.$('summary')).click(); await page.waitForTimeout(250); }
+    const inputs = await details.$$('.s3-block input'); if (inputs.length < 6) return false;
+    const [epIn, bkIn, , akIn, skIn] = inputs;
+    await epIn.fill('https://fake-s3-smoke.test');
+    await bkIn.fill('smoke-bucket');
+    await akIn.fill('AKIAFAKESMOKE');
+    await skIn.fill('sekritFakeKey123');
+    const btn = await details.$('.s3-block button:has-text("Connect bucket")'); if (!btn) return false;
+    await btn.click(); await page.waitForTimeout(400);   // renderSettings() rebuilds the DOM — re-query below
+    details = await $('details.adv'); if (!details) return false;
+    const chip = await details.$('.s3-block .chip');
+    const chipText = chip ? (await chip.evaluate((c) => c.textContent)).trim() : '';
+    const wrote = await page.evaluate(() => Object.values(window.__fakeS3Objects).some((v) => (v || '').includes('"entities"')));
+    return chipText === 'smoke-bucket' && wrote;
+  });
+  await check('S3 sync: local edit re-writes the snapshot', async () => {
+    await page.evaluate(() => { for (const k in window.__fakeS3Objects) window.__fakeS3Objects[k] = ''; });
+    await page.evaluate(async () => {
+      const { Store } = await import('/js/store.js');
+      Store.createEntity('Smoke S3 Entity');
+    });
+    await page.waitForTimeout(1800);
+    return await page.evaluate(() => Object.values(window.__fakeS3Objects).some((v) => (v || '').includes('Smoke S3 Entity')));
+  });
+  await check('S3 sync: disconnect', async () => {
+    let details = await $('details.adv'); if (!details) return false;
+    const btn = await details.$('.s3-block button:has-text("Disconnect")'); if (!btn) return false;
+    await btn.click(); await page.waitForTimeout(300);   // renderSettings() rebuilds the DOM — re-query below
+    details = await $('details.adv'); if (!details) return false;
+    return !!(await details.$('.s3-block button:has-text("Connect bucket")'));
+  });
+
   if (errors.length) { console.error('\nConsole/page errors:\n' + errors.join('\n')); failed = true; }
 } catch (e) {
   console.error('SUITE CRASH: ' + e.message); failed = true;

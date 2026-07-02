@@ -19,10 +19,12 @@
 //   autostart()             — silently resume at boot if still permitted
 //   on(event, fn)           — 'state' | 'synced'
 //
-// Today: local folder (File System Access API), no credentials. Planned
-// next (see ROADMAP.md): S3-compatible, WebDAV, Dropbox/Drive.
+// Today: local folder (File System Access API, no credentials) and
+// S3-compatible (signed fetch, SigV4). Planned next (see ROADMAP.md):
+// WebDAV, Dropbox/Drive.
 // -----------------------------------------------------------------------
 import { LocalFolder } from './local-folder.js';
+import { S3Sync } from './s3.js';
 
-export const ADAPTERS = [LocalFolder];
-export { LocalFolder };
+export const ADAPTERS = [LocalFolder, S3Sync];
+export { LocalFolder, S3Sync };
