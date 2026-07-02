@@ -5,6 +5,22 @@ import { icon } from '../icons.js';
 
 const SEEN_KEY = 'relay.whatsnew.seen';
 
+// Format an ISO-8601 UTC timestamp to a friendly Central-Time string.
+// Falls back to a legacy `date` string, then to '' — never fabricates a time.
+function fmtWhen(e){
+  if(e.ts){
+    const d = new Date(e.ts);
+    if(!isNaN(d)){
+      try{
+        return d.toLocaleString('en-US',{ timeZone:'America/Chicago',
+          month:'short', day:'numeric', year:'numeric',
+          hour:'numeric', minute:'2-digit' }) + ' CT';
+      }catch{ return d.toISOString(); }
+    }
+  }
+  return e.date || '';
+}
+
 export function hasUnread(){
   let seen = 0; try{ seen = parseInt(localStorage.getItem(SEEN_KEY)||'0',10); }catch{}
   return LATEST_VERSION > seen;
@@ -37,7 +53,7 @@ export function openWhatsNew(){
       entry.innerHTML = `
         <div class="wn-top"><span class="wn-badge">v${e.v}</span>
           <b>${escapeHtml(e.title)}</b></div>
-        <div class="wn-date">${escapeHtml(e.date)}</div>
+        <div class="wn-date">${escapeHtml(fmtWhen(e))}</div>
         <ul>${e.items.map(i=>`<li>${escapeHtml(i)}</li>`).join('')}</ul>`;
       list.append(entry);
     });

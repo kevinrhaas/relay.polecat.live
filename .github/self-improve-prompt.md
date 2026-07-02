@@ -44,8 +44,9 @@ an Admin area (`js/views/admin.js`). Read `README.md` and `ROADMAP.md` first.
 - **Update `ROADMAP.md`**: move what you did to "Done" with today's date; add any
   follow-ups you discovered to "Next".
 - **Add a `CHANGELOG` entry** in `js/changelog.js` for anything user-visible: a
-  new object at the TOP of the array with a bumped `v`, a short `title`, today's
-  date/time, and 1–4 plain-language `items`. This feeds the in-app "What's new"
+  new object at the TOP of the array with a bumped `v`, a short `title`, `ts: ''`
+  (an EMPTY string — the workflow stamps the real ship time; never write a date
+  yourself), and 1–4 plain-language `items`. This feeds the in-app "What's new"
   panel.
 
 ## Taste bar

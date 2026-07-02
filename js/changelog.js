@@ -1,11 +1,14 @@
 // Changelog powering the in-app "What's new" panel. Newest first.
 // The hourly self-improvement loop appends a new entry at the TOP for each
-// user-visible change (bump `v`, short `title`, today's date, 1–4 `items`).
+// user-visible change (bump `v`, short `title`, 1–4 `items`). Leave `ts` as an
+// empty string on the new entry — the workflow stamps it with the real commit
+// time so timestamps are never fabricated. `ts` is an ISO-8601 UTC string; the
+// What's new panel formats it to the reader's local time (shown as CT).
 export const CHANGELOG = [
   {
     v: 15,
     title: 'Sync locations: WebDAV',
-    date: 'Jul 3, 2026, 12:35 AM CT',
+    ts: '2026-07-02T13:15:04Z',
     items: [
       'Settings → Advanced → "Sync locations" now has a WebDAV option — Nextcloud, ownCloud, or any self-hosted WebDAV server.',
       'Enter a server URL, username, and app password; Relay authenticates itself (no SDK, no server) and keeps a live snapshot there.',
@@ -16,7 +19,7 @@ export const CHANGELOG = [
   {
     v: 14,
     title: 'Sync locations: S3-compatible storage',
-    date: 'Jul 3, 2026, 12:10 AM CT',
+    ts: '2026-07-02T12:38:11Z',
     items: [
       'Settings → Advanced → "Sync locations" now has an S3-compatible option — Cloudflare R2, Backblaze B2, AWS S3, MinIO, or anything else that speaks the S3 API.',
       'Enter an endpoint, bucket, and a scoped access key; Relay signs requests itself (no SDK, no server) and keeps a live snapshot in the bucket.',
@@ -27,7 +30,7 @@ export const CHANGELOG = [
   {
     v: 13,
     title: 'Screen-reader polish',
-    date: 'Jul 2, 2026, 11:58 PM CT',
+    ts: '2026-07-02T11:51:41Z',
     items: [
       'Icon-only buttons (close, delete row, pin, icon pickers, remove invite) now announce what they do to screen readers, not just "button".',
       'Pin/unpin now reports its actual state instead of a static label.',
@@ -36,7 +39,7 @@ export const CHANGELOG = [
   {
     v: 12,
     title: 'Sync locations: local folder',
-    date: 'Jul 2, 2026, 11:55 PM CT',
+    ts: '2026-07-02T10:14:53Z',
     items: [
       'Settings → Advanced → "Sync locations" — point Relay at a folder on your device (no credentials) and it keeps a live snapshot there.',
       'Reopening the app (or a peer opening theirs) pulls in whatever changed, even if no one was online at the same time.',
@@ -47,7 +50,7 @@ export const CHANGELOG = [
   {
     v: 11,
     title: 'Calmer Peers page',
-    date: 'Jul 2, 2026, 11:15 PM CT',
+    ts: '2026-07-02T08:11:40Z',
     items: [
       'Each peer now shows one simple control — Everything / Custom / Nothing — instead of a full grid of toggles.',
       '"Custom" opens a per-table sharing grid only when you need it.',
@@ -57,7 +60,7 @@ export const CHANGELOG = [
   {
     v: 10,
     title: 'Landing page refresh',
-    date: 'Jul 2, 2026, 10:05 PM CT',
+    ts: '2026-07-02T06:24:53Z',
     items: [
       'The front page now actually shows what Relay can do: invite-only access, live P2P chat, and on-the-fly table/field management.',
       'A "what\'s new" highlight links straight into the app.',
@@ -67,7 +70,7 @@ export const CHANGELOG = [
   {
     v: 9,
     title: 'What\'s new panel',
-    date: 'Jul 2, 2026, 9:40 PM CT',
+    ts: '2026-07-02T04:04:16Z',
     items: [
       'This panel — a searchable, slide-in changelog with a version badge and timestamp for every update.',
       'A dot appears on the ✨ button when there\'s something you haven\'t seen yet.',
@@ -77,7 +80,7 @@ export const CHANGELOG = [
   {
     v: 8,
     title: 'Autonomous improvement + roadmap',
-    date: 'Jul 2, 2026, 9:20 PM CT',
+    ts: '2026-07-02T04:04:16Z',
     items: [
       'Relay now improves itself: an hourly job builds the next roadmap item (or does a polish pass) and opens a reviewed pull request.',
       'Added a public roadmap and provider help for upcoming file-system "sync locations".',
@@ -86,7 +89,7 @@ export const CHANGELOG = [
   {
     v: 7,
     title: 'Manage your tables and fields',
-    date: 'Jul 2, 2026, 8:55 PM CT',
+    ts: '2026-07-02T02:50:33Z',
     items: [
       'Rename a table, change its icon, or delete it from "Edit table".',
       'Click any column header to rename or delete that field across all rows.',
@@ -96,7 +99,7 @@ export const CHANGELOG = [
   {
     v: 6,
     title: 'Sync just works now',
-    date: 'Jul 2, 2026, 8:30 PM CT',
+    ts: '2026-07-02T02:30:59Z',
     items: [
       'Everything syncs automatically: on connect it pulls the whole workspace down, and edits push live.',
       'Removed the manual Sync buttons — the top bar now shows "N online · live" so you can trust it.',
@@ -106,7 +109,7 @@ export const CHANGELOG = [
   {
     v: 5,
     title: 'Auto-connect across the internet',
-    date: 'Jul 2, 2026, 7:10 PM CT',
+    ts: '2026-07-02T01:10:09Z',
     items: [
       'Optional rendezvous relay (a free Cloudflare Worker) lets invited people auto-connect — no copy/paste handshake.',
       'One-command deploy and one-click setup links; it only brokers the connection, never your data.',
@@ -115,7 +118,7 @@ export const CHANGELOG = [
   {
     v: 4,
     title: 'Direct messages + durable peers',
-    date: 'Jul 1, 2026, 11:30 PM CT',
+    ts: '2026-07-01T23:21:36Z',
     items: [
       '1:1 private message threads alongside the broadcast room.',
       'Your peers and their permissions now survive reloads and updates.',
@@ -125,7 +128,7 @@ export const CHANGELOG = [
   {
     v: 3,
     title: 'Messaging + invite-only access',
-    date: 'Jul 1, 2026, 10:05 PM CT',
+    ts: '2026-07-01T22:41:22Z',
     items: [
       'Live peer-to-peer chat.',
       'Invite-only gate with signed invite links and an Admin area to mint them.',
@@ -134,7 +137,7 @@ export const CHANGELOG = [
   {
     v: 2,
     title: 'Landing page + auto-discovery',
-    date: 'Jul 1, 2026, 6:40 PM CT',
+    ts: '2026-07-01T22:24:55Z',
     items: [
       'A proper marketing landing page at the front door.',
       'Local-mesh + WebRTC peer discovery; fixed duplicate demo records on sync.',
@@ -143,7 +146,7 @@ export const CHANGELOG = [
   {
     v: 1,
     title: 'Relay is born',
-    date: 'Jul 1, 2026, 5:00 PM CT',
+    ts: '2026-07-01T21:57:49Z',
     items: [
       'A serverless, peer-to-peer collaborative table: UUID-keyed dynamic JSON rows that sync directly between browsers.',
       'Collapsible rail navigation, dark/light themes, export/import.',
