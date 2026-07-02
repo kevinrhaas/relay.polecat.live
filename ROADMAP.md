@@ -37,7 +37,16 @@ when you finish something, move it to **Done** with the date; add discoveries to
    a secondary left panel; selecting a row opens an animated **record editor in a
    right-hand side panel** (field-by-field, typed inputs) instead of only inline
    cell editing. Panels resizable, readable, and responsive (stack on mobile).
-3. **Keep the public site sexy.** Periodically refresh the landing page (`/`) to
+3. **Simplify the Peers page (calm it down).** The per-peer × per-entity
+   read/write toggle matrix becomes overwhelming as tables grow — it reads as a
+   daunting wall of switches. Use **progressive disclosure**: each peer card
+   shows a compact summary (avatar, name, connection status, and ONE control —
+   e.g. "Sharing: Everything / Custom / Nothing"); the full per-entity read/write
+   grid moves behind a "Manage sharing" expander or modal, shown only when the
+   summary is "Custom". Make cards compact and scannable, clearly separate
+   online vs saved/offline peers, and keep motion subtle. Goal: the page feels
+   calm at a glance, with detail on demand.
+4. **Keep the public site sexy.** Periodically refresh the landing page (`/`) to
    showcase current features — updated screenshots, subtle animations, short
    loops/GIFs, feature highlights. It should always reflect what the app can do.
 
