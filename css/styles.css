@@ -335,9 +335,14 @@ tr:hover .row-actions{opacity:1}
 .conn-connecting{color:var(--warning)}
 @keyframes pulse{50%{opacity:.35}}
 
-.sharing-row{display:flex;align-items:center;justify-content:space-between;gap:10px}
-.sharing-seg button{padding:5px 11px;font-size:11.5px;display:inline-flex;align-items:center;gap:4px}
-.sharing-seg .seg-custom svg{width:12px;height:12px;transition:transform .18s}
+/* Sharing control: label above a full-width 3-way segment. Buttons flex
+   equally so no state ("Nothing") ever clips, whatever the card width. */
+.sharing-row{display:flex;flex-direction:column;align-items:stretch;gap:7px}
+.sharing-row>.muted{font-size:10.5px;letter-spacing:.05em;text-transform:uppercase}
+.sharing-seg{display:flex;width:100%}
+.sharing-seg button{flex:1 1 0;min-width:0;justify-content:center;
+  padding:6px 8px;font-size:11.5px;display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
+.sharing-seg .seg-custom svg{width:12px;height:12px;flex:0 0 auto;transition:transform .18s}
 .sharing-seg .seg-custom.open svg{transform:rotate(90deg)}
 
 .perm-grid{animation:expand .2s ease}
