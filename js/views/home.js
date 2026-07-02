@@ -4,6 +4,16 @@ import { Sync } from '../sync.js';
 import { el, ago, avatarColor, initials, escapeHtml, toast } from '../ui.js';
 import { icon } from '../icons.js';
 
+// Lets a clickable `<div role="button">` card be activated from the keyboard,
+// same as a native button (Enter or Space), without triggering page scroll.
+function cardKeydown(fn){
+  return (ev)=>{
+    if(ev.target!==ev.currentTarget) return; // ignore keys bubbling up from a nested control (e.g. the pin button)
+    if(ev.key!=='Enter' && ev.key!==' ') return;
+    ev.preventDefault(); fn(ev);
+  };
+}
+
 export function renderHome(root, ctx){
   const me = Store.identity;
   const hour = new Date().getHours();
@@ -46,7 +56,7 @@ export function renderHome(root, ctx){
     ['Import workspace','Load entities from a .json export','upload','var(--brand-c)',()=>ctx.importWorkspace()],
   ];
   actions.forEach(([t,p,ic,col,fn])=>{
-    const c=el('div',{class:'card hover qa', onclick:fn});
+    const c=el('div',{class:'card hover qa', role:'button', tabindex:'0', onclick:fn, onkeydown:cardKeydown(fn)});
     c.innerHTML=`<div class="qicon" style="background:linear-gradient(135deg,${col},color-mix(in srgb,${col} 55%,#000))">${icon(ic)}</div>
       <div><b>${t}</b><p>${p}</p></div>`;
     qa.append(c);
@@ -72,7 +82,8 @@ export function renderHome(root, ctx){
 function entityCard(key, ctx, pinned, at){
   const e = Store.entity(key); if(!e) return el('div');
   const n = Store.count(key);
-  const c = el('div',{class:'card hover recent', onclick:()=>ctx.go('table',{entity:key})});
+  const go = ()=>ctx.go('table',{entity:key});
+  const c = el('div',{class:'card hover recent', role:'button', tabindex:'0', onclick:go, onkeydown:cardKeydown(go)});
   const pinLabel=()=>Store.isPinned(key)?'Unpin from home':'Pin to home';
   const pin = el('button',{class:'pin-btn'+(Store.isPinned(key)?' on':''), title:pinLabel(), 'aria-label':pinLabel(),
     'aria-pressed':String(Store.isPinned(key)),

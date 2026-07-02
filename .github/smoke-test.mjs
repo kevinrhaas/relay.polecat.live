@@ -91,6 +91,13 @@ try {
     await (await $('.rail-item[data-sec="table"]')).click(); await page.waitForTimeout(200);
     return !!(delOk && pinOk);
   });
+  await check('home quick-action card is keyboard-activatable (Enter)', async () => {
+    await (await $('.rail-item[data-sec="home"]')).click(); await page.waitForTimeout(300);
+    const card = page.locator('.qa', { hasText: 'Open a table' });
+    if (!(await card.getAttribute('tabindex'))) return false;
+    await card.focus(); await page.keyboard.press('Enter'); await page.waitForTimeout(300);
+    return !!(await $('.rail-item[data-sec="table"].active'));
+  });
   await check('edit a cell (persists to store)', async () => {
     const cell = await $('tbody tr td[contenteditable]'); if (!cell) return false;
     await cell.click(); await page.keyboard.type('smoke-value'); await page.keyboard.press('Tab');

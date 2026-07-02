@@ -6,6 +6,15 @@
 // What's new panel formats it to the reader's local time (shown as CT).
 export const CHANGELOG = [
   {
+    v: 17,
+    title: 'Home cards now work from the keyboard',
+    ts: '2026-07-02T16:36:27.331Z',
+    items: [
+      'The quick-action tiles and "your tables" cards on Home can now be reached with Tab and activated with Enter or Space.',
+      'They also show a clear focus ring, matching the rest of the app.',
+    ],
+  },
+  {
     v: 16,
     title: 'Landing page: sync locations',
     ts: '2026-07-02T13:28:08.306Z',

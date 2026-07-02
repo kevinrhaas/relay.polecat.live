@@ -226,6 +226,7 @@ body{
 }
 .card.hover:hover{border-color:var(--brand-b);transform:translateY(-2px);
   box-shadow:var(--shadow-sm)}
+.card.hover:focus-visible{outline:none;border-color:var(--brand-b);box-shadow:var(--ring)}
 
 .grid{display:grid;gap:16px}
 .section-title{display:flex;align-items:center;gap:10px;margin:30px 0 14px}

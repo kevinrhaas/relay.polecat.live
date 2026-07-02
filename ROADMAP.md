@@ -35,6 +35,8 @@ when you finish something, move it to **Done** with the date; add discoveries to
    loops/GIFs, feature highlights. It should always reflect what the app can do.
 
 ## Next
+- Bump the pin/star button's hit area (currently ~24px) closer to a 44px touch
+  target on the Home "your tables" cards.
 - Per-thread unread counts in Messages.
 - Column types / simple validation (text, number, bool, date, select) with nicer editors.
 - Sort & filter rows; search within a table.
@@ -49,6 +51,11 @@ when you finish something, move it to **Done** with the date; add discoveries to
 - Multiple workspaces / workspace switcher.
 
 ## Done
+- 2026-07-02 — Accessibility: Home's clickable cards (quick actions, "your
+  tables" entries) are now reachable and activatable from the keyboard —
+  `role="button"`, `tabindex="0"`, Enter/Space handling, and a focus-visible
+  ring. Previously these were `<div onclick>` with no way to reach or trigger
+  them without a mouse/touch.
 - 2026-07-02 — Landing page: added a "Bring your own backup" feature card
   covering the local-folder / S3 / WebDAV sync locations, refreshed the hero
   "what's new" pill and meta description to match (previously only mentioned
