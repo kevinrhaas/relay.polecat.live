@@ -49,8 +49,8 @@ an Admin area (`js/views/admin.js`). Read `README.md` and `ROADMAP.md` first.
 - **Add a `CHANGELOG` entry** in `js/changelog.js` for anything user-visible: a
   new object at the TOP of the array with a bumped `v`, a short `title`, `ts: ''`
   (an EMPTY string — the workflow stamps the real ship time; never write a date
-  yourself), and 1–4 plain-language `items`. This feeds the in-app "What's new"
-  panel.
+  yourself), and 1–4 plain-language `items`. Do NOT add a `date` field — the
+  workflow derives it from `ts`. This feeds the in-app "What's new" panel.
 
 ## Taste bar
 Think like a senior product engineer with strong design sense. Ship something

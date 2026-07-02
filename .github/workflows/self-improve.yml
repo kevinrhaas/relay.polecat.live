@@ -70,13 +70,14 @@ jobs:
             --max-turns 80 \
             --allowedTools "Bash,Edit,Write,Read,Glob,Grep" || echo "claude exited non-zero (continuing to smoke test)"
 
-      # Stamp the newest changelog entry with the real time. The agent leaves
-      # `ts: ''` on any new top entry; we fill it here so timestamps reflect
-      # when the change actually shipped and can never be fabricated.
-      - name: Stamp changelog timestamp
+      # Stamp the changelog with real time: fill the new top entry's empty `ts`
+      # with the ship time, and derive every entry's `date` alias from its `ts`.
+      # Timestamps reflect when the change actually shipped and can never be
+      # fabricated. See .github/stamp-changelog.mjs.
+      - name: Stamp changelog timestamps
         run: |
           if git diff --name-only | grep -q '^js/changelog.js$'; then
-            node -e "const fs=require('fs');const f='js/changelog.js';let s=fs.readFileSync(f,'utf8');const ts=new Date().toISOString();s=s.replace(/ts:\s*''/, \"ts: '\"+ts+\"'\");fs.writeFileSync(f,s);console.log('Stamped top changelog entry: '+ts);"
+            node .github/stamp-changelog.mjs
           else
             echo "changelog.js unchanged; nothing to stamp."
           fi
