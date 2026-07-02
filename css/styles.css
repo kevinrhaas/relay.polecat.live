@@ -271,8 +271,9 @@ body{
 .recent b{font-size:13.5px}
 .recent .meta{font-size:11.5px;color:var(--text-3);display:flex;gap:10px}
 
-.pin-btn{color:var(--text-3);background:none;border:0;cursor:pointer;padding:4px;
-  border-radius:6px;transition:.15s}
+.pin-btn{color:var(--text-3);background:none;border:0;cursor:pointer;padding:12px;
+  margin-left:auto;border-radius:8px;transition:.15s;
+  display:inline-flex;align-items:center;justify-content:center}
 .pin-btn:hover{color:var(--brand-b);background:var(--surface-2)}
 .pin-btn.on{color:var(--warning)}
 .pin-btn svg{width:16px;height:16px}

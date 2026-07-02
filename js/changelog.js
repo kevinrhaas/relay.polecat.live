@@ -10,6 +10,16 @@
 // .github/stamp-changelog.mjs regenerates every `date` from its `ts`.
 export const CHANGELOG = [
   {
+    v: 19,
+    title: 'Easier-to-tap star on Home',
+    ts: '2026-07-02T22:57:33.306Z',
+    date: 'Jul 2, 2026, 5:57 PM CT',
+    items: [
+      'The pin/star on each "your tables" card is bigger and easier to tap, especially on a phone.',
+      'It now sits flush against the right edge of the card instead of crowding the table name.',
+    ],
+  },
+  {
     v: 18,
     title: 'Sync locations: Dropbox',
     ts: '2026-07-02T17:36:28.172Z',

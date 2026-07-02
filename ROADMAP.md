@@ -33,8 +33,6 @@ when you finish something, move it to **Done** with the date; add discoveries to
    loops/GIFs, feature highlights. It should always reflect what the app can do.
 
 ## Next
-- Bump the pin/star button's hit area (currently ~24px) closer to a 44px touch
-  target on the Home "your tables" cards.
 - Per-thread unread counts in Messages.
 - Column types / simple validation (text, number, bool, date, select) with nicer editors.
 - Sort & filter rows; search within a table.
@@ -49,6 +47,20 @@ when you finish something, move it to **Done** with the date; add discoveries to
 - Multiple workspaces / workspace switcher.
 
 ## Done
+- 2026-07-02 — CI reliability: the hourly smoke suite was silently dialing out
+  to the real, live production rendezvous room on every run (the app
+  auto-joins the baked-in default room on boot — see `js/config.js`), merging
+  in shared peer data and re-broadcasting each run's never-cleaned-up fixture
+  entities right back into it. Once a fixture name landed in the shared room,
+  every later run's `Store.createEntity()` for that same name collided with
+  itself, which is what was intermittently failing CI (4 of the last 7 hourly
+  runs). `.github/smoke-test.mjs` now stubs `WebSocket` so the suite never
+  touches the live relay — hermetic and deterministic regardless of the
+  runner's network. Also deleted the one stray fixture entity my local
+  repro had synced into the shared room while diagnosing this.
+- 2026-07-02 — Bumped the pin/star button's hit area on Home's "your tables"
+  cards from ~24px to 40px and right-aligned it flush with the card edge
+  (previously it trailed directly after the label with no separation).
 - 2026-07-02 — Sync locations, phase 4: Dropbox via OAuth 2.0 + PKCE — click
   "Connect Dropbox" with just an app key (no client secret, ever) and approve
   once; Relay handles the redirect, token exchange, and silent refresh from

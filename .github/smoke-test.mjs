@@ -40,13 +40,27 @@ try {
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 860 } });
   // pre-grant the invite gate so the app boots in CI
   await ctx.addInitScript(`try{localStorage.setItem('relay.access',JSON.stringify({grantedAt:Date.now(),via:'ci'}));}catch(e){}`);
+  // The app auto-joins the baked-in default rendezvous room on boot (see
+  // js/config.js) — that's the real, LIVE, shared production room. A runner
+  // with internet egress would otherwise merge real peer data into the page
+  // under test (and broadcast every fixture entity this suite creates right
+  // back into that shared room). Stub WebSocket so rendezvous never actually
+  // dials out; Rendezvous._open() already handles a failed connection
+  // gracefully (state:'error', no console noise), so the suite stays hermetic
+  // and deterministic regardless of the runner's network.
+  await ctx.addInitScript(() => {
+    window.WebSocket = class {
+      constructor(){ setTimeout(() => { this.onerror && this.onerror(new Event('error')); this.onclose && this.onclose({ code: 1006 }); }, 0); }
+      send(){} close(){} addEventListener(){} removeEventListener(){}
+    };
+  });
   const page = await ctx.newPage();
   page.on('pageerror', (e) => errors.push('pageerror: ' + e.message));
   page.on('console', (m) => {
     if (m.type() !== 'error') return;
     const t = m.text();
-    // The rendezvous relay is optional and external; a failed WebSocket to it
-    // (offline sandbox, relay blip) is benign and must not gate a deploy.
+    // Belt-and-suspenders: a network hiccup unrelated to rendezvous (now
+    // stubbed above) still shouldn't gate a deploy.
     if (/WebSocket connection to .*rendezvous/i.test(t) || /net::ERR_/.test(t)) return;
     errors.push('console: ' + t);
   });
