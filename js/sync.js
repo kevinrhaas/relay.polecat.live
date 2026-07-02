@@ -116,6 +116,7 @@ export const Sync = new (class extends Emitter{
 
   // ---- peer registry ---------------------------------------------------
   _seePeer(id, name, transport, offers, uid){
+    const isNew = !this.peers.has(id);
     const p = this.peers.get(id) || { id, transport };
     p.name = name || p.name || id.slice(0,6);
     p.transport = transport;
@@ -126,6 +127,14 @@ export const Sync = new (class extends Emitter{
     this.peers.set(id, p);
     if(p.uid) this._rememberPeer(p.uid, p.name);
     this.emit('peers');
+    // On first sight of a peer this session, immediately sync both ways so
+    // opening the app "pulls down everything" without a manual Sync click.
+    if(isNew) setTimeout(()=>this._autoSyncPeer(id), 150);
+  }
+  _autoSyncPeer(peerId){
+    const p=this.peers.get(peerId); if(!p) return;
+    this._pushTo(peerId, p.transport);                                   // send them our shared data
+    this._reply(peerId, p.transport, { kind:'sync-req', entities:null }); // ask for theirs
   }
   _peerUid(sessionId){ return this.peers.get(sessionId)?.uid || sessionId; }
 
