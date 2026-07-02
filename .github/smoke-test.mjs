@@ -162,8 +162,57 @@ try {
   });
 
   console.log('Settings');
+  await page.evaluate(() => {
+    // stub the File System Access API with an in-memory folder so the
+    // local-folder sync-location flow can be driven headlessly (no native
+    // OS picker in CI)
+    const files = {};
+    window.__fakeDirFiles = files;
+    window.showDirectoryPicker = async () => ({
+      name: 'smoke-folder',
+      queryPermission: async () => 'granted',
+      requestPermission: async () => 'granted',
+      getFileHandle: async (name, opts) => {
+        if (!(name in files)) {
+          if (!(opts && opts.create)) throw new Error('NotFoundError');
+          files[name] = '';
+        }
+        return {
+          getFile: async () => ({ text: async () => files[name] }),
+          createWritable: async () => ({ write: async (d) => { files[name] = d; }, close: async () => {} }),
+        };
+      },
+    });
+  });
   await (await $('.rail-item[data-sec="settings"]')).click(); await page.waitForTimeout(300);
   await check('advanced (rendezvous) disclosure present', async () => !!(await $('details.adv')));
+  await check('local folder sync: connect writes a snapshot', async () => {
+    let details = await $('details.adv'); if (!details) return false;
+    if (!(await details.evaluate((d) => d.open))) { await (await details.$('summary')).click(); await page.waitForTimeout(250); }
+    const btn = await details.$('.lf-block button:has-text("Choose folder")'); if (!btn) return false;
+    await btn.click(); await page.waitForTimeout(400);   // renderSettings() rebuilds the DOM — re-query below
+    details = await $('details.adv'); if (!details) return false;
+    const chip = await details.$('.lf-block .chip');
+    const chipText = chip ? (await chip.evaluate((c) => c.textContent)).trim() : '';
+    const wrote = await page.evaluate(() => (window.__fakeDirFiles['relay-workspace.json'] || '').includes('"entities"'));
+    return chipText === 'smoke-folder' && wrote;
+  });
+  await check('local folder sync: local edit re-writes the snapshot', async () => {
+    await page.evaluate(() => { window.__fakeDirFiles['relay-workspace.json'] = ''; });
+    await page.evaluate(async () => {
+      const { Store } = await import('/js/store.js');
+      Store.createEntity('Smoke Sync Entity');
+    });
+    await page.waitForTimeout(1800);
+    return await page.evaluate(() => (window.__fakeDirFiles['relay-workspace.json'] || '').includes('Smoke Sync Entity'));
+  });
+  await check('local folder sync: disconnect', async () => {
+    let details = await $('details.adv'); if (!details) return false;
+    const btn = await details.$('.lf-block button:has-text("Disconnect")'); if (!btn) return false;
+    await btn.click(); await page.waitForTimeout(300);   // renderSettings() rebuilds the DOM — re-query below
+    details = await $('details.adv'); if (!details) return false;
+    return !!(await details.$('.lf-block button:has-text("Choose folder")'));
+  });
 
   if (errors.length) { console.error('\nConsole/page errors:\n' + errors.join('\n')); failed = true; }
 } catch (e) {

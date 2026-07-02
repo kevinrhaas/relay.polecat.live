@@ -16,22 +16,18 @@ when you finish something, move it to **Done** with the date; add discoveries to
   (last-writer-wins; deletes use tombstones; entity/field ops sync).
 
 ## Now (highest value first)
-1. **Sync locations (file-system snapshot sync).** Let a user point Relay at a
-   storage location that holds a full workspace snapshot, so anyone can pull the
-   latest even when no peer is online. Pluggable adapter interface
-   (`js/storage/`); each adapter reads/writes one JSON snapshot (the existing
-   export format) and merges via LWW on load, then writes on change (debounced).
-   Build in this order:
-   1. **Local folder** via the File System Access API — *no credentials*. Pro
-      tip to surface in the UI: point it at a folder your Dropbox/Google
-      Drive/iCloud desktop app already syncs → free cloud sync, no keys.
-   2. **S3-compatible** (Cloudflare R2 / Backblaze B2 / AWS S3) via signed
+1. **Sync locations — remaining adapters.** Phase 1 (local folder) is done —
+   see Done below. Next adapters, same `js/storage/` contract (`isSupported`,
+   `connect`/`reconnect`/`disconnect`/`autostart`, `state`, snapshot merge via
+   `Store.import(json,{merge:true})`, debounced write via `Store.export()`):
+   1. **S3-compatible** (Cloudflare R2 / Backblaze B2 / AWS S3) via signed
       `fetch` (SigV4) — key id + secret + bucket + endpoint.
-   3. **WebDAV** (Nextcloud, etc.) — URL + user + pass.
-   4. **Dropbox / Google Drive** (OAuth) — heavier; do last.
-   Settings → Advanced hosts the config. See `docs/sync-providers.md` for the
+   2. **WebDAV** (Nextcloud, etc.) — URL + user + pass.
+   3. **Dropbox / Google Drive** (OAuth) — heavier; do last.
+   Settings → Advanced already hosts the "Sync locations" section; add each
+   adapter as its own sub-card there. See `docs/sync-providers.md` for the
    signup/keys help to link from the UI. Note the client-side-credentials caveat
-   in the UI. "Public key shareable" = a read-only snapshot others can pull.
+   in the UI.
 2. **Tree / side-panel table navigation.** A DBeaver-style but *sexier* browse
    experience: a collapsible tree of entities (and, expandable, their fields) in
    a secondary left panel; selecting a row opens an animated **record editor in a
@@ -56,6 +52,13 @@ when you finish something, move it to **Done** with the date; add discoveries to
 - Multiple workspaces / workspace switcher.
 
 ## Done
+- 2026-07-02 — Sync locations, phase 1: local folder sync via the File System
+  Access API (no credentials). Pluggable adapter interface in `js/storage/`;
+  Settings → Advanced → "Sync locations" to connect a folder, which loads its
+  snapshot on connect (LWW merge) and writes a fresh one on every local change
+  (debounced), so a workspace stays backed up / reachable even with no peers
+  online — point it at a Dropbox/Drive/iCloud-synced folder for free cross-
+  device backup.
 - 2026-07-02 — Simplified the Peers page: compact per-peer "Sharing: Everything / Custom / Nothing" control replaces the always-visible per-entity toggle grid, which now lives behind "Custom"; online/offline peers grouped separately.
 - 2026-07-02 — Landing page refresh: copy now reflects messaging, invite-only access, and table/field management; added a "what's new" highlight pill and subtle scroll-reveal motion.
 - 2026-07-02 — "What's new" changelog panel (slide-in, searchable, CT timestamps, mobile).

@@ -3,6 +3,17 @@
 // user-visible change (bump `v`, short `title`, today's date, 1–4 `items`).
 export const CHANGELOG = [
   {
+    v: 12,
+    title: 'Sync locations: local folder',
+    date: 'Jul 2, 2026, 11:55 PM CT',
+    items: [
+      'Settings → Advanced → "Sync locations" — point Relay at a folder on your device (no credentials) and it keeps a live snapshot there.',
+      'Reopening the app (or a peer opening theirs) pulls in whatever changed, even if no one was online at the same time.',
+      'Tip: pick a folder your Dropbox / Google Drive / iCloud desktop app already syncs, for free cross-device backup.',
+      'First of several planned sync-location adapters — S3, WebDAV, and Dropbox/Drive are next.',
+    ],
+  },
+  {
     v: 11,
     title: 'Calmer Peers page',
     date: 'Jul 2, 2026, 11:15 PM CT',

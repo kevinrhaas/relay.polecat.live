@@ -3,8 +3,9 @@
 import { Store } from '../store.js';
 import { Sync } from '../sync.js';
 import { Rendezvous } from '../rendezvous.js';
+import { LocalFolder } from '../storage/index.js';
 import { Access } from '../access.js';
-import { el, escapeHtml, toast, confirmDialog, avatarColor, initials } from '../ui.js';
+import { el, escapeHtml, toast, confirmDialog, avatarColor, initials, ago } from '../ui.js';
 import { icon } from '../icons.js';
 import { setTheme, getThemePref } from '../theme.js';
 
@@ -89,8 +90,38 @@ export function renderSettings(root, ctx){
         if(!rurl.value.trim()||!rroom.value.trim()){ toast('URL and room required',{kind:'err'}); return; }
         Rendezvous.connect(rurl.value, rroom.value); toast('Connecting to rendezvous…',{kind:'ok'}); renderSettings(root,ctx); }});
   adv.append(uf, rf, actionBtn);
+
+  // -- Local folder sync (sync locations, phase 1) --
+  adv.append(el('div',{class:'divider'}));
+  const lfBlock=el('div',{class:'lf-block'});
+  const lfStatus = { connected:['connected','var(--success)'], error:['error','var(--danger)'],
+    'needs-permission':['needs permission','var(--warning)'], unsupported:['unsupported','var(--text-3)'],
+    off:['off','var(--text-3)'] }[LocalFolder.state] || [LocalFolder.state,'var(--text-3)'];
+  lfBlock.append(el('div',{class:'section-title', style:'margin:4px 0 4px', html:`
+    <h2 style="font-size:13px">Sync locations · local folder</h2><div class="sp"></div>
+    <span class="conn-state" style="color:${lfStatus[1]}"><span class="dot" style="background:${lfStatus[1]}"></span>${lfStatus[0]}</span>`}));
+  lfBlock.append(el('p',{class:'muted tiny', html:`Point Relay at a folder on this device — a snapshot syncs there on every change, and loads back whenever you open the app, even if no peer is online.
+    <b>Tip:</b> pick a folder your Dropbox / Google Drive / iCloud desktop app already syncs for free cross-device backup, no keys needed.
+    ${LocalFolder.isSupported()?'':' Needs a Chromium browser (Chrome / Edge) — not available in this browser.'}`}));
+  const lfRow=el('div',{style:'display:flex;gap:10px;flex-wrap:wrap;align-items:center'});
+  if(LocalFolder.state==='connected'){
+    lfRow.append(
+      el('span',{class:'chip', text:LocalFolder.folderName}),
+      el('span',{class:'muted tiny', text: LocalFolder.lastSync?`synced ${ago(LocalFolder.lastSync)}`:'syncing…'}),
+      el('button',{class:'btn danger sm', html:`${icon('x')} Disconnect`, onclick:()=>{ LocalFolder.disconnect(); renderSettings(root,ctx); }}));
+  }else if(LocalFolder.state==='needs-permission'){
+    lfRow.append(
+      el('span',{class:'chip', text:LocalFolder.folderName}),
+      el('button',{class:'btn primary sm', html:`${icon('folder')} Reconnect`, onclick:async()=>{ await LocalFolder.reconnect(); renderSettings(root,ctx); }}));
+  }else{
+    lfRow.append(el('button',{class:'btn primary sm', html:`${icon('folder')} Choose folder`, disabled:!LocalFolder.isSupported(),
+      onclick:async()=>{ const okd=await LocalFolder.connect(); if(okd) toast('Folder connected — synced',{kind:'ok'}); renderSettings(root,ctx); }}));
+  }
+  lfBlock.append(lfRow);
+  adv.append(lfBlock);
+
   // keep it open if the user already configured it, so state is visible
-  if(Rendezvous.configured()||connected) adv.open=true;
+  if(Rendezvous.configured()||connected||LocalFolder.state!=='off') adv.open=true;
   wrap.append(adv);
 
   // ---- data ------------------------------------------------------------
