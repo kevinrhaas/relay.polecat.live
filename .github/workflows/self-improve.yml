@@ -10,7 +10,10 @@ name: Hourly self-improvement
 # itself after committing.
 on:
   schedule:
-    - cron: '0 * * * *'   # top of every hour (UTC); GitHub may delay under load
+    # Off-peak minutes: GitHub heavily delays/drops scheduled jobs at :00.
+    # Two runs/hour improves the odds of a roughly-hourly cadence; the
+    # concurrency lock keeps them from overlapping.
+    - cron: '23,53 * * * *'
   workflow_dispatch: {}    # run manually from the Actions tab
 
 permissions:
