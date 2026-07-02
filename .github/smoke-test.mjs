@@ -341,6 +341,78 @@ try {
     return !!(await details.$('.wd-block button:has-text("Connect WebDAV")'));
   });
 
+  await page.evaluate(async () => {
+    // Dropbox's endpoints are fixed hostnames (not user-supplied like S3/
+    // WebDAV), so stub fetch by pathname; also stub the OAuth redirect
+    // itself (no real dropbox.com consent screen in CI) by rewriting the
+    // URL with a fake ?code=&state= the way a real redirect-back would.
+    const state = { file: null };
+    window.__fakeDropbox = state;
+    const realFetch = window.fetch.bind(window);
+    window.fetch = async (url, opts = {}) => {
+      const u = new URL(url, location.href);
+      if (u.hostname === 'api.dropboxapi.com' && u.pathname === '/oauth2/token') {
+        return new Response(JSON.stringify({ access_token: 'fake-access', refresh_token: 'fake-refresh', expires_in: 14400 }), { status: 200 });
+      }
+      if (u.hostname === 'api.dropboxapi.com' && u.pathname === '/2/users/get_current_account') {
+        return new Response(JSON.stringify({ email: 'smoke@example.com' }), { status: 200 });
+      }
+      if (u.hostname === 'api.dropboxapi.com' && u.pathname === '/2/auth/token/revoke') {
+        return new Response('', { status: 200 });
+      }
+      if (u.hostname === 'content.dropboxapi.com' && u.pathname === '/2/files/download') {
+        return state.file != null ? new Response(state.file, { status: 200 }) : new Response('', { status: 409 });
+      }
+      if (u.hostname === 'content.dropboxapi.com' && u.pathname === '/2/files/upload') {
+        state.file = opts.body;
+        return new Response('{}', { status: 200 });
+      }
+      return realFetch(url, opts);
+    };
+    const { Dropbox } = await import('/js/storage/dropbox.js');
+    window.__dropbox = Dropbox;
+    Dropbox._navigate = (url) => {
+      const authUrl = new URL(url);
+      const params = new URLSearchParams(location.search);
+      params.set('code', 'fake-code');
+      params.set('state', authUrl.searchParams.get('state'));
+      history.replaceState(null, '', location.pathname + '?' + params.toString() + location.hash);
+    };
+  });
+  await check('Dropbox sync: connect completes OAuth and writes a snapshot', async () => {
+    let details = await $('details.adv'); if (!details) return false;
+    if (!(await details.evaluate((d) => d.open))) { await (await details.$('summary')).click(); await page.waitForTimeout(250); }
+    const keyIn = await details.$('.db-block input'); if (!keyIn) return false;
+    await keyIn.fill('smoke-app-key');
+    const btn = await details.$('.db-block button:has-text("Connect Dropbox")'); if (!btn) return false;
+    await btn.click(); await page.waitForTimeout(200);
+    // stubbed _navigate() only rewrote the URL with ?code=&state=; simulate
+    // the boot-time redirect handling a real reload would trigger
+    await page.evaluate(() => window.__dropbox.autostart());
+    await page.waitForTimeout(300);
+    details = await $('details.adv'); if (!details) return false;
+    const chip = await details.$('.db-block .chip');
+    const chipText = chip ? (await chip.evaluate((c) => c.textContent)).trim() : '';
+    const wrote = await page.evaluate(() => (window.__fakeDropbox.file || '').includes('"entities"'));
+    return chipText === 'smoke@example.com' && wrote;
+  });
+  await check('Dropbox sync: local edit re-writes the snapshot', async () => {
+    await page.evaluate(() => { window.__fakeDropbox.file = ''; });
+    await page.evaluate(async () => {
+      const { Store } = await import('/js/store.js');
+      Store.createEntity('Smoke Dropbox Entity');
+    });
+    await page.waitForTimeout(1800);
+    return await page.evaluate(() => (window.__fakeDropbox.file || '').includes('Smoke Dropbox Entity'));
+  });
+  await check('Dropbox sync: disconnect', async () => {
+    let details = await $('details.adv'); if (!details) return false;
+    const btn = await details.$('.db-block button:has-text("Disconnect")'); if (!btn) return false;
+    await btn.click(); await page.waitForTimeout(300);   // renderSettings() rebuilds the DOM — re-query below
+    details = await $('details.adv'); if (!details) return false;
+    return !!(await details.$('.db-block button:has-text("Connect Dropbox")'));
+  });
+
   if (errors.length) { console.error('\nConsole/page errors:\n' + errors.join('\n')); failed = true; }
 } catch (e) {
   console.error('SUITE CRASH: ' + e.message); failed = true;

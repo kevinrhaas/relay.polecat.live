@@ -6,6 +6,16 @@
 // What's new panel formats it to the reader's local time (shown as CT).
 export const CHANGELOG = [
   {
+    v: 18,
+    title: 'Sync locations: Dropbox',
+    ts: '2026-07-02T17:36:28.172Z',
+    items: [
+      'Click-to-authorize Dropbox sync — connect with just an app key, no secrets or manual keys to copy.',
+      'Uses OAuth with PKCE end to end, so nothing sensitive ever needs to live in this browser.',
+      'Same backup behavior as the other sync locations: loads your latest snapshot on connect, writes a fresh one on every change.',
+    ],
+  },
+  {
     v: 17,
     title: 'Home cards now work from the keyboard',
     ts: '2026-07-02T16:36:27.331Z',

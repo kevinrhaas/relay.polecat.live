@@ -64,14 +64,33 @@ need: **server URL** (the folder you want the snapshot in), **username**,
 
 ---
 
-## 3. Dropbox / Google Drive (OAuth — most convenient, more setup)
-- **Dropbox:** dropbox.com/developers → create an app (Scoped access, App folder)
-  → get an app key → OAuth (PKCE, no secret needed in-browser). Free plan works.
-- **Google Drive:** console.cloud.google.com → new project → enable Drive API →
-  OAuth consent screen → create an **OAuth Client ID (Web)** with your Relay
-  origin as an authorized origin → use Google Identity Services token flow
-  (drive.file scope). Free.
-- **Why last:** OAuth redirect/consent is more moving parts than a key+secret.
+## 3. Dropbox (OAuth — click-to-authorize, available now)
+Available now in **Settings → Advanced → Sync locations → Dropbox**. Relay uses
+OAuth 2.0 with PKCE, so there's no client secret to protect — only an **app key**
+(client id) is ever entered, and it's not sensitive. Setup:
+1. **dropbox.com/developers/apps** → Create app → **Scoped access** → **App folder**
+   (recommended — Relay only ever sees its own folder, not your whole Dropbox).
+2. Under **Permissions**, enable `files.content.write` and `files.content.read`,
+   then click Submit.
+3. Under **Settings**, copy the **App key**.
+4. Under **OAuth 2 → Redirect URIs**, add the exact URL you see in the address
+   bar when you're on Relay's Settings page (no `?query` or `#hash`) — e.g.
+   `https://relay.polecat.live/app/`. This must match exactly or Dropbox will
+   refuse the redirect.
+5. Paste the app key into Settings → Advanced → Sync locations → Dropbox →
+   **Connect Dropbox**. You'll be sent to Dropbox to approve access, then
+   bounced straight back, connected.
+- **Cost:** free. **Caveat:** self-hosting Relay at a different URL (or moving
+  it) means re-registering the new redirect URI in the Dropbox app.
+
+---
+
+## 4. Google Drive (OAuth — planned)
+Not implemented yet (see ROADMAP.md). Will follow the same shape as Dropbox
+above: console.cloud.google.com → enable Drive API → OAuth consent screen →
+**OAuth Client ID (Web)** → `drive.file` scope (limits access to files Relay
+itself creates, so no broad Drive permission or Google app-verification review
+needed).
 
 ---
 
@@ -79,7 +98,7 @@ need: **server URL** (the folder you want the snapshot in), **username**,
 - **Just me, easiest:** Local Folder pointed at your existing Dropbox/Drive folder.
 - **Small trusted group, cheap & fast:** Cloudflare R2 or Backblaze B2.
 - **Already self-host:** WebDAV / Nextcloud.
-- **Want click-to-authorize convenience:** Dropbox or Google Drive.
+- **Want click-to-authorize convenience:** Dropbox.
 
 All of these store only the snapshot JSON; Relay merges it with your local data,
 so turning a sync location on or off never loses anything.

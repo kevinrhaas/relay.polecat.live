@@ -3,7 +3,7 @@
 import { Store } from '../store.js';
 import { Sync } from '../sync.js';
 import { Rendezvous } from '../rendezvous.js';
-import { LocalFolder, S3Sync, WebDAVSync } from '../storage/index.js';
+import { LocalFolder, S3Sync, WebDAVSync, Dropbox } from '../storage/index.js';
 import { Access } from '../access.js';
 import { el, escapeHtml, toast, confirmDialog, avatarColor, initials, ago } from '../ui.js';
 import { icon } from '../icons.js';
@@ -202,8 +202,35 @@ export function renderSettings(root, ctx){
   }
   adv.append(wdBlock);
 
+  // -- Dropbox sync (sync locations, phase 4 — OAuth) --
+  adv.append(el('div',{class:'divider'}));
+  const dbBlock=el('div',{class:'db-block'});
+  const dbStatus = { connected:['connected','var(--success)'], error:['error','var(--danger)'],
+    unsupported:['unsupported','var(--text-3)'], off:['off','var(--text-3)'] }[Dropbox.state] || [Dropbox.state,'var(--text-3)'];
+  dbBlock.append(el('div',{class:'section-title', style:'margin:4px 0 4px', html:`
+    <h2 style="font-size:13px">Sync locations · Dropbox</h2><div class="sp"></div>
+    <span class="conn-state" style="color:${dbStatus[1]}"><span class="dot" style="background:${dbStatus[1]}"></span>${dbStatus[0]}</span>`}));
+  dbBlock.append(el('p',{class:'muted tiny', html:`Click-to-authorize — a snapshot syncs to your Dropbox on every change. Uses OAuth with PKCE, so
+    no secret ever touches this browser; you just need an <b>app key</b>. See <span class="kbd">docs/sync-providers.md</span> for creating the app and
+    registering this page's URL as its redirect URI.`}));
+  if(Dropbox.state==='connected'){
+    const dbRow=el('div',{style:'display:flex;gap:10px;flex-wrap:wrap;align-items:center'});
+    dbRow.append(
+      el('span',{class:'chip', text:Dropbox.cfg.email||'connected'}),
+      el('span',{class:'muted tiny', text: Dropbox.lastSync?`synced ${ago(Dropbox.lastSync)}`:'syncing…'}),
+      el('button',{class:'btn danger sm', html:`${icon('x')} Disconnect`, onclick:()=>{ Dropbox.disconnect(); renderSettings(root,ctx); }}));
+    dbBlock.append(dbRow);
+  }else{
+    const keyIn=el('input',{class:'input', placeholder:'app key', value:(Dropbox.cfg&&Dropbox.cfg.appKey)||''});
+    const field=(label,input)=>{ const f=el('div',{class:'field',style:'margin:0'}); f.append(el('label',{text:label}), input); return f; };
+    dbBlock.append(field('App key', keyIn));
+    dbBlock.append(el('button',{class:'btn primary sm', style:'margin-top:8px', html:`${icon('broadcast')} Connect Dropbox`, disabled:!Dropbox.isSupported(),
+      onclick:()=>{ Dropbox.connect(keyIn.value.trim()); }}));
+  }
+  adv.append(dbBlock);
+
   // keep it open if the user already configured it, so state is visible
-  if(Rendezvous.configured()||connected||LocalFolder.state!=='off'||S3Sync.state!=='off'||WebDAVSync.state!=='off') adv.open=true;
+  if(Rendezvous.configured()||connected||LocalFolder.state!=='off'||S3Sync.state!=='off'||WebDAVSync.state!=='off'||Dropbox.state!=='off') adv.open=true;
   wrap.append(adv);
 
   // ---- data ------------------------------------------------------------
