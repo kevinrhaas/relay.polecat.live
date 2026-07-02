@@ -4,7 +4,7 @@
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
   <title>Relay — a serverless, peer-to-peer collaborative table · polecat.live</title>
-  <meta name="description" content="Relay is a collaborative database that lives in your browser. Create dynamic tables, chat, and invite the people you trust with signed invite-only links — synced directly, peer to peer. No accounts, no backend, no servers."/>
+  <meta name="description" content="Relay is a collaborative database that lives in your browser. Create dynamic tables, chat, and invite the people you trust with signed invite-only links — synced directly, peer to peer, with optional backups to your own local folder, S3, or WebDAV. No accounts, no backend, no servers."/>
   <meta name="theme-color" content="#0a0a0f"/>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg"/>
   <link rel="stylesheet" href="/css/landing.css"/>
@@ -32,6 +32,7 @@
     <g id="i-message" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8 8 0 0 1-11.6 7.1L4 20l1.4-5.2A8 8 0 1 1 21 11.5Z"/></g>
     <g id="i-key" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 9.5a4 4 0 1 0-5 3.9L3 20v3h3l7.6-7.6a4 4 0 0 0 .9.1 4 4 0 0 0 4-4Z"/><circle cx="8.5" cy="9.5" r=".5" fill="currentColor" stroke="none"/></g>
     <g id="i-github" fill="currentColor"><path d="M12 2A10 10 0 0 0 8.8 21.5c.5.1.7-.2.7-.5v-1.7c-2.8.6-3.4-1.3-3.4-1.3-.5-1.2-1.1-1.5-1.1-1.5-.9-.6.1-.6.1-.6 1 .1 1.5 1 1.5 1 .9 1.5 2.3 1.1 2.9.8.1-.6.3-1.1.6-1.4-2.2-.2-4.6-1.1-4.6-5 0-1.1.4-2 1-2.7-.1-.3-.4-1.3.1-2.6 0 0 .8-.3 2.7 1a9.4 9.4 0 0 1 5 0c1.9-1.3 2.7-1 2.7-1 .5 1.3.2 2.3.1 2.6.6.7 1 1.6 1 2.7 0 3.9-2.3 4.8-4.6 5 .4.3.7.9.7 1.9v2.8c0 .3.2.6.7.5A10 10 0 0 0 12 2Z"/></g>
+    <g id="i-cloud" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M7 18a4.5 4.5 0 0 1-.6-8.96 5.5 5.5 0 0 1 10.75-1.7A4 4 0 0 1 17 18H7Z"/></g>
   </defs></svg>
 
   <header class="nav" id="nav">
@@ -56,7 +57,7 @@
         <p class="lead">Relay is a shared workspace that lives in your browser and connects straight to the
           people you trust — tables, live chat, files-worth of data, synced directly, peer to peer. No
           accounts. No backend. No one else holding, reading, or brokering what you share.</p>
-        <a class="whats-new" href="/app/">✨ New — invite-only access, P2P messaging &amp; a "what's new" panel</a>
+        <a class="whats-new" href="/app/">✨ New — back up to your own local folder, S3, or WebDAV</a>
         <div class="hero-cta">
           <a class="btn primary lg" href="/app/">Launch Relay <svg width="18" height="18"><use href="#i-arrow"/></svg></a>
           <a class="btn lg" href="https://github.com/kevinrhaas/relay.polecat.live" target="_blank" rel="noopener">
@@ -99,6 +100,8 @@
             <h3>Live chat &amp; presence</h3><p>A broadcast room plus 1:1 direct messages, delivered over the same encrypted channel as your tables. See who's online and watch every sync stream by.</p></div>
           <div class="card reveal"><div class="ic" style="background:linear-gradient(135deg,#f0a830,#a86e12)"><svg><use href="#i-download"/></svg></div>
             <h3>Yours to keep</h3><p>Local-first storage, one-click export / import, dark &amp; light themes. Take your workspace anywhere.</p></div>
+          <div class="card reveal"><div class="ic" style="background:linear-gradient(135deg,#38bdf8,#155e75)"><svg><use href="#i-cloud"/></svg></div>
+            <h3>Bring your own backup</h3><p>Point Relay at a local folder, an S3-compatible bucket, or a WebDAV server and it keeps a live snapshot there — your storage, still nothing routed through us.</p></div>
         </div>
       </div>
     </section>

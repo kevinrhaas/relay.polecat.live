@@ -49,6 +49,11 @@ when you finish something, move it to **Done** with the date; add discoveries to
 - Multiple workspaces / workspace switcher.
 
 ## Done
+- 2026-07-02 — Landing page: added a "Bring your own backup" feature card
+  covering the local-folder / S3 / WebDAV sync locations, refreshed the hero
+  "what's new" pill and meta description to match (previously only mentioned
+  invite-only access and messaging, which had since been superseded by
+  bigger features).
 - 2026-07-02 — Sync locations, phase 3: WebDAV (Nextcloud, ownCloud, any
   self-hosted WebDAV server) via HTTP Basic auth `fetch` — no SDK, no server.
   Settings → Advanced → "Sync locations" gained a WebDAV sub-card (server URL,

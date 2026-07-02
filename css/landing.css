@@ -106,7 +106,8 @@ section{padding:64px 0;position:relative;z-index:1}
 
 .grid{display:grid;gap:18px}
 .f3{grid-template-columns:repeat(3,1fr)}
-@media(max-width:860px){.f3{grid-template-columns:1fr}}
+.grid.f3 .card:nth-child(7){grid-column:2}
+@media(max-width:860px){.f3{grid-template-columns:1fr}.grid.f3 .card:nth-child(7){grid-column:1}}
 
 .card{background:color-mix(in srgb,var(--surface) 82%,transparent);border:1px solid var(--border);
   border-radius:var(--radius);padding:26px;transition:border-color .2s,transform .2s}
@@ -181,6 +182,7 @@ footer{border-top:1px solid var(--border);padding:40px 0;position:relative;z-ind
 .grid.f3 .card:nth-child(4){animation-delay:.18s}
 .grid.f3 .card:nth-child(5){animation-delay:.24s}
 .grid.f3 .card:nth-child(6){animation-delay:.3s}
+.grid.f3 .card:nth-child(7){animation-delay:.36s}
 .steps .step:nth-child(1){animation-delay:0s}
 .steps .step:nth-child(2){animation-delay:.08s}
 .steps .step:nth-child(3){animation-delay:.16s}

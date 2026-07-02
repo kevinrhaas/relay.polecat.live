@@ -6,6 +6,15 @@
 // What's new panel formats it to the reader's local time (shown as CT).
 export const CHANGELOG = [
   {
+    v: 16,
+    title: 'Landing page: sync locations',
+    ts: '2026-07-02T13:28:08.306Z',
+    items: [
+      'The front page now shows off "bring your own backup" — sync to a local folder, S3-compatible storage, or WebDAV.',
+      'The "what\'s new" highlight and page description point at it too.',
+    ],
+  },
+  {
     v: 15,
     title: 'Sync locations: WebDAV',
     ts: '2026-07-02T13:15:04Z',
