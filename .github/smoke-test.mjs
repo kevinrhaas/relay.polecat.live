@@ -76,6 +76,14 @@ try {
     await page.click('button:has-text("Row")'); await page.waitForTimeout(300);
     return (await count('tbody tr')) >= 1;
   });
+  await check('icon-only buttons expose an accessible label', async () => {
+    const delRow = await $('tbody tr .row-actions');
+    const delOk = delRow && (await delRow.getAttribute('aria-label'));
+    await (await $('.rail-item[data-sec="home"]')).click(); await page.waitForTimeout(200);
+    const pin = await $('.pin-btn'); const pinOk = pin && (await pin.getAttribute('aria-label'));
+    await (await $('.rail-item[data-sec="table"]')).click(); await page.waitForTimeout(200);
+    return !!(delOk && pinOk);
+  });
   await check('edit a cell (persists to store)', async () => {
     const cell = await $('tbody tr td[contenteditable]'); if (!cell) return false;
     await cell.click(); await page.keyboard.type('smoke-value'); await page.keyboard.press('Tab');

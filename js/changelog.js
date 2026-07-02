@@ -3,6 +3,15 @@
 // user-visible change (bump `v`, short `title`, today's date, 1–4 `items`).
 export const CHANGELOG = [
   {
+    v: 13,
+    title: 'Screen-reader polish',
+    date: 'Jul 2, 2026, 11:58 PM CT',
+    items: [
+      'Icon-only buttons (close, delete row, pin, icon pickers, remove invite) now announce what they do to screen readers, not just "button".',
+      'Pin/unpin now reports its actual state instead of a static label.',
+    ],
+  },
+  {
     v: 12,
     title: 'Sync locations: local folder',
     date: 'Jul 2, 2026, 11:55 PM CT',

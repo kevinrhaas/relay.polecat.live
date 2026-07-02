@@ -52,6 +52,10 @@ when you finish something, move it to **Done** with the date; add discoveries to
 - Multiple workspaces / workspace switcher.
 
 ## Done
+- 2026-07-02 — Accessibility: icon-only buttons (modal close, delete row, pin,
+  icon pickers, remove invite) now carry `aria-label`/`title` so screen readers
+  announce their purpose instead of just "button"; pin/unpin state is announced
+  via `aria-pressed` and updates live.
 - 2026-07-02 — Sync locations, phase 1: local folder sync via the File System
   Access API (no credentials). Pluggable adapter interface in `js/storage/`;
   Settings → Advanced → "Sync locations" to connect a folder, which loads its

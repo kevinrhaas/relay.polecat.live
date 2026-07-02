@@ -107,7 +107,7 @@ function inviteRow(inv, root, ctx){
       if(await confirmDialog('Revoke invite','Blocks this invite instantly on this device. To block it everywhere, copy the blocklist into js/revoked.js and redeploy.',{danger:true,okLabel:'Revoke'})){
         Access.revoke(inv.jti); toast('Invite revoked',{kind:'ok'}); renderAdmin(root,ctx); } }}));
   }
-  btns.append(el('button',{class:'btn ghost icon sm', html:icon('trash'), title:'Remove from list', onclick:async()=>{
+  btns.append(el('button',{class:'btn ghost icon sm', html:icon('trash'), title:'Remove from list', 'aria-label':'Remove from list', onclick:async()=>{
     if(await confirmDialog('Remove invite','This only removes it from your local list; the link keeps working unless revoked or expired.',{danger:true,okLabel:'Remove'})){
       Access.forget(inv.iat); renderAdmin(root,ctx); } }}));
   c.append(btns);

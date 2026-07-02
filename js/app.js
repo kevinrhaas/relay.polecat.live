@@ -113,8 +113,11 @@ function newEntity(){
   let chosen='table';
   const picker=el('div',{style:'display:flex;gap:8px;flex-wrap:wrap'});
   icons.forEach(ic=>{
-    const b=el('button',{class:'btn icon'+(ic==='table'?' primary':''), html:icon(ic), onclick:()=>{
-      chosen=ic; [...picker.children].forEach(x=>x.classList.remove('primary')); b.classList.add('primary'); }});
+    const label=ic[0].toUpperCase()+ic.slice(1)+' icon';
+    const b=el('button',{class:'btn icon'+(ic==='table'?' primary':''), title:label, 'aria-label':label,
+      'aria-pressed':String(ic==='table'), html:icon(ic), onclick:()=>{
+      chosen=ic; [...picker.children].forEach(x=>{x.classList.remove('primary');x.setAttribute('aria-pressed','false')});
+      b.classList.add('primary'); b.setAttribute('aria-pressed','true'); }});
     picker.append(b);
   });
   const body=el('div');

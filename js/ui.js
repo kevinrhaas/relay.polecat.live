@@ -83,7 +83,7 @@ export function modal({title='', body, foot, wide=false, icon:ic}={}){
   const m = el('div',{class:'modal'+(wide?' wide':'')});
   const head = el('div',{class:'modal-head', html:
     `${ic?`<span style="color:var(--brand-b)">${icon(ic)}</span>`:''}<h3>${escapeHtml(title)}</h3>`});
-  const close = el('button',{class:'btn ghost icon', html:icon('x'), onclick:()=>hide()});
+  const close = el('button',{class:'btn ghost icon', title:'Close', 'aria-label':'Close', html:icon('x'), onclick:()=>hide()});
   head.append(close);
   const bodyEl = el('div',{class:'modal-body'});
   if(typeof body==='string') bodyEl.innerHTML=body; else if(body) bodyEl.append(body);
