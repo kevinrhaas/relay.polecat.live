@@ -50,8 +50,19 @@ Relay → client:
 - `{ "type": "leave", "id" }`
 - `{ "type": "signal", "from": "<peerId>", "data": { ... } }`
 
+## Cost — it's free
+
+- **No server to run.** `wrangler deploy` uploads the code to Cloudflare; they
+  run it on-demand and it's dormant when idle. You don't keep anything running.
+- **Free Workers plan.** This uses a **SQLite-backed Durable Object**
+  (`new_sqlite_classes` in `wrangler.toml`), which is included on Cloudflare's
+  free plan. It uses no storage — rooms are purely in-memory.
+- **No bandwidth/egress charges.** Cloudflare doesn't bill Workers egress, and
+  the relay only carries the tiny WebRTC handshake (offer/answer/ICE), never
+  your data. A handshake is a few messages, so real usage sits far under the
+  free tier's daily limits.
+
 ## Notes
 
-- Durable Objects are available on the Cloudflare Workers free plan.
 - Peers behind symmetric NATs may still need a TURN server to connect; the STUN
   server configured in Relay's Settings only helps with address discovery.
