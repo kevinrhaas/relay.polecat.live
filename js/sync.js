@@ -61,6 +61,12 @@ export const Sync = new (class extends Emitter{
       else if(c.type==='entity' && c.key) this._pushEntity(c.key);
     });
     window.addEventListener('beforeunload', ()=>this._say('*',{kind:'bye', id:this.selfId}));
+    // quiet safety-net: periodically re-push to connected peers so nothing can
+    // drift even if a message was missed. Sync stays fully automatic — no
+    // buttons needed. Silent (no toasts/log).
+    this._reconcile = setInterval(()=>{
+      for(const p of this.peerList()) this._pushTo(p.id, p.transport);
+    }, 25000);
     this._info('Sync engine online');
   }
 

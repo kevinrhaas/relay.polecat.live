@@ -60,15 +60,13 @@ function buildTopbar(){
   bar.append(menuBtn, topTitle, el('span',{class:'sp'}));
 
   avatars=el('div',{class:'avatars'});
-  presence=el('div',{class:'presence', html:`<span class="dot"></span><span class="txt">offline</span>`});
-  const syncBtn=el('button',{class:'btn sm topbar-sync', html:`${icon('refresh')} Sync`, title:'Sync with all peers',
-    onclick:()=>{ Sync.syncAll(); }});
+  presence=el('div',{class:'presence', title:'Changes sync automatically with connected peers', html:`<span class="dot"></span><span class="txt">offline</span>`});
   const themeBtn=el('button',{class:'btn icon ghost', title:'Toggle theme',
     html:icon(getThemePref()==='light'?'moon':'sun'),
     onclick:()=>{ const next=document.documentElement.getAttribute('data-theme')==='light'?'dark':'light';
       setTheme(next); themeBtn.innerHTML=icon(next==='light'?'moon':'sun'); }});
   const newBtn=el('button',{class:'btn sm primary', html:`${icon('plus')} New`, onclick:()=>newEntity()});
-  bar.append(avatars, presence, syncBtn, themeBtn, newBtn);
+  bar.append(avatars, presence, themeBtn, newBtn);
   return bar;
 }
 
@@ -137,7 +135,8 @@ function refreshBadges(){
 function refreshPresence(){
   const n=Sync.onlineCount();
   presence.classList.toggle('online', n>0);
-  presence.querySelector('.txt').textContent = n? `${n} online` : 'no peers';
+  // reassure the user sync is continuous when peers are connected
+  presence.querySelector('.txt').textContent = n? `${n} online · live` : 'no peers';
   avatars.innerHTML='';
   Sync.peerList().slice(0,4).forEach(p=>{
     avatars.append(el('div',{class:'av', title:p.name, style:`background:${avatarColor(p.id)}`, text:initials(p.name)}));

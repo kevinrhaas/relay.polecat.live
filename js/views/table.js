@@ -41,8 +41,7 @@ export function renderTable(root, ctx, params={}){
     onclick:()=>{Store.togglePin(current);renderTable(root,ctx,{entity:current});}});
   const addCol = el('button',{class:'btn sm', html:`${icon('plus')} Field`, onclick:()=>addColumn(root,ctx)});
   const addRow = el('button',{class:'btn sm primary', html:`${icon('plus')} Row`, onclick:()=>addRowRec(root,ctx)});
-  const syncBtn = el('button',{class:'btn sm', html:`${icon('refresh')} Sync`, onclick:()=>{Sync.syncAll();toast('Sync pass sent',{kind:'ok'});}});
-  toolbar.append(spacer, pin, addCol, syncBtn, addRow);
+  toolbar.append(spacer, pin, addCol, addRow);
   wrap.append(toolbar);
 
   // table
@@ -50,7 +49,7 @@ export function renderTable(root, ctx, params={}){
   const rows = Store.records(current);
   const scroll = el('div',{class:'table-scroll'});
   if(!rows.length){
-    scroll.append(el('div',{class:'empty', html:`${icon('grid')}<div>No rows yet in <b>${escapeHtml(e.label)}</b>.<br>Add a row or sync from a peer.</div>`}));
+    scroll.append(el('div',{class:'empty', html:`${icon('grid')}<div>No rows yet in <b>${escapeHtml(e.label)}</b>.<br>Add a row — it syncs to your peers automatically.</div>`}));
   }else{
     const table=el('table',{class:'data'});
     const thead=el('thead');
