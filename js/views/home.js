@@ -53,24 +53,16 @@ export function renderHome(root, ctx){
   });
   wrap.append(qa);
 
-  // ---- pinned (add-to-home) -------------------------------------------
-  const pinned = Store.pinned();
-  wrap.append(el('div',{class:'section-title', html:`<h2>Pinned to home</h2><div class="sp"></div>
-    <span class="muted tiny">Pin any table from its ⭐ to keep it here</span>`}));
-  if(pinned.length){
-    const g=el('div',{class:'grid recents'});
-    pinned.forEach(k=>g.append(entityCard(k, ctx, true)));
-    wrap.append(g);
-  }else{
-    wrap.append(el('div',{class:'card muted', text:'Nothing pinned yet — open a table and hit the star to add it here.'}));
-  }
-
-  // ---- recents ---------------------------------------------------------
+  // ---- your tables (pinned first, then recent) ------------------------
+  const pinnedKeys = Store.pinned();
   const recents = Store.recents();
-  if(recents.length){
-    wrap.append(el('div',{class:'section-title', html:'<h2>Recent activity</h2>'}));
+  const recentAt = Object.fromEntries(recents.map(r=>[r.entity, r.at]));
+  const order = [...pinnedKeys, ...recents.map(r=>r.entity).filter(k=>!pinnedKeys.includes(k))];
+  if(order.length){
+    wrap.append(el('div',{class:'section-title', html:'<h2>Your tables</h2>'}));
+    wrap.append(el('div',{class:'muted tiny', style:'margin:-8px 0 2px', text:'Starred tables stay first. Tap a table’s star to pin it here.'}));
     const g=el('div',{class:'grid recents'});
-    recents.forEach(r=>g.append(entityCard(r.entity, ctx, false, r.at)));
+    order.forEach(k=>g.append(entityCard(k, ctx, pinnedKeys.includes(k), recentAt[k])));
     wrap.append(g);
   }
 
