@@ -25,6 +25,9 @@ an Admin area (`js/views/admin.js`). Read `README.md` and `ROADMAP.md` first.
    Roughly every other polish run, **refresh the public landing page (`/`)** so
    it showcases the current feature set — accurate copy, a highlight of a recent
    feature, tasteful motion. Keep it sexy and true to what the app now does.
+   **Do NOT feature the GitHub repo or the "open source" angle on the public
+   site** — no "View source" button, no GitHub nav/footer links, no "open
+   source" eyebrow copy. The owner is intentionally not promoting that yet.
 
 ## Hard rules
 - Keep it **lean**: vanilla JS/HTML/CSS only. No frameworks, no bundlers, no npm
