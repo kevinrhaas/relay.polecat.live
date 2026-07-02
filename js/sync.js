@@ -110,7 +110,7 @@ export const Sync = new (class extends Emitter{
       case 'sync-req':
         this._pushTo(from, transport, m.entities); break;
       case 'push':
-        this._onPush(from, m.records, m.entities); break;
+        this._onPush(from, m.records, m.entities, m.tombstones); break;
       case 'chat':
         this._recvChat(m.msg); break;
     }
@@ -221,17 +221,20 @@ export const Sync = new (class extends Emitter{
   _pushTo(peerId, transport, entities){
     const uid=this._peerUid(peerId);
     const share=(entities||Store.entityNames()).filter(e=>this.can(uid,'read',e));
-    if(!share.length) return;
+    const tombstones=Store.tombstoneDefs();
+    if(!share.length && !tombstones.length) return;
     const records=Store.snapshot(share);
-    // send table definitions too, so empty tables propagate with their name/icon
-    this._reply(peerId, transport, { kind:'push', records, entities:Store.entityDefs(share) });
+    // send table definitions + delete-tombstones too, so renames/new/empty/
+    // deleted tables all propagate (not just record data)
+    this._reply(peerId, transport, { kind:'push', records, entities:Store.entityDefs(share), tombstones });
     this.stats.sent += records.length; this.emit('stats');
   }
-  _onPush(from, records, entityDefs){
+  _onPush(from, records, entityDefs, tombstones){
     const uid=this._peerUid(from);
     const name=this.peers.get(from)?.name||from.slice(0,6);
-    // create any shared tables we don't have yet (structure, not data)
-    if(entityDefs) for(const d of entityDefs){ if(Store.ensureEntity(d)) this._sync(`New table “${d.label}” shared by ${name}`); }
+    // deletes first, then create/rename tables (LWW), then merge records
+    Store.applyTombstones(tombstones);
+    if(entityDefs) for(const d of entityDefs){ if(Store.ensureEntity(d)==='created') this._sync(`New table “${d.label}” shared by ${name}`); }
     records=records||[];
     this.stats.received += records.length;
     let applied=0;

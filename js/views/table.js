@@ -39,9 +39,10 @@ export function renderTable(root, ctx, params={}){
   const pin = el('button',{class:'btn sm'+(Store.isPinned(current)?' ':''),
     html:`${icon('star')} ${Store.isPinned(current)?'Pinned':'Pin'}`,
     onclick:()=>{Store.togglePin(current);renderTable(root,ctx,{entity:current});}});
+  const editBtn = el('button',{class:'btn sm', html:`${icon('edit')} Edit table`, onclick:()=>editEntity(root,ctx)});
   const addCol = el('button',{class:'btn sm', html:`${icon('plus')} Field`, onclick:()=>addColumn(root,ctx)});
   const addRow = el('button',{class:'btn sm primary', html:`${icon('plus')} Row`, onclick:()=>addRowRec(root,ctx)});
-  toolbar.append(spacer, pin, addCol, addRow);
+  toolbar.append(spacer, pin, editBtn, addCol, addRow);
   wrap.append(toolbar);
 
   // table
@@ -55,7 +56,9 @@ export function renderTable(root, ctx, params={}){
     const thead=el('thead');
     const hr=el('tr');
     hr.append(el('th',{text:'id'}));
-    cols.forEach(c=>hr.append(el('th',{text:c})));
+    cols.forEach(c=>hr.append(el('th',{class:'col-head', title:'Rename or delete this field',
+      html:`${escapeHtml(c)} <span class="col-caret">${icon('chevron')}</span>`,
+      onclick:()=>editField(c, root, ctx)})));
     hr.append(el('th',{text:'updated'}), el('th',{text:''}));
     thead.append(hr); table.append(thead);
 
@@ -128,6 +131,61 @@ function addRowRec(root, ctx){
   // focus first editable cell of the new (top) row
   setTimeout(()=>{ const td=root.querySelector('tbody tr td[contenteditable]'); td&&td.focus(); },30);
   toast('Row added',{kind:'ok'});
+}
+
+// ---- edit / delete a table (rename, icon, delete) -----------------------
+function editEntity(root, ctx){
+  const e=Store.entity(current); if(!e) return;
+  const name=el('input',{class:'input', value:e.label});
+  const icons=['table','db','grid','peers','check','star','bolt','key','chat','activity'];
+  let chosen=e.icon||'table';
+  const picker=el('div',{style:'display:flex;gap:8px;flex-wrap:wrap'});
+  icons.forEach(ic=>{
+    const b=el('button',{class:'btn icon'+(ic===chosen?' primary':''), html:icon(ic), onclick:()=>{
+      chosen=ic; [...picker.children].forEach(x=>x.classList.remove('primary')); b.classList.add('primary'); }});
+    picker.append(b);
+  });
+  const body=el('div');
+  body.append(
+    (()=>{ const f=el('div',{class:'field'}); f.append(el('label',{text:'Table name'}), name); return f; })(),
+    (()=>{ const f=el('div',{class:'field'}); f.append(el('label',{text:'Icon'}), picker); return f; })(),
+    el('p',{class:'muted tiny', text:'Renames and icon changes sync to your peers.'}));
+  const del=el('button',{class:'btn danger', html:`${icon('trash')} Delete table`, onclick:async()=>{
+    if(await confirmDialog('Delete table',`Delete “${e.label}” and all its rows for you and your peers? This can't be undone.`,{danger:true,okLabel:'Delete table'})){
+      hide(); Store.deleteEntity(current);
+      current=Store.entityNames()[0]||null;
+      renderTable(root,ctx,{entity:current}); toast('Table deleted',{kind:'ok'});
+    }
+  }});
+  const save=el('button',{class:'btn primary', text:'Save', onclick:()=>{
+    Store.renameEntity(current, name.value); Store.setEntityIcon(current, chosen);
+    hide(); renderTable(root,ctx,{entity:current}); toast('Table updated',{kind:'ok'});
+  }});
+  const { hide }=modal({ title:'Edit table', icon:'edit', body, foot:[del, el('div',{style:'flex:1'}),
+    el('button',{class:'btn', text:'Cancel', onclick:()=>hide()}), save] });
+  setTimeout(()=>name.focus(),50);
+}
+
+// ---- rename / delete a field (column) -----------------------------------
+function editField(field, root, ctx){
+  const input=el('input',{class:'input', value:field});
+  const body=el('div');
+  body.append(
+    (()=>{ const f=el('div',{class:'field'}); f.append(el('label',{text:'Field name'}), input); return f; })(),
+    el('p',{class:'muted tiny', text:'Applies across every row and syncs to your peers.'}));
+  const del=el('button',{class:'btn danger', html:`${icon('trash')} Delete field`, onclick:async()=>{
+    if(await confirmDialog('Delete field',`Remove “${field}” from every row in this table (for you and your peers)?`,{danger:true,okLabel:'Delete field'})){
+      hide(); Store.deleteField(current, field); renderTable(root,ctx,{entity:current}); toast('Field deleted',{kind:'ok'});
+    }
+  }});
+  const save=el('button',{class:'btn primary', text:'Rename', onclick:()=>{
+    const nn=input.value.trim().replace(/\s+/g,'_');
+    if(nn && nn!==field) Store.renameField(current, field, nn);
+    hide(); renderTable(root,ctx,{entity:current}); toast('Field renamed',{kind:'ok'});
+  }});
+  const { hide }=modal({ title:`Field: ${field}`, icon:'edit', body, foot:[del, el('div',{style:'flex:1'}),
+    el('button',{class:'btn', text:'Cancel', onclick:()=>hide()}), save] });
+  setTimeout(()=>{ input.focus(); input.select(); },50);
 }
 
 export function currentEntity(){ return current; }
