@@ -73,14 +73,16 @@ export const Store = new (class extends Emitter{
     const by = 'seed';            // fixed author so LWW is deterministic
     const mk = (id, entity, fields, dt) =>
       ({ id, entity, fields, _meta:{ rev:1, updatedAt:BASE-dt, updatedBy:by, deleted:false } });
+    const emeta = { updatedAt:BASE, updatedBy:by };  // stable entity metadata
     const data = {
       entities: {
-        contacts: { label:'Contacts', icon:'peers', records:{} },
-        tasks:    { label:'Tasks',    icon:'check', records:{} },
-        assets:   { label:'Assets',   icon:'grid',  records:{} },
+        contacts: { label:'Contacts', icon:'peers', records:{}, _meta:{...emeta} },
+        tasks:    { label:'Tasks',    icon:'check', records:{}, _meta:{...emeta} },
+        assets:   { label:'Assets',   icon:'grid',  records:{}, _meta:{...emeta} },
       },
       recents: [],
       pinned: ['contacts'],
+      entityTombstones: {},   // key -> {at, by}  (deleted-table markers, synced)
     };
     [
       mk('seed-contact-ada',   'contacts',{name:'Ada Lovelace', role:'Engineer', email:'ada@relay.dev', status:'active'}, 8.6e6),
@@ -97,30 +99,93 @@ export const Store = new (class extends Emitter{
   entities(){ return this.data.entities; }
   entity(name){ return this.data.entities[name]; }
   entityNames(){ return Object.keys(this.data.entities); }
+  _emeta(){ return { updatedAt: Date.now(), updatedBy: this.identity.id }; }
   createEntity(label, iconName='table'){
     const key = label.toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'') || 'entity_'+uuid().slice(0,4);
     if(this.data.entities[key]) throw new Error('An entity with that name already exists');
-    this.data.entities[key] = { label, icon:iconName, records:{} };
+    this.data.entities[key] = { label, icon:iconName, records:{}, _meta:this._emeta() };
+    (this.data.entityTombstones||={}) && delete this.data.entityTombstones[key];  // un-tombstone if recreated
     this._persist(); this.emit('entities'); this.emit('change',{type:'entity',key,origin:'local'});
     return key;
   }
+  renameEntity(key, label){
+    const e=this.entity(key); if(!e || !label.trim()) return;
+    e.label=label.trim(); e._meta=this._emeta();
+    this._persist(); this.emit('entities'); this.emit('change',{type:'entity',key,origin:'local'});
+  }
+  setEntityIcon(key, icon){
+    const e=this.entity(key); if(!e) return;
+    e.icon=icon; e._meta=this._emeta();
+    this._persist(); this.emit('entities'); this.emit('change',{type:'entity',key,origin:'local'});
+  }
   deleteEntity(key){
+    if(!this.data.entities[key]) return;
     delete this.data.entities[key];
+    (this.data.entityTombstones||={})[key] = { at: Date.now(), by: this.identity.id };  // tombstone → propagates
     this.data.pinned = (this.data.pinned||[]).filter(k=>k!==key);
     this._persist(); this.emit('entities'); this.emit('change',{type:'entity',key,origin:'local'});
   }
-  // entity DEFINITIONS (label+icon) for sync, so empty tables propagate and
-  // arrive with the creator's chosen name/icon (not a generic guess)
+
+  // ---- field (column) operations — applied across all records ----------
+  renameField(entity, oldKey, newKey){
+    const e=this.entity(entity); newKey=(newKey||'').trim().replace(/\s+/g,'_');
+    if(!e || !newKey || oldKey===newKey) return;
+    for(const r of Object.values(e.records)){
+      if(r._meta.deleted || !(oldKey in (r.fields||{}))) continue;
+      const f={...r.fields}; f[newKey]=f[oldKey]; delete f[oldKey];
+      r.fields=f; r._meta={ rev:(r._meta.rev||0)+1, updatedAt:Date.now(), updatedBy:this.identity.id, deleted:false };
+    }
+    this._persist(); this.emit('records', entity); this.emit('change',{type:'record',entity,origin:'local'});
+  }
+  deleteField(entity, key){
+    const e=this.entity(entity); if(!e) return;
+    for(const r of Object.values(e.records)){
+      if(r._meta.deleted || !(key in (r.fields||{}))) continue;
+      const f={...r.fields}; delete f[key];
+      r.fields=f; r._meta={ rev:(r._meta.rev||0)+1, updatedAt:Date.now(), updatedBy:this.identity.id, deleted:false };
+    }
+    this._persist(); this.emit('records', entity); this.emit('change',{type:'record',entity,origin:'local'});
+  }
+
+  // ---- entity definitions + tombstones for sync ------------------------
   entityDefs(filter){
     return Object.entries(this.data.entities)
       .filter(([k])=>!filter || filter.includes(k))
-      .map(([key,e])=>({ key, label:e.label, icon:e.icon||'table' }));
+      .map(([key,e])=>({ key, label:e.label, icon:e.icon||'table', _meta:e._meta||{updatedAt:0,updatedBy:'?'} }));
   }
+  tombstoneDefs(){ return Object.entries(this.data.entityTombstones||{}).map(([key,t])=>({key,...t})); }
+
+  // create-or-update an entity from a peer's definition (LWW on label/icon)
   ensureEntity(def){
-    if(!def || !def.key || this.data.entities[def.key]) return false;
-    this.data.entities[def.key] = { label:def.label||def.key, icon:def.icon||'table', records:{} };
-    this._persist(); this.emit('entities'); this.emit('change',{type:'entity',key:def.key,origin:'remote'});
-    return true;
+    if(!def || !def.key) return false;
+    const tomb=(this.data.entityTombstones||{})[def.key];
+    const incoming = def._meta?.updatedAt || 0;
+    if(tomb && tomb.at >= incoming) return false;              // a newer delete wins
+    const e=this.data.entities[def.key];
+    if(!e){
+      this.data.entities[def.key] = { label:def.label||def.key, icon:def.icon||'table', records:{}, _meta:def._meta||this._emeta() };
+      this._persist(); this.emit('entities'); this.emit('change',{type:'entity',key:def.key,origin:'remote'});
+      return 'created';
+    }
+    if(incoming > (e._meta?.updatedAt||0) && (e.label!==def.label || e.icon!==def.icon)){
+      e.label=def.label; e.icon=def.icon||e.icon; e._meta=def._meta;
+      this._persist(); this.emit('entities'); this.emit('change',{type:'entity',key:def.key,origin:'remote'});
+      return 'updated';
+    }
+    return false;
+  }
+  // apply peers' delete-tombstones (LWW vs the entity's own metadata)
+  applyTombstones(list){
+    if(!list) return; let changed=false;
+    this.data.entityTombstones||={};
+    for(const t of list){
+      const cur=this.data.entityTombstones[t.key];
+      if(cur && cur.at>=t.at) continue;
+      this.data.entityTombstones[t.key]={ at:t.at, by:t.by };
+      const e=this.data.entities[t.key];
+      if(e && t.at >= (e._meta?.updatedAt||0)){ delete this.data.entities[t.key]; changed=true; }
+    }
+    if(changed){ this._persist(); this.emit('entities'); this.emit('change',{type:'entity',origin:'remote'}); }
   }
 
   // ---- records ---------------------------------------------------------
