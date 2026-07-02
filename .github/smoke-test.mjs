@@ -1,6 +1,8 @@
-// Smoke test for CI: serve the repo, load the landing page and the app (with
-// the invite gate pre-granted), and fail on any console/page error or if the
-// app shell doesn't render. Keeps the hourly self-improvement loop safe.
+// Functional smoke suite for CI. Serves the repo and drives the REAL app end
+// to end; the hourly self-improvement loop only commits/deploys if every check
+// here passes. This is a GROWING list — when a feature ships, add a check.
+//
+// Local run:  PW_EXECUTABLE=/path/to/chrome node .github/smoke-test.mjs
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -22,40 +24,116 @@ const server = http.createServer((req, res) => {
   });
 });
 
-const fail = (m) => { console.error('SMOKE FAIL:', m); process.exit(1); };
+const errors = [];
+let failed = false;
+const base = `http://localhost:${PORT}`;
+const fail = (m) => { failed = true; console.error('  ✗ ' + m); };
+const ok   = (m) => console.log('  ✓ ' + m);
+async function check(name, fn) {
+  try { const r = await fn(); if (r === false) fail(name); else ok(name); }
+  catch (e) { fail(`${name} — ${e.message}`); }
+}
 
 await new Promise((r) => server.listen(PORT, r));
-const browser = await chromium.launch();
-const errors = [];
+const browser = await chromium.launch({ executablePath: process.env.PW_EXECUTABLE || undefined });
 try {
-  const ctx = await browser.newContext();
+  const ctx = await browser.newContext({ viewport: { width: 1280, height: 860 } });
   // pre-grant the invite gate so the app boots in CI
   await ctx.addInitScript(`try{localStorage.setItem('relay.access',JSON.stringify({grantedAt:Date.now(),via:'ci'}));}catch(e){}`);
   const page = await ctx.newPage();
   page.on('pageerror', (e) => errors.push('pageerror: ' + e.message));
   page.on('console', (m) => { if (m.type() === 'error') errors.push('console: ' + m.text()); });
+  const $ = (s) => page.$(s);
+  const count = (s) => page.$$eval(s, (e) => e.length).catch(() => 0);
 
-  // landing
-  await page.goto(`http://localhost:${PORT}/`, { waitUntil: 'networkidle', timeout: 30000 });
-  const hasHero = await page.$('h1');
-  if (!hasHero) fail('landing page has no <h1>');
+  console.log('Landing');
+  await page.goto(`${base}/`, { waitUntil: 'networkidle', timeout: 30000 });
+  await check('landing renders a headline', async () => !!(await $('h1')));
+  await check('landing has a Launch link to /app/', async () =>
+    (await page.$$eval('a', (as) => as.some((a) => /\/app\/?$/.test(a.getAttribute('href') || '')))));
 
-  // app
-  await page.goto(`http://localhost:${PORT}/app/`, { waitUntil: 'networkidle', timeout: 30000 });
-  await page.waitForTimeout(1200);
-  const railItems = await page.$$eval('.rail-item', (els) => els.length).catch(() => 0);
-  if (railItems < 3) fail('app nav (.rail-item) did not render');
-
-  // click through the main sections; each must render without error
+  console.log('App shell');
+  await page.goto(`${base}/app/`, { waitUntil: 'networkidle', timeout: 30000 });
+  await page.waitForTimeout(1000);
+  await check('nav rail renders (>=5 sections)', async () => (await count('.rail-item')) >= 5);
   for (const sec of ['home', 'table', 'messages', 'peers', 'activity', 'settings']) {
-    const el = await page.$(`.rail-item[data-sec="${sec}"]`);
-    if (el) { await el.click(); await page.waitForTimeout(400); }
+    await check(`section "${sec}" opens`, async () => {
+      const el = await $(`.rail-item[data-sec="${sec}"]`); if (!el) return false;
+      await el.click(); await page.waitForTimeout(350);
+      return (await count('#view *')) > 0;
+    });
   }
-  await page.waitForTimeout(500);
 
-  if (errors.length) fail(errors.join('\n'));
-  console.log(`SMOKE OK — landing + app render, ${railItems} nav items, no console errors.`);
+  console.log('Tables — create / row / edit / field / delete');
+  await (await $('.rail-item[data-sec="table"]')).click(); await page.waitForTimeout(300);
+  await check('create a new table', async () => {
+    await (await $('.topbar .btn.primary')).click(); await page.waitForTimeout(300);
+    await page.fill('.modal input', 'Smoke Table');
+    await page.click('.modal button:has-text("Create")'); await page.waitForTimeout(500);
+    return await page.$$eval('.entity-tab', (t) => t.some((x) => /smoke table/i.test(x.textContent)));
+  });
+  await check('add a row', async () => {
+    await page.click('button:has-text("Row")'); await page.waitForTimeout(300);
+    return (await count('tbody tr')) >= 1;
+  });
+  await check('edit a cell (persists to store)', async () => {
+    const cell = await $('tbody tr td[contenteditable]'); if (!cell) return false;
+    await cell.click(); await page.keyboard.type('smoke-value'); await page.keyboard.press('Tab');
+    await page.waitForTimeout(300);
+    return await page.evaluate(() => JSON.stringify(JSON.parse(localStorage.getItem('relay.workspace.v1'))).includes('smoke-value'));
+  });
+  await check('edit-table modal (rename/delete) opens', async () => {
+    await page.click('button:has-text("Edit table")'); await page.waitForTimeout(300);
+    const has = !!(await page.$('.modal button:has-text("Delete table")'));
+    await page.keyboard.press('Escape'); await page.waitForTimeout(200); return has;
+  });
+  await check('field (column header) modal opens', async () => {
+    const th = await $('th.col-head'); if (!th) return false;
+    await th.click(); await page.waitForTimeout(300);
+    const has = !!(await page.$('.modal button:has-text("Delete field")'));
+    await page.keyboard.press('Escape'); await page.waitForTimeout(200); return has;
+  });
+  await check('delete a table (store + UI update)', async () => {
+    await page.evaluate(async () => {
+      const { Store } = await import('/js/store.js');
+      const k = Store.entityNames().find((n) => Store.entity(n).label === 'Smoke Table');
+      if (k) Store.deleteEntity(k);
+    });
+    await page.waitForTimeout(400);
+    return !(await page.$$eval('.entity-tab', (t) => t.some((x) => /smoke table/i.test(x.textContent))));
+  });
+
+  console.log('Messaging');
+  await (await $('.rail-item[data-sec="messages"]')).click(); await page.waitForTimeout(300);
+  await check('send a message appears in the feed', async () => {
+    const ta = await $('.composer textarea'); if (!ta) return false;
+    await ta.click(); await page.keyboard.type('smoke hello'); await page.keyboard.press('Enter');
+    await page.waitForTimeout(400);
+    return await page.$$eval('.msg .text', (m) => m.some((x) => x.textContent.includes('smoke hello')));
+  });
+
+  console.log('What\'s new');
+  await check('what\'s new panel opens, lists entries, searches', async () => {
+    await (await $('.wn-btn')).click(); await page.waitForTimeout(300);
+    if (!(await $('.sheet-overlay.show'))) return false;
+    if ((await count('.wn-entry')) < 1) return false;
+    await page.fill('.sheet .input', 'zzzznomatch'); await page.waitForTimeout(250);
+    const none = (await count('.wn-entry')) === 0;
+    await page.keyboard.press('Escape'); await page.waitForTimeout(200);
+    return none;
+  });
+
+  console.log('Settings');
+  await (await $('.rail-item[data-sec="settings"]')).click(); await page.waitForTimeout(300);
+  await check('advanced (rendezvous) disclosure present', async () => !!(await $('details.adv')));
+
+  if (errors.length) { console.error('\nConsole/page errors:\n' + errors.join('\n')); failed = true; }
+} catch (e) {
+  console.error('SUITE CRASH: ' + e.message); failed = true;
 } finally {
   await browser.close();
   server.close();
 }
+
+if (failed) { console.error('\nSMOKE FAILED — not publishing.'); process.exit(1); }
+console.log('\nSMOKE OK — all functional checks passed.');

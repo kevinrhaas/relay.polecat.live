@@ -31,8 +31,13 @@ an Admin area (`js/views/admin.js`). Read `README.md` and `ROADMAP.md` first.
   runtime deps in the app. Match the existing code's patterns and style.
 - Keep it **elegant, simple, understandable**. Animations and flows are welcome;
   every panel must be **readable and responsive (mobile-friendly)**.
-- **Do not break the app.** A smoke test loads `/app/` and fails the run on any
-  console error or if the nav doesn't render. Verify your change is sound.
+- **Do not break the app.** `.github/smoke-test.mjs` is a functional suite that
+  drives the real app; the run only deploys if EVERY check passes. Before you
+  finish, mentally (or by running it) confirm your change keeps all checks green.
+- **Grow the smoke suite.** For any new user-visible feature, ADD a `check(...)`
+  to `.github/smoke-test.mjs` that exercises it end-to-end. The suite must always
+  prove "everything still functions," and it should get more thorough over time,
+  never less.
 - **Do NOT touch**: `js/access.js` PUBLIC_KEY_B64, `CNAME`, `.github/workflows/*`,
   `js/config.js` (the deployed rendezvous default), or anything secret.
 - Scope: **one focused change**, ideally a handful of files. Don't rewrite the app.
