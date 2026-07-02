@@ -64,6 +64,16 @@ header.nav.scrolled{border-color:var(--border)}
   font-weight:750;margin:26px auto 0;max-width:14ch}
 .hero h1 .g{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
 .hero p.lead{font-size:clamp(16px,2vw,20px);color:var(--text-2);max-width:60ch;margin:24px auto 0;line-height:1.55}
+.whats-new{display:inline-flex;align-items:center;gap:6px;margin-top:22px;padding:7px 15px;border-radius:999px;
+  max-width:92vw;text-align:center;font-size:12.5px;font-weight:600;color:var(--text);
+  background:color-mix(in srgb,var(--consensus) 16%,var(--surface));
+  border:1px solid color-mix(in srgb,var(--consensus) 45%,var(--border));
+  box-shadow:0 0 0 0 color-mix(in srgb,var(--consensus) 40%,transparent);
+  animation:pulse-ring 2.6s ease-out infinite;transition:.16s}
+.whats-new:hover{background:color-mix(in srgb,var(--consensus) 26%,var(--surface));transform:translateY(-1px)}
+@keyframes pulse-ring{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--consensus) 35%,transparent)}
+  70%{box-shadow:0 0 0 8px color-mix(in srgb,var(--consensus) 0%,transparent)}
+  100%{box-shadow:0 0 0 0 color-mix(in srgb,var(--consensus) 0%,transparent)}}
 .hero-cta{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin-top:34px}
 .trust{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:34px}
 .trust .chip{display:inline-flex;align-items:center;gap:7px;padding:6px 13px;border-radius:999px;
@@ -99,7 +109,7 @@ section{padding:64px 0;position:relative;z-index:1}
 @media(max-width:860px){.f3{grid-template-columns:1fr}}
 
 .card{background:color-mix(in srgb,var(--surface) 82%,transparent);border:1px solid var(--border);
-  border-radius:var(--radius);padding:26px;transition:.2s}
+  border-radius:var(--radius);padding:26px;transition:border-color .2s,transform .2s}
 .card:hover{border-color:color-mix(in srgb,var(--brand-b) 55%,var(--border));transform:translateY(-3px)}
 .card .ic{width:46px;height:46px;border-radius:12px;display:flex;align-items:center;justify-content:center;
   color:#fff;margin-bottom:16px}
@@ -161,4 +171,21 @@ footer{border-top:1px solid var(--border);padding:40px 0;position:relative;z-ind
   .foot-in{flex-direction:column;align-items:flex-start;gap:12px}
   .foot-links{margin-left:0;flex-wrap:wrap}
 }
-@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+/* ---- scroll reveal ------------------------------------------------------ */
+.reveal{opacity:0;transform:translateY(18px)}
+.reveal.in{animation:reveal-in .6s cubic-bezier(.16,.8,.3,1) forwards}
+@keyframes reveal-in{to{opacity:1;transform:none}}
+.grid.f3 .card:nth-child(1){animation-delay:0s}
+.grid.f3 .card:nth-child(2){animation-delay:.06s}
+.grid.f3 .card:nth-child(3){animation-delay:.12s}
+.grid.f3 .card:nth-child(4){animation-delay:.18s}
+.grid.f3 .card:nth-child(5){animation-delay:.24s}
+.grid.f3 .card:nth-child(6){animation-delay:.3s}
+.steps .step:nth-child(1){animation-delay:0s}
+.steps .step:nth-child(2){animation-delay:.08s}
+.steps .step:nth-child(3){animation-delay:.16s}
+
+@media(prefers-reduced-motion:reduce){
+  *{animation:none!important;transition:none!important}
+  .reveal{opacity:1;transform:none}
+}

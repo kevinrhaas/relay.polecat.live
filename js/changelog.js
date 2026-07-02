@@ -3,6 +3,16 @@
 // user-visible change (bump `v`, short `title`, today's date, 1–4 `items`).
 export const CHANGELOG = [
   {
+    v: 10,
+    title: 'Landing page refresh',
+    date: 'Jul 2, 2026, 10:05 PM CT',
+    items: [
+      'The front page now actually shows what Relay can do: invite-only access, live P2P chat, and on-the-fly table/field management.',
+      'A "what\'s new" highlight links straight into the app.',
+      'Sections gently fade in as you scroll.',
+    ],
+  },
+  {
     v: 9,
     title: 'What\'s new panel',
     date: 'Jul 2, 2026, 9:40 PM CT',

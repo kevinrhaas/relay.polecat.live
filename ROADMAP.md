@@ -65,6 +65,7 @@ when you finish something, move it to **Done** with the date; add discoveries to
 - Multiple workspaces / workspace switcher.
 
 ## Done
+- 2026-07-02 — Landing page refresh: copy now reflects messaging, invite-only access, and table/field management; added a "what's new" highlight pill and subtle scroll-reveal motion.
 - 2026-07-02 — "What's new" changelog panel (slide-in, searchable, CT timestamps, mobile).
 - 2026-07-02 — Hourly self-improvement loop (this file + `.github/`).
 - 2026-07-02 — Table + field management (rename/delete, tombstone sync).
