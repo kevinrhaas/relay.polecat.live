@@ -30,7 +30,7 @@ export function renderHome(root, ctx){
   const statGrid = el('div',{class:'grid stats'});
   stats.forEach(([k,v,d,ic,col])=>{
     statGrid.append(el('div',{class:'card stat', html:`
-      <div class="glow" style="background:${col}"></div>
+      <div class="glow" style="background:radial-gradient(closest-side, ${col}, transparent)"></div>
       <div class="k">${k}</div><div class="v">${v}</div><div class="d">${d}</div>
       <div class="spark" style="color:${col}">${icon(ic)}</div>`}));
   });
