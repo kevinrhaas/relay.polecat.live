@@ -51,11 +51,16 @@ methods GET/PUT/HEAD).
 ---
 
 ## 2. WebDAV (self-hosted / Nextcloud)
-- **What:** point Relay at a WebDAV URL. You need: **URL**, **username**,
-  **password** (use an app password).
+Available now in **Settings → Advanced → Sync locations → WebDAV**. Relay
+authenticates with HTTP Basic auth straight from the browser — no SDK. You
+need: **server URL** (the folder you want the snapshot in), **username**,
+**password** (use an app password, not your main account password).
 - **Providers:** Nextcloud (free self-host or low-cost managed), any WebDAV host.
+- **Nextcloud URL shape:** `https://<host>/remote.php/dav/files/<user>/<folder>`
+  — create `<folder>` first (Relay writes the file, not the folder).
 - **Cost:** free if self-hosted. **Caveat:** the server must send CORS headers
-  for your Relay origin.
+  for your Relay origin (Nextcloud: Settings → Security → allow your origin,
+  or set `CORS_ALLOWED_ORIGINS` for a reverse proxy in front of it).
 
 ---
 

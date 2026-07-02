@@ -3,6 +3,17 @@
 // user-visible change (bump `v`, short `title`, today's date, 1–4 `items`).
 export const CHANGELOG = [
   {
+    v: 15,
+    title: 'Sync locations: WebDAV',
+    date: 'Jul 3, 2026, 12:35 AM CT',
+    items: [
+      'Settings → Advanced → "Sync locations" now has a WebDAV option — Nextcloud, ownCloud, or any self-hosted WebDAV server.',
+      'Enter a server URL, username, and app password; Relay authenticates itself (no SDK, no server) and keeps a live snapshot there.',
+      'Same convergence as every other sync location: it loads whatever changed on connect and re-writes a fresh snapshot after every local edit.',
+      'See docs/sync-providers.md for the Nextcloud URL shape and the CORS headers your server needs.',
+    ],
+  },
+  {
     v: 14,
     title: 'Sync locations: S3-compatible storage',
     date: 'Jul 3, 2026, 12:10 AM CT',

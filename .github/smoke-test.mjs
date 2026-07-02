@@ -272,6 +272,55 @@ try {
     return !!(await details.$('.s3-block button:has-text("Connect bucket")'));
   });
 
+  await page.evaluate(() => {
+    // stub fetch with an in-memory file so the WebDAV sync-location flow
+    // (Basic auth) can be driven headlessly (no real WebDAV server in CI)
+    const files = {};
+    window.__fakeWebdavFiles = files;
+    const realFetch = window.fetch.bind(window);
+    window.fetch = async (url, opts = {}) => {
+      const u = new URL(url, location.href);
+      if (!u.hostname.includes('fake-webdav-smoke')) return realFetch(url, opts);
+      if (!opts.headers || !opts.headers['Authorization']) return new Response('missing auth', { status: 401 });
+      const method = (opts.method || 'GET').toUpperCase();
+      if (method === 'PUT') { files[u.pathname] = opts.body; return new Response('', { status: 201 }); }
+      if (method === 'GET') { const b = files[u.pathname]; return b != null ? new Response(b, { status: 200 }) : new Response('', { status: 404 }); }
+      return new Response('', { status: 405 });
+    };
+  });
+  await check('WebDAV sync: connect authenticates and writes a snapshot', async () => {
+    let details = await $('details.adv'); if (!details) return false;
+    if (!(await details.evaluate((d) => d.open))) { await (await details.$('summary')).click(); await page.waitForTimeout(250); }
+    const inputs = await details.$$('.wd-block input'); if (inputs.length < 3) return false;
+    const [urlIn, userIn, passIn] = inputs;
+    await urlIn.fill('https://fake-webdav-smoke.test/remote.php/dav/files/smoke/relay');
+    await userIn.fill('smoke-user');
+    await passIn.fill('sekritAppPass123');
+    const btn = await details.$('.wd-block button:has-text("Connect WebDAV")'); if (!btn) return false;
+    await btn.click(); await page.waitForTimeout(400);   // renderSettings() rebuilds the DOM — re-query below
+    details = await $('details.adv'); if (!details) return false;
+    const chip = await details.$('.wd-block .chip');
+    const chipText = chip ? (await chip.evaluate((c) => c.textContent)).trim() : '';
+    const wrote = await page.evaluate(() => Object.values(window.__fakeWebdavFiles).some((v) => (v || '').includes('"entities"')));
+    return chipText === 'smoke-user' && wrote;
+  });
+  await check('WebDAV sync: local edit re-writes the snapshot', async () => {
+    await page.evaluate(() => { for (const k in window.__fakeWebdavFiles) window.__fakeWebdavFiles[k] = ''; });
+    await page.evaluate(async () => {
+      const { Store } = await import('/js/store.js');
+      Store.createEntity('Smoke WebDAV Entity');
+    });
+    await page.waitForTimeout(1800);
+    return await page.evaluate(() => Object.values(window.__fakeWebdavFiles).some((v) => (v || '').includes('Smoke WebDAV Entity')));
+  });
+  await check('WebDAV sync: disconnect', async () => {
+    let details = await $('details.adv'); if (!details) return false;
+    const btn = await details.$('.wd-block button:has-text("Disconnect")'); if (!btn) return false;
+    await btn.click(); await page.waitForTimeout(300);   // renderSettings() rebuilds the DOM — re-query below
+    details = await $('details.adv'); if (!details) return false;
+    return !!(await details.$('.wd-block button:has-text("Connect WebDAV")'));
+  });
+
   if (errors.length) { console.error('\nConsole/page errors:\n' + errors.join('\n')); failed = true; }
 } catch (e) {
   console.error('SUITE CRASH: ' + e.message); failed = true;

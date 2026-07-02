@@ -3,7 +3,7 @@
 import { Store } from '../store.js';
 import { Sync } from '../sync.js';
 import { Rendezvous } from '../rendezvous.js';
-import { LocalFolder, S3Sync } from '../storage/index.js';
+import { LocalFolder, S3Sync, WebDAVSync } from '../storage/index.js';
 import { Access } from '../access.js';
 import { el, escapeHtml, toast, confirmDialog, avatarColor, initials, ago } from '../ui.js';
 import { icon } from '../icons.js';
@@ -164,8 +164,46 @@ export function renderSettings(root, ctx){
   }
   adv.append(s3Block);
 
+  // -- WebDAV sync (sync locations, phase 3) --
+  adv.append(el('div',{class:'divider'}));
+  const wdBlock=el('div',{class:'wd-block'});
+  const wdStatus = { connected:['connected','var(--success)'], error:['error','var(--danger)'],
+    unsupported:['unsupported','var(--text-3)'], off:['off','var(--text-3)'] }[WebDAVSync.state] || [WebDAVSync.state,'var(--text-3)'];
+  wdBlock.append(el('div',{class:'section-title', style:'margin:4px 0 4px', html:`
+    <h2 style="font-size:13px">Sync locations · WebDAV</h2><div class="sp"></div>
+    <span class="conn-state" style="color:${wdStatus[1]}"><span class="dot" style="background:${wdStatus[1]}"></span>${wdStatus[0]}</span>`}));
+  wdBlock.append(el('p',{class:'muted tiny', html:`Point Relay at a WebDAV folder (Nextcloud, ownCloud, any self-hosted WebDAV) — a snapshot syncs there on every change,
+    authenticated right from this browser (no server). See <span class="kbd">docs/sync-providers.md</span> for setup and the CORS headers the server needs.
+    Use an app password, not your main account password.`}));
+  if(WebDAVSync.state==='connected'){
+    const wdRow=el('div',{style:'display:flex;gap:10px;flex-wrap:wrap;align-items:center'});
+    wdRow.append(
+      el('span',{class:'chip', text:WebDAVSync.cfg.username}),
+      el('span',{class:'muted tiny', text: WebDAVSync.lastSync?`synced ${ago(WebDAVSync.lastSync)}`:'syncing…'}),
+      el('button',{class:'btn danger sm', html:`${icon('x')} Disconnect`, onclick:()=>{ WebDAVSync.disconnect(); renderSettings(root,ctx); }}));
+    wdBlock.append(wdRow);
+  }else{
+    const cfg = WebDAVSync.cfg || {};
+    const urlIn=el('input',{class:'input', placeholder:'https://cloud.example.com/remote.php/dav/files/you/relay', value:cfg.url||''});
+    const userIn=el('input',{class:'input', placeholder:'username', value:cfg.username||''});
+    const passIn=el('input',{class:'input', type:'password', placeholder:'app password', value:cfg.password||''});
+    const grid=el('div',{style:'display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px 12px'});
+    const field=(label,input)=>{ const f=el('div',{class:'field',style:'margin:0'}); f.append(el('label',{text:label}), input); return f; };
+    grid.append(
+      (()=>{ const f=field('Server URL', urlIn); f.style.gridColumn='1 / -1'; return f; })(),
+      field('Username', userIn), field('Password', passIn));
+    wdBlock.append(grid);
+    wdBlock.append(el('button',{class:'btn primary sm', style:'margin-top:4px', html:`${icon('broadcast')} Connect WebDAV`, disabled:!WebDAVSync.isSupported(),
+      onclick:async()=>{
+        const okwd=await WebDAVSync.connect({ url:urlIn.value.trim(), username:userIn.value.trim(), password:passIn.value });
+        if(okwd) toast('WebDAV connected — synced',{kind:'ok'});
+        renderSettings(root,ctx);
+      }}));
+  }
+  adv.append(wdBlock);
+
   // keep it open if the user already configured it, so state is visible
-  if(Rendezvous.configured()||connected||LocalFolder.state!=='off'||S3Sync.state!=='off') adv.open=true;
+  if(Rendezvous.configured()||connected||LocalFolder.state!=='off'||S3Sync.state!=='off'||WebDAVSync.state!=='off') adv.open=true;
   wrap.append(adv);
 
   // ---- data ------------------------------------------------------------

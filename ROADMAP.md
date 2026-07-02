@@ -16,17 +16,15 @@ when you finish something, move it to **Done** with the date; add discoveries to
   (last-writer-wins; deletes use tombstones; entity/field ops sync).
 
 ## Now (highest value first)
-1. **Sync locations — remaining adapters.** Phase 1 (local folder) and phase 2
-   (S3-compatible) are done — see Done below. Next adapters, same
-   `js/storage/` contract (`isSupported`, `connect`/`reconnect`/`disconnect`/
-   `autostart`, `state`, snapshot merge via `Store.import(json,{merge:true})`,
-   debounced write via `Store.export()`):
-   1. **WebDAV** (Nextcloud, etc.) — URL + user + pass.
-   2. **Dropbox / Google Drive** (OAuth) — heavier; do last.
-   Settings → Advanced already hosts the "Sync locations" section; add each
-   adapter as its own sub-card there. See `docs/sync-providers.md` for the
-   signup/keys help to link from the UI. Note the client-side-credentials caveat
-   in the UI.
+1. **Sync locations — last adapter.** Phase 1 (local folder), phase 2
+   (S3-compatible), and phase 3 (WebDAV) are done — see Done below. Last
+   adapter, same `js/storage/` contract (`isSupported`, `connect`/
+   `reconnect`/`disconnect`/`autostart`, `state`, snapshot merge via
+   `Store.import(json,{merge:true})`, debounced write via `Store.export()`):
+   1. **Dropbox / Google Drive** (OAuth) — heavier; last one on the list.
+   Settings → Advanced already hosts the "Sync locations" section; add it as
+   its own sub-card there. See `docs/sync-providers.md` for the signup/keys
+   help to link from the UI. Note the client-side-credentials caveat in the UI.
 2. **Tree / side-panel table navigation.** A DBeaver-style but *sexier* browse
    experience: a collapsible tree of entities (and, expandable, their fields) in
    a secondary left panel; selecting a row opens an animated **record editor in a
@@ -51,6 +49,12 @@ when you finish something, move it to **Done** with the date; add discoveries to
 - Multiple workspaces / workspace switcher.
 
 ## Done
+- 2026-07-02 — Sync locations, phase 3: WebDAV (Nextcloud, ownCloud, any
+  self-hosted WebDAV server) via HTTP Basic auth `fetch` — no SDK, no server.
+  Settings → Advanced → "Sync locations" gained a WebDAV sub-card (server URL,
+  username, app password); same connect-on-load / debounced-write-on-change
+  contract as the local-folder and S3 adapters, so it converges the same way.
+  `docs/sync-providers.md` updated with the Nextcloud URL shape and CORS note.
 - 2026-07-02 — Sync locations, phase 2: S3-compatible object storage (Cloudflare
   R2, Backblaze B2, AWS S3, MinIO...) via signed `fetch` requests (AWS SigV4,
   computed locally with Web Crypto — no SDK, no server). Settings → Advanced →

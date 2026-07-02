@@ -2,7 +2,7 @@
 import { Store } from './store.js';
 import { Sync } from './sync.js';
 import { Rendezvous } from './rendezvous.js';
-import { LocalFolder, S3Sync } from './storage/index.js';
+import { LocalFolder, S3Sync, WebDAVSync } from './storage/index.js';
 import { Access } from './access.js';
 import { applyTheme, getThemePref, setTheme } from './theme.js';
 import { buildRail, SECTIONS } from './shell.js';
@@ -35,6 +35,7 @@ async function boot(){
   Rendezvous.autostart();
   LocalFolder.autostart();
   S3Sync.autostart();
+  WebDAVSync.autostart();
 
   const app=$('#app');
   rail=el('nav',{id:'rail','aria-label':'Navigation'});
