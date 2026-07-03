@@ -19,6 +19,7 @@ import { clock, uuid } from './ui.js';
 
 const PERM_KEY = 'relay.perms.v1';
 const KNOWN_KEY = 'relay.knownpeers.v1';
+const READ_KEY = 'relay.chat-read.v1';
 const MESH = 'relay-mesh-v1';
 
 class Emitter{
@@ -49,6 +50,7 @@ export const Sync = new (class extends Emitter{
     this.meshOn = false;
     this.chat = this._loadChat();   // light P2P messaging history
     this._seenChat = new Set(this.chat.map(m=>m.id));
+    this.readState = this._loadReadState(); // threadKey -> last-read timestamp, per-device
   }
 
   // ---- lifecycle -------------------------------------------------------
@@ -302,13 +304,30 @@ export const Sync = new (class extends Emitter{
     if(!msg.to) return 'general';
     return msg.uid===this.uid ? msg.to : msg.uid;
   }
+  // ---- per-thread read state --------------------------------------------
+  _loadReadState(){ try{ return JSON.parse(localStorage.getItem(READ_KEY)||'{}'); }catch{ return {}; } }
+  _saveReadState(){ try{ localStorage.setItem(READ_KEY, JSON.stringify(this.readState)); }catch{} }
+  markRead(threadKey){
+    this.readState[threadKey]=Date.now();
+    this._saveReadState();
+    this.emit('read');
+  }
+  unreadCount(threadKey){
+    const since=this.readState[threadKey]||0;
+    return this.chat.reduce((n,m)=>n+((this.threadKey(m)===threadKey && m.uid!==this.uid && m.ts>since)?1:0), 0);
+  }
+  totalUnread(){
+    const keys=new Set(this.chat.map(m=>this.threadKey(m)));
+    let n=0; keys.forEach(k=>{ n+=this.unreadCount(k); });
+    return n;
+  }
   _store(msg){
     this._seenChat.add(msg.id);
     this.chat.push(msg);
     if(this.chat.length>200){ this.chat=this.chat.slice(-200); }
     this._saveChat();
   }
-  clearChat(){ this.chat=[]; this._seenChat.clear(); this._saveChat(); this.emit('chat', null); }
+  clearChat(){ this.chat=[]; this._seenChat.clear(); this._saveChat(); this.readState={}; this._saveReadState(); this.emit('chat', null); }
 
   // ---- WebRTC manual signaling ----------------------------------------
   _iceServers(){

@@ -10,6 +10,17 @@
 // .github/stamp-changelog.mjs regenerates every `date` from its `ts`.
 export const CHANGELOG = [
   {
+    v: 25,
+    title: 'Messages: per-thread unread badges',
+    ts: '2026-07-03T05:18:49.083Z',
+    date: 'Jul 3, 2026, 12:18 AM CT',
+    items: [
+      'Each DM/General thread pill now shows its own unread count, so you can tell at a glance which conversation has something new without leaving the one you\'re reading.',
+      'The Messages nav badge now reflects real unread messages across every thread (and persists across reloads) instead of just resetting whenever you opened Messages.',
+      'A message landing in a thread you\'re not viewing no longer rebuilds the whole panel — it just updates that thread\'s badge, so an in-progress draft in the composer is never lost.',
+    ],
+  },
+  {
     v: 24,
     title: 'Fix: flickering/unstable Peers & Settings while auto-connect retries',
     ts: '2026-07-03T03:54:58.725Z',

@@ -10,6 +10,7 @@ let thread = 'general';   // 'general' or a peer uid
 
 export function renderMessages(root, ctx){
   root.innerHTML='';
+  Sync.markRead(thread);   // viewing this thread clears its unread badge
   const wrap=el('div',{class:'wrap chat-wrap'});
 
   // ---- thread selector (General + known peers) -------------------------
@@ -55,20 +56,34 @@ export function renderMessages(root, ctx){
   _off = Sync.on('chat', (m)=>{
     const f=document.getElementById('chatFeed'); if(!f){ _off&&_off(); _off=null; return; }
     if(m===null){ renderMessages(root, ctx); return; }
-    // if the message lands in another thread, just refresh the pills' unread
-    if(Sync.threadKey(m)!==thread){ renderMessages(root, ctx); return; }
+    // a message for another thread never disturbs this view (e.g. composer
+    // text mid-draft) — just bump that thread's pill badge in place
+    if(Sync.threadKey(m)!==thread){ updatePillBadges(); return; }
+    Sync.markRead(thread);
     const emptyEl=f.querySelector('.empty'); if(emptyEl) emptyEl.remove();
     f.append(bubble(m)); scrollBottom();
   });
   setTimeout(()=>input.focus(),40);
 
+  function updatePillBadges(){
+    tabs.querySelectorAll('.thread-pill').forEach(p=>{
+      const key=p.dataset.threadKey;
+      p.querySelector('.pill-badge')?.remove();
+      if(key===thread) return;
+      const n=Sync.unreadCount(key);
+      if(n>0) p.insertAdjacentHTML('beforeend', `<span class="pill-badge">${n>99?'99+':n}</span>`);
+    });
+  }
+
   function threadPill(key, name, isGeneral){
     const active = key===thread;
     const isOnline = isGeneral ? online.size>0 : online.has(key);
     const b=el('button',{class:'thread-pill'+(active?' active':''), onclick:()=>{ thread=key; renderMessages(root, ctx); }});
+    b.dataset.threadKey=key;
     if(isGeneral){ b.innerHTML=`${icon('chat')}<span>General</span>`; }
     else{ b.innerHTML=`<span class="tav" style="background:${avatarColor(key)}">${initials(name)}</span>
       <span>${escapeHtml(name.split('-')[0])}</span><span class="pdot${isOnline?' on':''}"></span>`; }
+    if(!active){ const n=Sync.unreadCount(key); if(n>0) b.insertAdjacentHTML('beforeend', `<span class="pill-badge">${n>99?'99+':n}</span>`); }
     return b;
   }
 }

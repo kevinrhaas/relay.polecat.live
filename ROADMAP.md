@@ -26,7 +26,6 @@ when you finish something, move it to **Done** with the date; add discoveries to
   ITP or strict Firefox cookie blocking will force a "needs permission" state
   more often than Dropbox's refresh-token flow does. Falls back to a one-click
   Reconnect, but worth watching for complaints.
-- Per-thread unread counts in Messages.
 - Drag-to-resize the Tables tree panel (currently collapsible but fixed-width).
 - Column types / simple validation (text, number, bool, date, select) with nicer editors.
 - Presence cursors / "who's viewing this table".
@@ -40,6 +39,17 @@ when you finish something, move it to **Done** with the date; add discoveries to
 - Multiple workspaces / workspace switcher.
 
 ## Done
+- 2026-07-03 — Per-thread unread counts in Messages: each thread pill (General
+  and every DM) now shows its own unread badge, computed from a persisted
+  per-thread last-read timestamp (`Sync.markRead`/`unreadCount`/`totalUnread`
+  in `js/sync.js`, `localStorage['relay.chat-read.v1']`) rather than a
+  session-only counter — the Messages nav badge is now just the sum across
+  threads, so it survives reloads and reflects reality instead of resetting
+  whenever you glanced at the section. Also fixed a real rough edge this
+  surfaced: a message landing in a thread you weren't viewing used to
+  trigger a full `renderMessages()` re-render (dropping any in-progress
+  composer draft) — it now only patches that thread's pill badge in place.
+  Added a smoke check covering both the per-thread badge and the nav total.
 - 2026-07-03 — Fixed the flaky smoke check (`"Custom" expands the per-table
   grid and toggles persist`, ~1 in 3 local runs, "Element is not attached to
   the DOM") and its real-world cause: every sync-location adapter's `_set(s)`

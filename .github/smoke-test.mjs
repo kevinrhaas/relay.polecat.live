@@ -239,6 +239,32 @@ try {
     await page.waitForTimeout(400);
     return await page.$$eval('.msg .text', (m) => m.some((x) => x.textContent.includes('smoke hello')));
   });
+  await check('unread badge appears on an inactive DM thread and clears on open', async () => {
+    // seed a known peer (no reload needed — the thread list is rebuilt from
+    // Sync.knownPeers() on every render) then simulate them DMing us while
+    // we're sitting on the General thread
+    await page.evaluate(async () => {
+      const { Sync } = await import('/js/sync.js');
+      Sync._rememberPeer('smoke-thread-uid', 'Smoke Thread Peer');
+    });
+    await (await $('.rail-item[data-sec="home"]')).click(); await page.waitForTimeout(150);
+    await (await $('.rail-item[data-sec="messages"]')).click(); await page.waitForTimeout(300);
+    await page.evaluate(async () => {
+      const { Sync } = await import('/js/sync.js');
+      Sync._recvChat({ id: 'smoke-msg-1', from: 'smoke-peer-session', uid: 'smoke-thread-uid',
+        name: 'Smoke Thread Peer', text: 'hi there', ts: Date.now(), to: Sync.uid });
+    });
+    await page.waitForTimeout(300);
+    const pillSel = '.thread-pill[data-thread-key="smoke-thread-uid"]';
+    const badgeBefore = await page.$eval(pillSel, (p) => p.querySelector('.pill-badge')?.textContent.trim());
+    if (badgeBefore !== '1') return false;
+    // the nav rail's own Messages badge should reflect the same unread total
+    const railBadge = await page.$eval('.rail-item[data-sec="messages"] .badge', (b) => b.hidden ? null : b.textContent.trim());
+    if (railBadge !== '1') return false;
+    await (await $(pillSel)).click(); await page.waitForTimeout(300);
+    const badgeAfter = await page.$eval(pillSel, (p) => p.querySelector('.pill-badge'));
+    return badgeAfter === null;
+  });
 
   console.log('Peers — progressive sharing controls');
   await check('seed a known offline peer', async () => {

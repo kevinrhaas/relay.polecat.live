@@ -22,7 +22,6 @@ const RENDERERS = { home:renderHome, table:renderTable, messages:renderMessages,
 
 let rail, view, topTitle, presence, avatars;
 let currentSection='home', currentParams={};
-let unread=0;
 
 async function boot(){
   applyTheme();
@@ -87,7 +86,6 @@ function go(section, params={}){
   location.hash=section;
   topTitle.textContent=TITLES[section]||'Relay';
   window.__rail.setActive(section);
-  if(section==='messages'){ unread=0; refreshBadges(); }
   if(window.innerWidth<=720) window.__rail.setOpen(false);   // close drawer on mobile
   render();
 }
@@ -143,7 +141,7 @@ function newEntity(){
 // ---- live glue -----------------------------------------------------------
 function refreshBadges(){
   window.__rail.setBadge('peers', Sync.onlineCount());
-  window.__rail.setBadge('messages', unread);
+  window.__rail.setBadge('messages', Sync.totalUnread());
 }
 function refreshPresence(){
   const n=Sync.onlineCount();
@@ -172,9 +170,8 @@ function wireEvents(){
   GoogleDrive.on('state', ()=>{ if(currentSection==='settings') render(); });
   GoogleDrive.on('synced', ()=>{ if(currentSection==='settings') render(); });
   Sync.on('log', (line)=>{ if(currentSection==='activity') pushLogLine(line); });
-  Sync.on('chat', (m)=>{
-    if(m && m.from!==Sync.selfId && currentSection!=='messages'){ unread++; refreshBadges(); }
-  });
+  Sync.on('chat', ()=>refreshBadges());
+  Sync.on('read', ()=>refreshBadges());
 
   Store.on('entities', ()=>{ if(['table','home'].includes(currentSection)) render(); });
   Store.on('change', (c)=>{
