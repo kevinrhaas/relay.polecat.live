@@ -10,6 +10,17 @@
 // .github/stamp-changelog.mjs regenerates every `date` from its `ts`.
 export const CHANGELOG = [
   {
+    v: 38,
+    title: 'Bulk-select and delete rows',
+    ts: '2026-07-03T20:14:59.936Z',
+    date: 'Jul 3, 2026, 3:14 PM CT',
+    items: [
+      'Every table row now has a checkbox; a header checkbox selects or clears all visible (filtered) rows at once.',
+      'Selecting one or more rows shows a "Delete selected" action bar so you can clear out a batch of rows in one confirm instead of one at a time.',
+      'Deletes still tombstone individually, so they propagate to peers exactly like a single-row delete.',
+    ],
+  },
+  {
     v: 37,
     title: 'Landing page refresh',
     ts: '2026-07-03T19:29:50.337Z',

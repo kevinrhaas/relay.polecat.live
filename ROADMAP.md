@@ -21,6 +21,11 @@ when you finish something, move it to **Done** with the date; add discoveries to
    loops/GIFs, feature highlights. It should always reflect what the app can do.
 
 ## Next
+- The new row-selection checkboxes (`selected` in `js/views/table.js`) only
+  power bulk delete so far. Natural next steps on the same selection: bulk
+  "export selected to CSV" (reusing `exportCsv()`'s logic against `[...selected]`
+  instead of `visibleRows()`), or bulk-set a single field's value across every
+  checked row.
 - Google Drive sync's silent token renewal (`prompt:''`) depends on an active
   Google session + third-party-cookie access to accounts.google.com — Safari
   ITP or strict Firefox cookie blocking will force a "needs permission" state
@@ -34,6 +39,26 @@ when you finish something, move it to **Done** with the date; add discoveries to
 - Multiple workspaces / workspace switcher.
 
 ## Done
+- 2026-07-03 — Bulk-select and delete rows: every row in the table grid now has
+  a checkbox (plus a header "select all" that respects whatever filter/sort is
+  active), and checking one or more shows a "Delete selected" action bar with a
+  live count — the only way to remove several rows used to be one confirm
+  dialog per row. Deletes still tombstone individually via a new
+  `Store.removeMany()` (single persist/emit for the batch, same pattern as
+  `upsertMany()`), so they propagate to peers exactly like a single-row delete.
+  Selection is ephemeral UI state (module-scoped, not persisted), cleared on
+  entity switch and pruned against live records so a peer deleting a selected
+  row elsewhere never leaves a stale checkbox. While building this, found and
+  fixed a real pre-existing mobile bug: `.table-shell`'s `align-items:flex-start`
+  (needed for the desktop side-by-side tree/table layout) was left in place
+  when the layout stacks to a single column under 720px, so the table column's
+  width shrink-to-fit the wide data grid instead of the viewport — pushing the
+  toolbar's rightmost buttons (and now the bulk-delete button) off-canvas with
+  no way to reach them. Mobile now overrides it to `align-items:stretch`, and
+  the toolbar/bulk-bar wrap onto multiple lines within the actual viewport
+  width instead. Added two smoke checks: one exercising select-all/partial-
+  select/bulk-delete end to end, one asserting the toolbar and bulk bar stay
+  within the viewport at a 390px mobile width.
 - 2026-07-03 — Landing page refresh: the hero screenshot and copy hadn't kept
   pace with several recent shipped features (per-table live presence, CSV
   export, typed/dropdown fields with sort). Re-captured the hero shot to show

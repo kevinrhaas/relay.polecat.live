@@ -293,6 +293,37 @@ try {
     // the sort check above left the table sorted by name, descending
     return lines.join('|') === ['name', 'zebra', 'mango', 'apple'].join('|');
   });
+  await check('bulk row selection: "select all" checks every row, unchecking one shows a live count, and Delete selected removes only the checked rows', async () => {
+    // table is still sorted desc from the check above: zebra, mango, apple
+    const selectAll = await $('th.chk-head .row-check'); if (!selectAll) return false;
+    await selectAll.click(); await page.waitForTimeout(200);
+    let bar = await $('.bulk-bar'); if (!bar) return false;
+    if ((await page.$eval('.bulk-count', (e) => e.textContent)) !== '3 selected') return false;
+    // uncheck one row — the count should drop without disturbing the other checks
+    const rowChecks = await page.$$('tbody tr .row-check');
+    if (rowChecks.length !== 3) return false;
+    await rowChecks[0].click(); await page.waitForTimeout(200);
+    if ((await page.$eval('.bulk-count', (e) => e.textContent)) !== '2 selected') return false;
+    await page.click('.bulk-bar button:has-text("Delete selected")'); await page.waitForTimeout(250);
+    await page.click('.modal button.danger:has-text("Delete")'); await page.waitForTimeout(400);
+    const remaining = await page.$$eval('tbody tr td[contenteditable]', (tds) => tds.map((t) => t.textContent.trim()));
+    return remaining.length === 1 && remaining[0] === 'zebra' && !(await $('.bulk-bar'));
+  });
+  await check('mobile layout: the toolbar and bulk-select bar stay within the viewport (no horizontal overflow)', async () => {
+    await page.setViewportSize({ width: 390, height: 780 }); await page.waitForTimeout(250);
+    const rowCheck = await $('tbody tr .row-check');
+    if (!rowCheck) { await page.setViewportSize({ width: 1280, height: 860 }); return false; }
+    await rowCheck.click(); await page.waitForTimeout(250);
+    const fits = await page.evaluate(() => {
+      const vw = window.innerWidth;
+      const bar = document.querySelector('.bulk-bar');
+      const toolbar = document.querySelector('.tbl-toolbar');
+      return !!bar && document.body.scrollWidth <= vw
+        && bar.getBoundingClientRect().right <= vw + 1 && toolbar.getBoundingClientRect().right <= vw + 1;
+    });
+    await page.setViewportSize({ width: 1280, height: 860 }); await page.waitForTimeout(250);
+    return fits;
+  });
   await check('import CSV creates a new table with typed rows', async () => {
     const [chooser] = await Promise.all([
       page.waitForEvent('filechooser'),

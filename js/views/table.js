@@ -30,6 +30,7 @@ let treeWidth = clampTreeW(parseInt(localStorage.getItem(K_TREE_WIDTH)||String(T
 let expanded = loadExpanded();
 let filterText = '';
 let sortField = null, sortDir = 'asc';
+let selected = new Set(); // row ids checked for bulk actions, cleared on entity switch
 let _presOff = null; // unsub for the live "who's viewing this table" listener
 
 function loadExpanded(){
@@ -44,7 +45,7 @@ export function renderTable(root, ctx, params={}){
   const prevEntity = current;
   current = params.entity && names.includes(params.entity) ? params.entity
           : (current && names.includes(current) ? current : names[0]);
-  if(current!==prevEntity){ filterText=''; sortField=null; sortDir='asc'; }
+  if(current!==prevEntity){ filterText=''; sortField=null; sortDir='asc'; selected=new Set(); }
   Sync.setViewing(current || null);   // tell peers what table (if any) we're looking at
 
   // preserve focus/cursor in the filter box across full re-renders (e.g. a
@@ -102,6 +103,24 @@ export function renderTable(root, ctx, params={}){
   root.append(wrap);
   wirePresence(wrap, viewerEls, viewersBadge);
 
+  // action bar shown above the grid whenever one or more rows are checked
+  function bulkBar(){
+    const ids = [...selected];
+    return el('div',{class:'bulk-bar'},[
+      el('span',{class:'bulk-count', text:`${ids.length} selected`}),
+      el('button',{class:'btn ghost sm', text:'Clear', onclick:()=>{ selected.clear(); refreshRows(); }}),
+      el('div',{style:'flex:1 0 0;min-width:0'}),
+      el('button',{class:'btn danger sm', html:`${icon('trash')} Delete selected`, onclick:async()=>{
+        if(await confirmDialog('Delete rows', `Delete ${ids.length} row${ids.length!==1?'s':''}? This will propagate to your peers.`, {danger:true, okLabel:'Delete'})){
+          selected.clear();
+          Store.removeMany(current, ids);
+          renderTable(root, ctx, {entity:current});
+          toast(`Deleted ${ids.length} row${ids.length!==1?'s':''}`,{kind:'ok'});
+        }
+      }}),
+    ]);
+  }
+
   // rebuilds only the field header + rows + footer, so filtering/sorting
   // never disturbs the toolbar (and the search box keeps its focus)
   function refreshRows(){
@@ -110,6 +129,11 @@ export function renderTable(root, ctx, params={}){
     const total = Store.records(current).length;
     const needle = filterText.trim().toLowerCase();
     const rows = visibleRows(cols);
+
+    // drop selections for rows a peer deleted elsewhere (or the whole set once a table empties)
+    const liveIds = new Set(Store.records(current).map(r=>r.id));
+    for(const id of selected) if(!liveIds.has(id)) selected.delete(id);
+    if(selected.size) body.append(bulkBar());
 
     const scroll = el('div',{class:'table-scroll'});
     if(!total){
@@ -120,6 +144,17 @@ export function renderTable(root, ctx, params={}){
       const table=el('table',{class:'data'});
       const thead=el('thead');
       const hr=el('tr');
+      const allSelected = rows.length>0 && rows.every(r=>selected.has(r.id));
+      const someSelected = !allSelected && rows.some(r=>selected.has(r.id));
+      const selectAllCb = el('input',{type:'checkbox', class:'row-check', 'aria-label':'Select all visible rows'});
+      selectAllCb.checked = allSelected;
+      selectAllCb.indeterminate = someSelected;
+      selectAllCb.addEventListener('change',()=>{
+        if(selectAllCb.checked) rows.forEach(r=>selected.add(r.id));
+        else rows.forEach(r=>selected.delete(r.id));
+        refreshRows();
+      });
+      hr.append(el('th',{class:'chk-head'},[selectAllCb]));
       hr.append(el('th',{class:'open-head', text:''}));
       hr.append(el('th',{text:'id'}));
       cols.forEach(c=>{
@@ -140,7 +175,7 @@ export function renderTable(root, ctx, params={}){
       thead.append(hr); table.append(thead);
 
       const tbody=el('tbody');
-      rows.forEach(r=>tbody.append(rowEl(r, cols, root, ctx)));
+      rows.forEach(r=>tbody.append(rowEl(r, cols, root, ctx, refreshRows)));
       table.append(tbody);
       scroll.append(table);
     }
@@ -296,8 +331,17 @@ function wireTreeResize(panel, handle){
   });
 }
 
-function rowEl(r, cols, root, ctx){
-  const tr=el('tr',{'data-id':r.id});
+function rowEl(r, cols, root, ctx, onSelectionChange){
+  const tr=el('tr',{'data-id':r.id, class: selected.has(r.id)?'row-selected':''});
+  const chkTd=el('td',{class:'chk-cell'});
+  const chk=el('input',{type:'checkbox', class:'row-check', 'aria-label':`Select row ${shortId(r.id)}`});
+  chk.checked = selected.has(r.id);
+  chk.addEventListener('change',()=>{
+    if(chk.checked) selected.add(r.id); else selected.delete(r.id);
+    onSelectionChange();
+  });
+  chkTd.append(chk);
+  tr.append(chkTd);
   const openTd=el('td',{class:'open-cell'});
   openTd.append(el('button',{class:'btn ghost icon sm row-open', title:'Open record', 'aria-label':'Open record',
     html:icon('chevron'), onclick:()=>openRecordPanel(r, cols, root, ctx)}));
