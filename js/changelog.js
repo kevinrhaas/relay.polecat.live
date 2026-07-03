@@ -10,6 +10,17 @@
 // .github/stamp-changelog.mjs regenerates every `date` from its `ts`.
 export const CHANGELOG = [
   {
+    v: 33,
+    title: 'CSV import suggests field types per column',
+    ts: '2026-07-03T15:49:46.635Z',
+    date: 'Jul 3, 2026, 10:49 AM CT',
+    items: [
+      'The CSV import preview now shows a type picker for every column — Auto, Text, Number, Yes/No, Date, or Dropdown — instead of only guessing from the values.',
+      'Columns with a short repeated set of values (like a status or category column) are pre-set to Dropdown, with the choices filled in from the file.',
+      'Override any column before importing, e.g. force a column of numeric-looking codes to stay Text instead of becoming numbers.',
+    ],
+  },
+  {
     v: 32,
     title: 'Keyboard focus fixes for hidden buttons',
     ts: '2026-07-03T14:51:50.042Z',

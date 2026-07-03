@@ -348,6 +348,14 @@ table.data th.col-head.sorted{color:var(--brand-b)}
 .col-type-badge{font-size:8.5px;font-weight:700;letter-spacing:.03em;color:var(--text-3);
   background:var(--surface-3);border-radius:4px;padding:1px 4px;flex:0 0 auto;
   text-transform:uppercase;cursor:help}
+.import-types{display:flex;flex-direction:column;gap:8px;max-height:220px;overflow:auto;
+  border:1px solid var(--border);border-radius:var(--radius);padding:10px 12px}
+.import-type-row{display:grid;grid-template-columns:26% 1fr;align-items:center;gap:10px}
+.import-type-row:has(.import-type-opts:not([style*=none])){grid-template-columns:22% 34% 1fr}
+.import-type-name{font-size:12.5px;color:var(--text-2);white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis}
+.import-type-row select,.import-type-opts{min-width:0}
+.import-type-opts input{width:100%}
 .col-sort-ic{display:inline-flex;flex:0 0 auto}
 .col-sort-ic svg{width:11px;height:11px;transform:rotate(-90deg);transition:transform .15s}
 .col-sort-ic.desc svg{transform:rotate(90deg)}
@@ -648,6 +656,9 @@ a.link:hover{text-decoration:underline}
   /* tables stay usable via horizontal scroll; keep headers tight */
   table.data th,table.data td{padding:9px 11px}
   .tbl-search{flex:1 1 100%}
+
+  /* CSV import's per-column type picker stacks instead of squeezing three controls in a row */
+  .import-type-row,.import-type-row:has(.import-type-opts:not([style*=none])){grid-template-columns:1fr}
 
   /* tree panel stacks above the table instead of sitting beside it */
   .table-shell{flex-direction:column}

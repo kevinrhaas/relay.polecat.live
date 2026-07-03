@@ -589,12 +589,32 @@ function openImportPreview(root, ctx, filename, headers, dataRows){
     tbody.append(tr);
   });
   table.append(tbody);
+
+  const typeRows = headers.map((h,i)=>{
+    const colValues = dataRows.map(row=>row[i]).filter(v=>v);
+    const suggestion = suggestColumnType(colValues);
+    const sel=el('select',{class:'input'});
+    FIELD_TYPES.forEach(([v,l])=>sel.append(el('option',{value:v, text:l})));
+    sel.value = suggestion.type;
+    const optsInput=el('input',{class:'input', placeholder:'Comma-separated options', value:(suggestion.options||[]).join(', ')});
+    const optsWrap=el('div',{class:'import-type-opts', style:suggestion.type==='select'?'':'display:none'}, optsInput);
+    sel.addEventListener('change',()=>{ optsWrap.style.display = sel.value==='select' ? '' : 'none'; });
+    const row=el('div',{class:'import-type-row'},[
+      el('span',{class:'import-type-name', title:h, text:h}), sel, optsWrap]);
+    return { header:h, sel, optsInput, row };
+  });
+
   const body=el('div');
   body.append(
     (()=>{ const f=el('div',{class:'field'}); f.append(el('label',{text:'Table name'}), name); return f; })(),
     el('p',{class:'muted tiny', text:`${dataRows.length} row${dataRows.length!==1?'s':''} · ${headers.length} field${headers.length!==1?'s':''}`
       + (dataRows.length>previewRows.length ? ` · showing first ${previewRows.length}` : '')}),
-    el('div',{class:'table-scroll', style:'max-height:240px'}, table));
+    el('div',{class:'table-scroll', style:'max-height:240px'}, table),
+    (()=>{ const f=el('div',{class:'field'}); f.append(
+      el('label',{text:'Field types'}),
+      el('p',{class:'muted tiny', style:'margin:0 0 8px', text:'Auto keeps the original text/number/boolean guessing. Columns that look like a short repeated set of values are pre-set to Dropdown.'}),
+      el('div',{class:'import-types'}, typeRows.map(t=>t.row))); return f; })());
+
   const { hide }=modal({ title:'Import CSV', icon:'upload', wide:true, body,
     foot:[ el('button',{class:'btn', text:'Cancel', onclick:()=>hide()}),
       el('button',{class:'btn primary', text:`Import ${dataRows.length} row${dataRows.length!==1?'s':''}`, onclick:()=>{
@@ -604,12 +624,39 @@ function openImportPreview(root, ctx, filename, headers, dataRows){
         catch(e){ toast('Could not create table',{body:e.message,kind:'err'}); return; }
         dataRows.forEach(row=>{
           const fields={};
-          headers.forEach((h,i)=>{ if(row[i]) fields[h]=inferValue(row[i]); });
+          headers.forEach((h,i)=>{ if(row[i]) fields[h]=coerceImportValue(row[i], typeRows[i].sel.value); });
           if(Object.keys(fields).length) Store.upsert(key, fields);
+        });
+        typeRows.forEach(({header,sel,optsInput})=>{
+          if(sel.value==='auto') return;
+          const opts = sel.value==='select' ? optsInput.value.split(',').map(s=>s.trim()).filter(Boolean) : undefined;
+          Store.setFieldType(key, header, sel.value, opts);
         });
         hide(); renderTable(root, ctx, {entity:key}); toast('Table imported',{kind:'ok'});
       }})]});
   setTimeout(()=>{ name.focus(); name.select(); },50);
+}
+
+// suggest Dropdown for a column that looks like a small repeated set of string
+// values (e.g. status/priority/category) — CSV exports of categorical fields
+// are exactly where a fixed option list pays off over free text. Leaves
+// already-auto-detectable columns (all booleans, all numbers) alone.
+function suggestColumnType(colValues){
+  if(colValues.length<3) return {type:'auto'};
+  if(colValues.every(v=>v==='true'||v==='false')) return {type:'auto'};
+  if(colValues.every(v=>v!=='' && !isNaN(Number(v)) && String(Number(v))===v)) return {type:'auto'};
+  const unique=[...new Set(colValues)];
+  if(unique.length>=2 && unique.length<=8 && unique.length<=colValues.length*0.6) return {type:'select', options:unique};
+  return {type:'auto'};
+}
+
+// apply an explicit import-time field type to a raw CSV cell string, falling
+// back to the normal auto-typing rules when left on "auto"
+function coerceImportValue(raw, type){
+  if(type==='boolean') return toBool(raw);
+  if(type==='number'){ const n=Number(raw); return isNaN(n) ? raw : n; }
+  if(type==='date'||type==='select'||type==='text') return raw;
+  return inferValue(raw);
 }
 
 // ---- edit / delete a table (rename, icon, delete) -----------------------

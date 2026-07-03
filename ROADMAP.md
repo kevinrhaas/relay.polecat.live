@@ -34,9 +34,6 @@ when you finish something, move it to **Done** with the date; add discoveries to
   comes up.
 - TURN fallback guidance for strict NATs.
 - Optional "always-on peer" (headless) for 24/7 availability without a DB.
-- CSV import always auto-types imported columns; it could offer to assign a
-  column type (esp. Dropdown, since a CSV of repeated string values is exactly
-  where a fixed option list pays off) in the import preview modal.
 
 ## Later
 - End-to-end encryption of records at rest / in transit beyond DTLS.
@@ -44,6 +41,24 @@ when you finish something, move it to **Done** with the date; add discoveries to
 - Multiple workspaces / workspace switcher.
 
 ## Done
+- 2026-07-03 — CSV import per-column field types: the import preview modal
+  (`openImportPreview` in `js/views/table.js`) now shows a Type picker
+  (Auto/Text/Number/Yes-No/Date/Dropdown — the same `FIELD_TYPES` list used
+  everywhere else) for every column, instead of only ever running the
+  value-based auto-typing rules. A new `suggestColumnType()` pre-selects
+  Dropdown, with its options filled in, for any column that looks like a
+  short repeated set of string values (2–8 distinct values, each repeating
+  on average) — an all-boolean or all-numeric column is left on Auto since
+  those already type themselves correctly. Confirming the import now runs
+  each column through `coerceImportValue()` (explicit types bypass
+  `inferValue`'s guessing — e.g. forcing Text keeps `"007"`-style values as
+  strings) and calls `Store.setFieldType()` for any column left off Auto, so
+  imported dropdowns/dates/booleans get the same dedicated grid + record-panel
+  editors as a manually-typed field. Added a smoke check that imports a CSV
+  with a repeated "status" column and an all-numeric "age" column, confirms
+  the preview suggests Dropdown with the right options for the former and
+  leaves the latter on Auto, overrides "age" to Text, and verifies both the
+  stored field types and values after import.
 - 2026-07-03 — Keyboard-focus polish: two icon-only buttons that only revealed
   themselves on mouse hover — a table row's delete (trash) button and a
   tree-panel field-name button (`.row-actions`, `.tree-field` in

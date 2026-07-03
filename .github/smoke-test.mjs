@@ -251,8 +251,8 @@ try {
     await chooser.setFiles({ name: 'smoke-import.csv', mimeType: 'text/csv',
       buffer: Buffer.from('name,age,active\nAda,30,true\nAlan,41,false\n') });
     await page.waitForTimeout(300);
-    if (!(await $('.modal input'))) return false;
-    await page.fill('.modal input', 'Smoke CSV Table');
+    if (!(await $('.modal input:visible'))) return false;
+    await page.fill('.modal input:visible', 'Smoke CSV Table');
     await page.click('.modal button:has-text("Import 2 rows")');
     await page.waitForTimeout(400);
     const created = await page.$$eval('.tree-row .tree-label', (t) => t.some((x) => /smoke csv table/i.test(x.textContent)));
@@ -263,6 +263,37 @@ try {
       if (!k) return false;
       const rows = Store.records(k);
       return rows.length === 2 && rows.some((r) => r.fields.name === 'Ada' && r.fields.age === 30 && r.fields.active === true);
+    });
+  });
+  await check('CSV import preview suggests Dropdown for a repeated column and lets you override another column\'s type', async () => {
+    const [chooser] = await Promise.all([
+      page.waitForEvent('filechooser'),
+      page.click('button[title="Import CSV"]'),
+    ]);
+    await chooser.setFiles({ name: 'smoke-import-types.csv', mimeType: 'text/csv',
+      buffer: Buffer.from('name,status,age\nAda,Open,30\nAlan,Done,41\nGrace,Open,29\nKen,Open,25\nLin,Review,33\n') });
+    await page.waitForTimeout(300);
+    const statusRow = page.locator('.import-type-row', { hasText: 'status' });
+    if (!(await statusRow.count())) return false;
+    const statusType = await statusRow.locator('select').inputValue();
+    const statusOpts = await statusRow.locator('.import-type-opts input').inputValue();
+    if (statusType !== 'select' || statusOpts !== 'Open, Done, Review') return false;
+    // "age" is all-numeric so it defaults to Auto; override it to Text so the
+    // imported values stay strings instead of the usual auto-inferred numbers
+    await page.locator('.import-type-row', { hasText: 'age' }).locator('select').selectOption('text');
+    await page.fill('.modal input:visible', 'Smoke CSV Types Table');
+    await page.click('.modal button:has-text("Import 5 rows")');
+    await page.waitForTimeout(400);
+    return await page.evaluate(async () => {
+      const { Store } = await import('/js/store.js');
+      const k = Store.entityNames().find((n) => Store.entity(n).label === 'Smoke CSV Types Table');
+      if (!k) return false;
+      const statusFt = Store.fieldType(k, 'status');
+      if (!statusFt || statusFt.type !== 'select' || statusFt.options.join(',') !== 'Open,Done,Review') return false;
+      const ageFt = Store.fieldType(k, 'age');
+      if (!ageFt || ageFt.type !== 'text') return false;
+      const rows = Store.records(k);
+      return rows.some((r) => r.fields.status === 'Open' && r.fields.age === '30');
     });
   });
   await check('delete a table (store + UI update)', async () => {
