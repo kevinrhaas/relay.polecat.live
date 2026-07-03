@@ -10,6 +10,17 @@
 // .github/stamp-changelog.mjs regenerates every `date` from its `ts`.
 export const CHANGELOG = [
   {
+    v: 42,
+    title: 'Undo a row delete',
+    ts: '2026-07-03T22:33:28.835Z',
+    date: 'Jul 3, 2026, 5:33 PM CT',
+    items: [
+      'Deleting a row (single or bulk) now shows an "Undo" button right on the confirmation toast.',
+      'Click it to bring the row(s) straight back — no need to dig through Settings or ask a peer to resend the data.',
+      'Works the same whether the row was removed from the grid, the record panel, or a multi-row bulk delete.',
+    ],
+  },
+  {
     v: 41,
     title: 'Bulk-set a field on selected rows',
     ts: '2026-07-03T21:50:35.054Z',

@@ -309,6 +309,35 @@ export const Store = new (class extends Emitter{
     return n;
   }
 
+  // un-tombstone a record deleted via remove()/removeMany() — a newer rev/
+  // updatedAt than the delete, so it wins LWW and un-deletes on every peer too.
+  // Only meaningful as long as the tombstone hasn't been pruned, which this
+  // app never does, so undo works no matter how the delete propagated.
+  restore(entity, id){
+    const e=this.entity(entity); const cur=e?.records[id]; if(!cur || !cur._meta.deleted) return false;
+    cur._meta={ rev:(cur._meta.rev||0)+1, updatedAt:Date.now(), updatedBy:this.identity.id, deleted:false };
+    this._touch(entity); this._persist();
+    this.emit('records', entity);
+    this.emit('change',{type:'record', entity, id, origin:'local'});
+    return true;
+  }
+  restoreMany(entity, ids){
+    const e=this.entity(entity); if(!e) return 0;
+    const updatedAt = Date.now();
+    let n=0;
+    for(const id of ids){
+      const cur=e.records[id]; if(!cur || !cur._meta.deleted) continue;
+      cur._meta={ rev:(cur._meta.rev||0)+1, updatedAt, updatedBy:this.identity.id, deleted:false };
+      n++;
+    }
+    if(n){
+      this._touch(entity); this._persist();
+      this.emit('records', entity);
+      this.emit('change', {type:'record', entity, origin:'local'});
+    }
+    return n;
+  }
+
   // set a single field's value across a batch of existing records with one
   // persist/emit instead of one per row — same rationale as upsertMany/
   // removeMany, for the bulk-select action bar's "Set field" action.

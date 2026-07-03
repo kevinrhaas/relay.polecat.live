@@ -120,7 +120,7 @@ export function renderTable(root, ctx, params={}){
           selected.clear();
           Store.removeMany(current, ids);
           renderTable(root, ctx, {entity:current});
-          toast(`Deleted ${ids.length} row${ids.length!==1?'s':''}`,{kind:'ok'});
+          deletedToast(current, ids, root, ctx);
         }
       }}),
     ]);
@@ -336,6 +336,18 @@ function wireTreeResize(panel, handle){
   });
 }
 
+// tombstones never get pruned, so a delete is always a rev away from undone —
+// surface that as an "Undo" action on the confirmation toast instead of
+// requiring peers/settings/export to recover an accidental delete.
+function deletedToast(entity, ids, root, ctx){
+  const n = ids.length;
+  toast(`Deleted ${n} row${n!==1?'s':''}`, {kind:'ok', action:{label:'Undo', onClick:()=>{
+    Store.restoreMany(entity, ids);
+    if(entity===current) renderTable(root, ctx, {entity:current});
+    toast(`Restored ${n} row${n!==1?'s':''}`, {kind:'ok'});
+  }}});
+}
+
 function rowEl(r, cols, root, ctx, onSelectionChange){
   const tr=el('tr',{'data-id':r.id, class: selected.has(r.id)?'row-selected':''});
   const chkTd=el('td',{class:'chk-cell'});
@@ -356,7 +368,7 @@ function rowEl(r, cols, root, ctx, onSelectionChange){
   tr.append(el('td',{class:'meta-cell', text:ago(r._meta.updatedAt), title:`rev ${r._meta.rev} · by ${shortId(r._meta.updatedBy)}`}));
   const act=el('td');
   const del=el('button',{class:'btn ghost icon sm row-actions', html:icon('trash'), title:'Delete row', 'aria-label':'Delete row',
-    onclick:async()=>{ if(await confirmDialog('Delete row','This tombstone will propagate to your peers.',{danger:true,okLabel:'Delete'})){ Store.remove(current,r.id); renderTable(root,ctx,{entity:current}); toast('Row deleted',{kind:'ok'}); } }});
+    onclick:async()=>{ if(await confirmDialog('Delete row','This tombstone will propagate to your peers.',{danger:true,okLabel:'Delete'})){ Store.remove(current,r.id); renderTable(root,ctx,{entity:current}); deletedToast(current,[r.id],root,ctx); } }});
   act.append(del); tr.append(act);
   return tr;
 }
@@ -563,7 +575,7 @@ function openRecordPanel(rec, cols, root, ctx){
 
   const del = el('button',{class:'btn danger', html:`${icon('trash')} Delete row`, onclick:async()=>{
     if(await confirmDialog('Delete row','This tombstone will propagate to your peers.',{danger:true,okLabel:'Delete'})){
-      Store.remove(current, rec.id); toast('Row deleted',{kind:'ok'}); s.hide();
+      Store.remove(current, rec.id); deletedToast(current,[rec.id],root,ctx); s.hide();
     }
   }});
 

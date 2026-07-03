@@ -366,6 +366,17 @@ try {
     return names.length === 3 && names.filter((n) => n === 'kiwi').length === 2
       && names.includes('zebra') && !(await $('.bulk-bar'));
   });
+  await check('deleting a row shows an "Undo" toast that restores it', async () => {
+    await page.waitForTimeout(400);   // let the previous check's re-render settle before grabbing a row handle
+    const before = await count('tbody tr');
+    const del = await $('.row-actions'); if (!del) return false;
+    await del.click(); await page.waitForTimeout(200);
+    await page.click('.modal button.danger:has-text("Delete")'); await page.waitForTimeout(300);
+    if ((await count('tbody tr')) !== before - 1) return false;
+    const undoBtn = await $('.toast-action'); if (!undoBtn) return false;
+    await undoBtn.click(); await page.waitForTimeout(300);
+    return (await count('tbody tr')) === before;
+  });
   await check('import CSV creates a new table with typed rows', async () => {
     const [chooser] = await Promise.all([
       page.waitForEvent('filechooser'),

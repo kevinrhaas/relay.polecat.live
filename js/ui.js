@@ -64,7 +64,9 @@ export function uuid(){
 export function shortId(id){ return String(id).slice(0,8); }
 
 // ---- toasts ------------------------------------------------------------
-export function toast(title, {body='', kind='info', ms=3800}={}){
+// `action` optionally renders a button (e.g. "Undo") that runs a callback and
+// dismisses the toast immediately, instead of waiting out the auto-dismiss.
+export function toast(title, {body='', kind='info', ms=3800, action}={}){
   const host = $('#toasts') || document.body.appendChild(el('div',{id:'toasts', role:'status', 'aria-live':'polite'}));
   const ic = {ok:'check',err:'x',info:'info',warn:'info'}[kind]||'info';
   const t = el('div',{class:`toast ${kind}`, html:
@@ -73,7 +75,12 @@ export function toast(title, {body='', kind='info', ms=3800}={}){
   requestAnimationFrame(()=>t.classList.add('show'));
   const kill=()=>{t.classList.remove('show');setTimeout(()=>t.remove(),320)};
   const to=setTimeout(kill,ms);
-  t.addEventListener('click',()=>{clearTimeout(to);kill()});
+  t.addEventListener('click',e=>{if(e.target.closest('.toast-action')) return; clearTimeout(to);kill()});
+  if(action){
+    const btn = el('button',{class:'btn ghost sm toast-action', text:action.label,
+      onclick:e=>{ e.stopPropagation(); clearTimeout(to); kill(); action.onClick(); }});
+    t.append(btn);
+  }
   return kill;
 }
 

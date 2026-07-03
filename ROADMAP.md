@@ -27,6 +27,9 @@ when you finish something, move it to **Done** with the date; add discoveries to
   more often than Dropbox's refresh-token flow does. Falls back to a one-click
   Reconnect, but worth watching for complaints.
 - Optional "always-on peer" (headless) for 24/7 availability without a DB.
+- Extend the new row-delete Undo to table delete and field delete — both still
+  only warn via `confirmDialog` with no way back. Table delete's confirm copy
+  currently says "This can't be undone", which would need updating too.
 
 ## Later
 - End-to-end encryption of records at rest / in transit beyond DTLS.
@@ -34,6 +37,17 @@ when you finish something, move it to **Done** with the date; add discoveries to
 - Multiple workspaces / workspace switcher.
 
 ## Done
+- 2026-07-03 — Undo a row delete: deleting a row — from the grid's trash
+  button, the record panel's "Delete row" button, or the bulk-select action
+  bar's "Delete selected" — now shows an "Undo" button right on the
+  confirmation toast (`toast()` in `js/ui.js` gained an optional `action`
+  param). Clicking it un-tombstones the record(s) via new
+  `Store.restore()`/`restoreMany()` (bump rev/updatedAt with `deleted:false`,
+  mirroring how `remove()`/`removeMany()` already bump it to `deleted:true`),
+  so the restore propagates to peers exactly like the delete did — nothing
+  new to design there since deletes were already non-destructive tombstones
+  under the hood, just with no UI path back. Added a smoke check that deletes
+  a row, clicks Undo, and confirms the row count returns to its prior value.
 - 2026-07-03 — Bulk-set a field's value on selected rows: the bulk-select
   action bar (`selected` in `js/views/table.js`) gained a "Set field…" button
   alongside "Delete selected" and "Export selected" — the natural next step

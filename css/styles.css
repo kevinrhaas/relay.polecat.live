@@ -528,6 +528,7 @@ textarea{resize:vertical;font-family:var(--mono);font-size:12px}
 .toast.info .ic{color:var(--info)}.toast.warn .ic{color:var(--warning)}
 .toast b{font-size:13px;display:block;margin-bottom:2px}
 .toast p{margin:0;font-size:12px;color:var(--text-2)}
+.toast-action{flex:0 0 auto;margin-left:auto;align-self:center}
 
 /* presence dot in topbar */
 .presence{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-2)}
