@@ -44,6 +44,16 @@ when you finish something, move it to **Done** with the date; add discoveries to
 - Multiple workspaces / workspace switcher.
 
 ## Done
+- 2026-07-03 — Landing page refresh: copy and the hero screenshot were stale
+  (the shot still showed the old horizontal entity tabs, pre-dating the
+  tree/side-panel navigation; "what's new" and the meta description only
+  mentioned local folder/S3/WebDAV backups, missing Dropbox and Google Drive).
+  Re-captured the app screenshot to show the current Tables view — collapsible
+  tree with an expanded table's fields, the live row filter box, and the
+  "Edit table" affordance. Hero "what's new" pill, meta/OG description, and
+  the "Yours to keep" / "Bring your own backup" feature cards now reflect CSV
+  import and the full five-provider backup lineup (local folder, S3, WebDAV,
+  Dropbox, Google Drive).
 - 2026-07-03 — Import CSV → new table. A new upload-icon button next to "New
   table" in the Tables tree header opens a file picker; the CSV is parsed
   client-side (a small RFC4180-ish parser handling quoted fields, embedded

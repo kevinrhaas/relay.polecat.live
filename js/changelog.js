@@ -10,6 +10,16 @@
 // .github/stamp-changelog.mjs regenerates every `date` from its `ts`.
 export const CHANGELOG = [
   {
+    v: 27,
+    title: 'Landing page refresh',
+    ts: '2026-07-03T08:05:29.270Z',
+    date: 'Jul 3, 2026, 3:05 AM CT',
+    items: [
+      'Re-shot the app screenshot on the homepage — it was still showing the old horizontal table tabs from before the tree/side-panel navigation shipped.',
+      'The hero highlight and feature cards now call out CSV import, and the backup card lists all five sync locations (local folder, S3, WebDAV, Dropbox, Google Drive).',
+    ],
+  },
+  {
     v: 26,
     title: 'Import CSV → new table',
     ts: '2026-07-03T06:45:32.471Z',
