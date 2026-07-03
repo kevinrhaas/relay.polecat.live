@@ -283,6 +283,23 @@ try {
     const desc = await page.$$eval('tbody tr td[contenteditable]', (tds) => tds.map((t) => t.textContent.trim()));
     return asc.join() === 'apple,mango,zebra' && desc.join() === 'zebra,mango,apple';
   });
+  await check('column header sort is keyboard-operable (Tab + Enter) and reports aria-sort', async () => {
+    let th = await $('th.col-head'); if (!th) return false;
+    if ((await th.getAttribute('tabindex')) !== '0') return false;
+    await th.click(); await page.waitForTimeout(250); // was left desc by the check above; one more click clears it
+    th = await $('th.col-head'); if (!th) return false;
+    await th.focus(); await page.keyboard.press('Enter'); await page.waitForTimeout(250); // -> asc
+    th = await $('th.col-head'); if (!th) return false;
+    const ariaAsc = await th.getAttribute('aria-sort');
+    const asc = await page.$$eval('tbody tr td[contenteditable]', (tds) => tds.map((t) => t.textContent.trim()));
+    th = await $('th.col-head'); if (!th) return false;
+    await th.focus(); await page.keyboard.press('Enter'); await page.waitForTimeout(250); // -> desc, matches state the checks below expect
+    th = await $('th.col-head'); if (!th) return false;
+    const ariaDesc = await th.getAttribute('aria-sort');
+    const desc = await page.$$eval('tbody tr td[contenteditable]', (tds) => tds.map((t) => t.textContent.trim()));
+    return ariaAsc === 'ascending' && ariaDesc === 'descending' &&
+      asc.join() === 'apple,mango,zebra' && desc.join() === 'zebra,mango,apple';
+  });
   await check('export CSV downloads the current (filtered/sorted) view', async () => {
     const [download] = await Promise.all([
       page.waitForEvent('download'),
@@ -628,9 +645,13 @@ try {
     const rows = await (await $('.peer')).$$('.perm-grid .perm-row');
     if (!rows.length) return false;
     const toggles = await (await $('.peer')).$$('.perm-grid .perm-row:first-child .toggle');
+    const before = await toggles[0].evaluate((b) => [b.getAttribute('role'), b.getAttribute('aria-checked'), !!b.getAttribute('aria-label')]);
     await toggles[0].click(); await page.waitForTimeout(300);
+    const toggles2 = await (await $('.peer')).$$('.perm-grid .perm-row:first-child .toggle');
+    const afterChecked = await toggles2[0].getAttribute('aria-checked');
     const btns2 = await (await $('.peer')).$$('.sharing-seg button');
-    return await btns2[1].evaluate((b) => b.classList.contains('on'));
+    const segOn = await btns2[1].evaluate((b) => b.classList.contains('on'));
+    return segOn && before[0] === 'switch' && before[2] && afterChecked !== before[1];
   });
   await check('WebRTC invite modal: "Join with invite" autofocuses the offer field', async () => {
     await page.click('button:has-text("WebRTC invite")'); await page.waitForTimeout(300);

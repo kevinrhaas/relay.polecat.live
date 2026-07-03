@@ -124,7 +124,9 @@ function peerCard(p, ctx){
       row.innerHTML=`<span class="en">${escapeHtml(e.label)}</span>`;
       ['read','write'].forEach(mode=>{
         const on=Sync.can(uid,mode,ent);
-        const t=el('button',{class:'toggle'+(on?' on':''), title:`${mode==='read'?'Peer can read this from you':'Peer can write this to you'}`,
+        const permLabel=mode==='read'?'Peer can read this from you':'Peer can write this to you';
+        const t=el('button',{class:'toggle'+(on?' on':''), type:'button', role:'switch',
+          'aria-checked':String(on), title:permLabel, 'aria-label':`${e.label} — ${mode}: ${permLabel}`,
           // Sync.setPerm's own 'perms' emit already re-renders this section.
           onclick:()=>{ Sync.setPerm(uid,mode,ent,!Sync.can(uid,mode,ent)); }});
         const lbl=el('span',{class:'muted tiny', style:'width:38px;text-align:right', text:mode});

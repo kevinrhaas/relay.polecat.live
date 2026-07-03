@@ -359,6 +359,7 @@ table.data th{position:sticky;top:0;background:var(--surface-2);z-index:2;
 table.data th.col-head{cursor:pointer;transition:color .12s}
 table.data th.col-head:hover{color:var(--text)}
 table.data th.col-head.sorted{color:var(--brand-b)}
+table.data th.col-head:focus-visible{outline:none;color:var(--text);box-shadow:inset var(--ring)}
 .col-head-inner{display:flex;align-items:center;gap:5px}
 .col-label{white-space:nowrap}
 .col-type-badge{font-size:8.5px;font-weight:700;letter-spacing:.03em;color:var(--text-3);

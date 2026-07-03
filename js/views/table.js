@@ -165,8 +165,11 @@ export function renderTable(root, ctx, params={}){
       cols.forEach(c=>{
         const sorted = sortField===c;
         const ft = Store.fieldType(current, c);
-        const th = el('th',{class:'col-head'+(sorted?' sorted':''), title:`Sort by ${c}`,
-          onclick:()=>{ if(sortField!==c){ sortField=c; sortDir='asc'; } else if(sortDir==='asc'){ sortDir='desc'; } else { sortField=null; sortDir='asc'; } refreshRows(); }});
+        const doSort=()=>{ if(sortField!==c){ sortField=c; sortDir='asc'; } else if(sortDir==='asc'){ sortDir='desc'; } else { sortField=null; sortDir='asc'; } refreshRows(); };
+        const th = el('th',{class:'col-head'+(sorted?' sorted':''), title:`Sort by ${c}`, tabindex:'0',
+          'aria-sort': sorted ? (sortDir==='asc'?'ascending':'descending') : 'none',
+          onclick:doSort,
+          onkeydown:(ev)=>{ if(ev.target!==ev.currentTarget) return; if(ev.key!=='Enter'&&ev.key!==' ') return; ev.preventDefault(); doSort(); }});
         const inner = el('div',{class:'col-head-inner'});
         inner.append(el('span',{class:'col-label', text:c}));
         if(ft) inner.append(el('span',{class:'col-type-badge', title:FIELD_TYPES.find(([v])=>v===ft.type)?.[1]||ft.type, text:TYPE_BADGE[ft.type]||ft.type}));
@@ -851,7 +854,7 @@ function editEntity(root, ctx){
     (()=>{ const f=el('div',{class:'field'}); f.append(el('label',{text:'Icon'}), picker); return f; })(),
     el('p',{class:'muted tiny', text:'Renames and icon changes sync to your peers.'}));
   const del=el('button',{class:'btn danger', html:`${icon('trash')} Delete table`, onclick:async()=>{
-    if(await confirmDialog('Delete table',`Delete “${e.label}” and all its rows for you and your peers? This can't be undone.`,{danger:true,okLabel:'Delete table'})){
+    if(await confirmDialog('Delete table',`Delete “${e.label}” and all its rows for you and your peers? This cannot be undone.`,{danger:true,okLabel:'Delete table'})){
       hide(); Store.deleteEntity(current);
       current=Store.entityNames()[0]||null;
       renderTable(root,ctx,{entity:current}); toast('Table deleted',{kind:'ok'});

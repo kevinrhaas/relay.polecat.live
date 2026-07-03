@@ -37,6 +37,24 @@ when you finish something, move it to **Done** with the date; add discoveries to
 - Multiple workspaces / workspace switcher.
 
 ## Done
+- 2026-07-03 — Keyboard accessibility polish, round 3: sorting a table by
+  clicking a column header (`th.col-head` in `js/views/table.js`) was
+  mouse-only — the `<th>` had an `onclick` but no `tabindex`, so keyboard
+  users couldn't reach or trigger it at all (not just an invisible-focus
+  case like the prior two rounds). It's now `tabindex="0"` with an
+  Enter/Space handler (same guard pattern as Home's keyboard-activatable
+  cards, so a keypress on the nested rename/delete pencil button doesn't
+  double-fire the sort) and a proper `aria-sort` attribute plus a
+  `:focus-visible` ring. Separately, the Peers page's per-entity
+  read/write permission toggles (`js/views/peers.js`) were the one
+  `.toggle` control in the app still missing `role="switch"`/`aria-checked`/
+  `aria-label` — every other toggle (boolean fields, record panel) already
+  had them. Also unified "This can't be undone" / "This cannot be undone"
+  wording on the two destructive-delete confirm dialogs to the latter.
+  Added a smoke check driving the column-sort via Tab+Enter (asserting
+  `aria-sort` and the resulting row order match the mouse-click version),
+  and extended the existing "Custom" permission-grid smoke check to assert
+  the toggle's switch role/aria-checked/label.
 - 2026-07-03 — Undo a row delete: deleting a row — from the grid's trash
   button, the record panel's "Delete row" button, or the bulk-select action
   bar's "Delete selected" — now shows an "Undo" button right on the

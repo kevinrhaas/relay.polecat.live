@@ -10,6 +10,16 @@
 // .github/stamp-changelog.mjs regenerates every `date` from its `ts`.
 export const CHANGELOG = [
   {
+    v: 43,
+    title: 'Keyboard accessibility polish',
+    ts: '2026-07-03T22:53:02.479Z',
+    date: 'Jul 3, 2026, 5:53 PM CT',
+    items: [
+      'Table column headers can now be sorted with the keyboard (Tab to a header, Enter/Space to sort), not just a mouse click.',
+      'Peer permission toggles now announce themselves properly to screen readers (which peer, which table, read or write, on or off).',
+    ],
+  },
+  {
     v: 42,
     title: 'Undo a row delete',
     ts: '2026-07-03T22:33:28.835Z',
