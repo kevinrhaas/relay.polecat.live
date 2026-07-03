@@ -368,6 +368,9 @@ table.data th.col-head.sorted{color:var(--brand-b)}
   overflow:hidden;text-overflow:ellipsis}
 .import-type-row select,.import-type-opts{min-width:0}
 .import-type-opts input{width:100%}
+.import-progress-track{height:6px;border-radius:3px;background:var(--surface-3);overflow:hidden}
+.import-progress-fill{height:100%;width:0%;background:var(--brand-b);transition:width .12s ease}
+.import-progress-label{margin:6px 0 0;text-align:right}
 .col-sort-ic{display:inline-flex;flex:0 0 auto}
 .col-sort-ic svg{width:11px;height:11px;transform:rotate(-90deg);transition:transform .15s}
 .col-sort-ic.desc svg{transform:rotate(90deg)}

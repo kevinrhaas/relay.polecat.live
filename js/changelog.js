@@ -10,6 +10,16 @@
 // .github/stamp-changelog.mjs regenerates every `date` from its `ts`.
 export const CHANGELOG = [
   {
+    v: 36,
+    title: 'Smoother large CSV imports',
+    ts: '2026-07-03T19:16:10.780Z',
+    date: 'Jul 3, 2026, 2:16 PM CT',
+    items: [
+      'Importing a big CSV now processes rows in chunks instead of freezing the tab while it works.',
+      'A progress bar and row count show while a large import is in flight.',
+    ],
+  },
+  {
     v: 35,
     title: 'TURN fallback for stubborn networks',
     ts: '2026-07-03T18:00:30.806Z',

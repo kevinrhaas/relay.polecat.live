@@ -242,6 +242,27 @@ export const Store = new (class extends Emitter{
     return e.records[id];
   }
 
+  // insert a batch of brand-new rows with a single persist/emit instead of one
+  // per row — upsert() re-stringifies the whole workspace on every call, which
+  // gets slower as an entity grows, so importing thousands of CSV rows one at
+  // a time would get progressively slower on top of being wasteful. Only for
+  // fresh rows (no id/prior-value merge), which is all a CSV import ever needs.
+  upsertMany(entity, rowsOfFields){
+    const e=this.entity(entity); if(!e) return [];
+    const updatedAt = Date.now();
+    const created = rowsOfFields.map(fields=>{
+      const id = uuid();
+      const rec = { id, entity, fields, _meta:{ rev:1, updatedAt, updatedBy:this.identity.id, deleted:false } };
+      e.records[id]=rec;
+      return rec;
+    });
+    this._touch(entity);
+    this._persist();
+    this.emit('records', entity);
+    this.emit('change', {type:'record', entity, origin:'local'});
+    return created;
+  }
+
   // merge a record received from a peer using LWW; returns true if applied
   merge(rec){
     const e=this.entity(rec.entity);

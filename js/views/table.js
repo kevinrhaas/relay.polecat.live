@@ -629,6 +629,11 @@ function openImportPreview(root, ctx, filename, headers, dataRows){
     return { header:h, sel, optsInput, row };
   });
 
+  const progressFill=el('div',{class:'import-progress-fill'});
+  const progressLabel=el('p',{class:'muted tiny import-progress-label'});
+  const progressWrap=el('div',{class:'field', style:'display:none'},
+    [el('div',{class:'import-progress-track'}, progressFill), progressLabel]);
+
   const body=el('div');
   body.append(
     (()=>{ const f=el('div',{class:'field'}); f.append(el('label',{text:'Table name'}), name); return f; })(),
@@ -638,27 +643,42 @@ function openImportPreview(root, ctx, filename, headers, dataRows){
     (()=>{ const f=el('div',{class:'field'}); f.append(
       el('label',{text:'Field types'}),
       el('p',{class:'muted tiny', style:'margin:0 0 8px', text:'Auto keeps the original text/number/boolean guessing. Columns that look like a short repeated set of values are pre-set to Dropdown.'}),
-      el('div',{class:'import-types'}, typeRows.map(t=>t.row))); return f; })());
+      el('div',{class:'import-types'}, typeRows.map(t=>t.row))); return f; })(),
+    progressWrap);
 
-  const { hide }=modal({ title:'Import CSV', icon:'upload', wide:true, body,
-    foot:[ el('button',{class:'btn', text:'Cancel', onclick:()=>hide()}),
-      el('button',{class:'btn primary', text:`Import ${dataRows.length} row${dataRows.length!==1?'s':''}`, onclick:()=>{
-        const label=name.value.trim(); if(!label) return;
-        let key;
-        try{ key=Store.createEntity(label, 'table'); }
-        catch(e){ toast('Could not create table',{body:e.message,kind:'err'}); return; }
-        dataRows.forEach(row=>{
-          const fields={};
-          headers.forEach((h,i)=>{ if(row[i]) fields[h]=coerceImportValue(row[i], typeRows[i].sel.value); });
-          if(Object.keys(fields).length) Store.upsert(key, fields);
-        });
-        typeRows.forEach(({header,sel,optsInput})=>{
-          if(sel.value==='auto') return;
-          const opts = sel.value==='select' ? optsInput.value.split(',').map(s=>s.trim()).filter(Boolean) : undefined;
-          Store.setFieldType(key, header, sel.value, opts);
-        });
-        hide(); renderTable(root, ctx, {entity:key}); toast('Table imported',{kind:'ok'});
-      }})]});
+  // rows import in fixed-size chunks, yielding to the main thread between each
+  // one, so a large CSV (tens of thousands of rows) never freezes the tab —
+  // only the final chunk resolves the click handler and closes the modal.
+  const CHUNK=300;
+  const cancelBtn=el('button',{class:'btn', text:'Cancel', onclick:()=>hide()});
+  const importBtn=el('button',{class:'btn primary', text:`Import ${dataRows.length} row${dataRows.length!==1?'s':''}`, onclick:async()=>{
+    const label=name.value.trim(); if(!label) return;
+    let key;
+    try{ key=Store.createEntity(label, 'table'); }
+    catch(e){ toast('Could not create table',{body:e.message,kind:'err'}); return; }
+    const total=dataRows.length;
+    cancelBtn.disabled=true; importBtn.disabled=true; progressWrap.style.display='';
+    for(let i=0;i<total;i+=CHUNK){
+      const batch=dataRows.slice(i,i+CHUNK).map(row=>{
+        const fields={};
+        headers.forEach((h,ci)=>{ if(row[ci]) fields[h]=coerceImportValue(row[ci], typeRows[ci].sel.value); });
+        return fields;
+      }).filter(fields=>Object.keys(fields).length);
+      if(batch.length) Store.upsertMany(key, batch);
+      const done=Math.min(i+CHUNK,total);
+      progressFill.style.width=Math.round(done/total*100)+'%';
+      progressLabel.textContent=`Importing ${done}/${total} rows…`;
+      if(done<total) await new Promise(r=>setTimeout(r,0));
+    }
+    typeRows.forEach(({header,sel,optsInput})=>{
+      if(sel.value==='auto') return;
+      const opts = sel.value==='select' ? optsInput.value.split(',').map(s=>s.trim()).filter(Boolean) : undefined;
+      Store.setFieldType(key, header, sel.value, opts);
+    });
+    hide(); renderTable(root, ctx, {entity:key}); toast(`Imported ${total} row${total!==1?'s':''}`,{kind:'ok'});
+  }});
+
+  const { hide }=modal({ title:'Import CSV', icon:'upload', wide:true, body, foot:[cancelBtn, importBtn] });
   setTimeout(()=>{ name.focus(); name.select(); },50);
 }
 

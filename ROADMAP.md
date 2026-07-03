@@ -26,11 +26,6 @@ when you finish something, move it to **Done** with the date; add discoveries to
   ITP or strict Firefox cookie blocking will force a "needs permission" state
   more often than Dropbox's refresh-token flow does. Falls back to a one-click
   Reconnect, but worth watching for complaints.
-- CSV import currently reads the whole file with `FileReader.readAsText` and
-  builds every row in memory before the first `Store.upsert` — fine for
-  typical exports, but a very large file (tens of thousands of rows) would
-  block the main thread for the whole import. Worth chunking/yielding if that
-  comes up.
 - Optional "always-on peer" (headless) for 24/7 availability without a DB.
 
 ## Later
@@ -39,6 +34,24 @@ when you finish something, move it to **Done** with the date; add discoveries to
 - Multiple workspaces / workspace switcher.
 
 ## Done
+- 2026-07-03 — Chunked CSV import for large files: confirming an import used to
+  run every row through `Store.upsert` (a full workspace persist + re-render
+  event, one per row) in a single synchronous pass — flagged as a known risk
+  in this file, since a very large CSV (tens of thousands of rows) would both
+  freeze the tab for the whole import and get progressively slower per row as
+  the table grew. `openImportPreview` in `js/views/table.js` now processes
+  rows in fixed-size (300-row) chunks via a new `Store.upsertMany()` (one
+  persist/emit per chunk instead of per row), yielding to the main thread
+  (`await new Promise(r=>setTimeout(r,0))`) between each chunk so the tab
+  stays responsive no matter the file size. The "Import N rows" button
+  disables and a small progress bar + live "Importing X/Y rows…" label (new
+  `.import-progress-*` styles) show for the duration; Cancel disables too
+  since the table's already been created and partially populated by that
+  point. Added a smoke check that imports a 6000-row CSV, confirms the
+  progress bar advances (and the button stays disabled) across two
+  back-to-back reads — deterministic thanks to the HTML spec's nested-
+  `setTimeout` clamp, not a timing guess — then verifies every row lands
+  correctly once the import finishes.
 - 2026-07-03 — TURN server fallback for strict NATs: Settings → Advanced gained
   a TURN server field (URL, username, credential) alongside the existing STUN
   field. STUN alone can't traverse symmetric NATs or many corporate/campus

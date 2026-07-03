@@ -346,6 +346,42 @@ try {
       return rows.some((r) => r.fields.status === 'Open' && r.fields.age === '30');
     });
   });
+  await check('large CSV import chunks the work (main thread yields between chunks, no rows dropped)', async () => {
+    const total = 6000; // 20 chunks of 300 — past the HTML spec's 5-deep nested-
+    // setTimeout clamp (browsers force >=4ms once a chain nests 5+ deep), so the
+    // import is guaranteed to still be mid-flight across two quick reads below
+    // regardless of how fast the runner's CPU is — not a timing guess.
+    const csv = 'id,val\n' + Array.from({ length: total }, (_, i) => `${i},row${i}`).join('\n') + '\n';
+    const [chooser] = await Promise.all([
+      page.waitForEvent('filechooser'),
+      page.click('button[title="Import CSV"]'),
+    ]);
+    await chooser.setFiles({ name: 'smoke-import-big.csv', mimeType: 'text/csv', buffer: Buffer.from(csv) });
+    await page.waitForTimeout(300);
+    await page.fill('.modal input:visible', 'Smoke Big Import');
+    await page.click(`.modal button:has-text("Import ${total} rows")`);
+    const readProgress = () => page.evaluate(() => {
+      const fill = document.querySelector('.import-progress-fill');
+      const btn = document.querySelector('.modal button.primary');
+      return { width: fill ? parseInt(fill.style.width, 10) : NaN, disabled: btn ? btn.disabled : false };
+    });
+    const first = await readProgress();
+    const second = await readProgress();
+    if (!first.disabled || !(first.width >= 0 && first.width < 100)) return false;
+    if (!(second.width >= first.width)) return false;
+    await page.waitForTimeout(1500);
+    const created = await page.$$eval('.tree-row .tree-label', (t) => t.some((x) => /smoke big import/i.test(x.textContent)));
+    if (!created) return false;
+    return await page.evaluate(async (n) => {
+      const { Store } = await import('/js/store.js');
+      const k = Store.entityNames().find((e) => Store.entity(e).label === 'Smoke Big Import');
+      if (!k) return false;
+      const rows = Store.records(k);
+      return rows.length === n
+        && rows.some((r) => r.fields.id === 0 && r.fields.val === 'row0')
+        && rows.some((r) => r.fields.id === n - 1 && r.fields.val === `row${n - 1}`);
+    }, total);
+  });
   await check('delete a table (store + UI update)', async () => {
     await page.evaluate(async () => {
       const { Store } = await import('/js/store.js');
