@@ -10,6 +10,17 @@
 // .github/stamp-changelog.mjs regenerates every `date` from its `ts`.
 export const CHANGELOG = [
   {
+    v: 35,
+    title: 'TURN fallback for stubborn networks',
+    ts: '2026-07-03T18:00:30.806Z',
+    date: 'Jul 3, 2026, 1:00 PM CT',
+    items: [
+      'Added an optional TURN server field in Settings → Advanced, next to STUN.',
+      'Helps WebRTC invites and auto-discovery connect through symmetric NATs and locked-down office networks where STUN alone can\'t punch through.',
+      'The relay only ever passes through the already-encrypted connection — it still can\'t read your data.',
+    ],
+  },
+  {
     v: 34,
     title: 'See who else is viewing a table',
     ts: '2026-07-03T16:37:56.809Z',

@@ -31,7 +31,6 @@ when you finish something, move it to **Done** with the date; add discoveries to
   typical exports, but a very large file (tens of thousands of rows) would
   block the main thread for the whole import. Worth chunking/yielding if that
   comes up.
-- TURN fallback guidance for strict NATs.
 - Optional "always-on peer" (headless) for 24/7 availability without a DB.
 
 ## Later
@@ -40,6 +39,18 @@ when you finish something, move it to **Done** with the date; add discoveries to
 - Multiple workspaces / workspace switcher.
 
 ## Done
+- 2026-07-03 — TURN server fallback for strict NATs: Settings → Advanced gained
+  a TURN server field (URL, username, credential) alongside the existing STUN
+  field. STUN alone can't traverse symmetric NATs or many corporate/campus
+  firewalls, which left WebRTC invites and rendezvous auto-discovery unable to
+  connect in those environments with no way to recover. `Sync._iceServers()`
+  (shared by manual invites, `rendezvous.js`, and `Sync.rtcConfig()`) now
+  appends the configured TURN server to the ICE server list whenever a URL is
+  set; the relay only ever sees the already-DTLS-encrypted data channel, never
+  plaintext records. Persisted the same way as the STUN setting
+  (`localStorage`), left blank by default. Added a smoke check that fills in
+  the fields, saves, and verifies both the persisted values and that
+  `Sync.rtcConfig().iceServers` carries the TURN entry with credentials.
 - 2026-07-03 — Presence: "who's viewing this table". Every peer currently
   looking at a table now shows as a small live avatar badge — in the Tables
   tree row for that entity, and next to the table name in the toolbar.

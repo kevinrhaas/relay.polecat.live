@@ -39,7 +39,10 @@ Two transports, one protocol:
 
 WebRTC optionally uses a public **STUN** server purely to discover your public
 address for NAT traversal — it never relays your data. Leave it blank in Settings
-for pure LAN / fully-serverless mode.
+for pure LAN / fully-serverless mode. If STUN alone can't connect two peers
+(symmetric NATs, locked-down office networks), add a **TURN** server URL +
+credentials in the same Advanced panel — it relays the already-encrypted data
+channel as a last resort and still can't read your data.
 
 ### Connecting two people across the internet
 1. Peer A → **Peers → WebRTC invite → Create invite → Generate offer**, copies the blob, sends it to B.

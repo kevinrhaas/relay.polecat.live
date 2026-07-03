@@ -73,6 +73,26 @@ export function renderSettings(root, ctx){
     onclick:()=>{ localStorage.setItem('relay.stun', stun.value.trim()); toast('Transport updated',{kind:'ok'}); }});
   adv.append(stunField, saveStun, el('div',{class:'divider'}));
 
+  // -- TURN (relay fallback for strict NATs / corporate firewalls) --
+  adv.append(el('div',{class:'section-title', style:'margin:18px 0 4px', html:'<h2 style="font-size:13px">TURN server (optional)</h2>'}));
+  adv.append(el('p',{class:'muted tiny', html:'STUN alone can\'t punch through symmetric NATs or locked-down office networks. A TURN server relays the WebRTC data channel as a last resort — it still can\'t read your data, since Relay\'s DTLS-encrypted channel passes straight through. Leave blank unless invites keep failing to connect.'}));
+  const turnUrl=el('input',{class:'input', placeholder:'turn:turn.example.com:3478', value: localStorage.getItem('relay.turn.url')||''});
+  const turnUser=el('input',{class:'input', placeholder:'username', value: localStorage.getItem('relay.turn.username')||''});
+  const turnCred=el('input',{class:'input', type:'password', placeholder:'credential', value: localStorage.getItem('relay.turn.credential')||''});
+  const turnUrlField=el('div',{class:'field', style:'margin-top:8px'}); turnUrlField.append(el('label',{text:'TURN URL'}), turnUrl);
+  const turnRow=el('div',{style:'display:flex;gap:10px;flex-wrap:wrap'});
+  const turnUserField=el('div',{class:'field', style:'flex:1;min-width:140px'}); turnUserField.append(el('label',{text:'Username'}), turnUser);
+  const turnCredField=el('div',{class:'field', style:'flex:1;min-width:140px'}); turnCredField.append(el('label',{text:'Credential'}), turnCred);
+  turnRow.append(turnUserField, turnCredField);
+  const saveTurn=el('button',{class:'btn sm', html:`${icon('check')} Save`,
+    onclick:()=>{
+      localStorage.setItem('relay.turn.url', turnUrl.value.trim());
+      localStorage.setItem('relay.turn.username', turnUser.value.trim());
+      localStorage.setItem('relay.turn.credential', turnCred.value.trim());
+      toast('Transport updated',{kind:'ok'});
+    }});
+  adv.append(turnUrlField, turnRow, saveTurn, el('div',{class:'divider'}));
+
   // -- Rendezvous (auto-discovery) --
   const stColor = st==='online'?'var(--success)':st==='connecting'?'var(--warning)':st==='error'?'var(--danger)':'var(--text-3)';
   adv.append(el('div',{class:'section-title', style:'margin:4px 0 4px', html:`

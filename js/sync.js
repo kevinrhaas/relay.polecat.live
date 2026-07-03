@@ -357,8 +357,14 @@ export const Sync = new (class extends Emitter{
   // ---- WebRTC manual signaling ----------------------------------------
   _iceServers(){
     const s=localStorage.getItem('relay.stun'); // '' = pure serverless / LAN only
-    if(s==='') return [];
-    return [{ urls: s || 'stun:stun.l.google.com:19302' }];
+    const servers = s==='' ? [] : [{ urls: s || 'stun:stun.l.google.com:19302' }];
+    const turnUrl=(localStorage.getItem('relay.turn.url')||'').trim();
+    if(turnUrl){
+      servers.push({ urls: turnUrl,
+        username: localStorage.getItem('relay.turn.username')||undefined,
+        credential: localStorage.getItem('relay.turn.credential')||undefined });
+    }
+    return servers;
   }
   // exposed for the rendezvous transport (automatic signaling)
   rtcConfig(){ return { iceServers:this._iceServers() }; }

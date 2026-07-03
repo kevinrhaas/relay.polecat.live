@@ -588,6 +588,33 @@ try {
   });
   await (await $('.rail-item[data-sec="settings"]')).click(); await page.waitForTimeout(300);
   await check('advanced (rendezvous) disclosure present', async () => !!(await $('details.adv')));
+  await check('TURN server: saving fields persists and feeds RTCPeerConnection config', async () => {
+    let details = await $('details.adv'); if (!details) return false;
+    if (!(await details.evaluate((d) => d.open))) { await (await details.$('summary')).click(); await page.waitForTimeout(250); }
+    const inputs = await details.$$('.input');
+    // STUN field is first; TURN url/username/credential follow it
+    const [, turnUrl, turnUser, turnCred] = inputs;
+    if (!turnUrl || !turnUser || !turnCred) return false;
+    await turnUrl.fill('turn:turn.example.com:3478');
+    await turnUser.fill('smoke-user');
+    await turnCred.fill('smoke-secret');
+    details = await $('details.adv');
+    const saveBtns = await details.$$('button:has-text("Save")');
+    await saveBtns[1].click(); await page.waitForTimeout(150);
+    const stored = await page.evaluate(() => ({
+      url: localStorage.getItem('relay.turn.url'),
+      username: localStorage.getItem('relay.turn.username'),
+      credential: localStorage.getItem('relay.turn.credential'),
+    }));
+    const servers = await page.evaluate(async () => {
+      const { Sync } = await import('/js/sync.js');
+      return Sync.rtcConfig().iceServers;
+    });
+    const turnEntry = servers.find((s) => s.urls === 'turn:turn.example.com:3478');
+    return stored.url === 'turn:turn.example.com:3478' && stored.username === 'smoke-user'
+      && stored.credential === 'smoke-secret' && !!turnEntry
+      && turnEntry.username === 'smoke-user' && turnEntry.credential === 'smoke-secret';
+  });
   await check('local folder sync: connect writes a snapshot', async () => {
     let details = await $('details.adv'); if (!details) return false;
     if (!(await details.evaluate((d) => d.open))) { await (await details.$('summary')).click(); await page.waitForTimeout(250); }
