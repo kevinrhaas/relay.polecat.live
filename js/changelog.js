@@ -10,6 +10,16 @@
 // .github/stamp-changelog.mjs regenerates every `date` from its `ts`.
 export const CHANGELOG = [
   {
+    v: 32,
+    title: 'Keyboard focus fixes for hidden buttons',
+    ts: '2026-07-03T14:51:50.042Z',
+    date: 'Jul 3, 2026, 9:51 AM CT',
+    items: [
+      'A table row’s delete button and a field name button in the Tables tree panel used to only appear on mouse hover — tabbing to them with a keyboard left them invisible.',
+      'Both now show the same focus ring as every other control when reached by keyboard.',
+    ],
+  },
+  {
     v: 31,
     title: 'Column types with nicer editors',
     ts: '2026-07-03T13:51:25.736Z',

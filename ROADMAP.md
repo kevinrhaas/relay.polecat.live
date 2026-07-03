@@ -44,6 +44,17 @@ when you finish something, move it to **Done** with the date; add discoveries to
 - Multiple workspaces / workspace switcher.
 
 ## Done
+- 2026-07-03 — Keyboard-focus polish: two icon-only buttons that only revealed
+  themselves on mouse hover — a table row's delete (trash) button and a
+  tree-panel field-name button (`.row-actions`, `.tree-field` in
+  `css/styles.css`) — were invisible to keyboard users, since `opacity:0`
+  had no `:focus-visible` counterpart to the existing `:hover` rule (every
+  other icon-only trigger in the app, e.g. `.col-edit-btn`, already had one).
+  Tabbing to either now reveals it with the same focus ring used everywhere
+  else (`var(--ring)`). Verified by driving real Tab-key navigation in a
+  headless browser and screenshotting the focused state — no smoke check
+  added since this is pure CSS with no new behavior for `.github/smoke-test.mjs`
+  to exercise beyond what already passes.
 - 2026-07-03 — Column types with nicer editors: any field can now be given an
   explicit type — Text, Number, Yes/No, Date, or Dropdown (fixed list of
   options) — from the field's edit modal (column header's pencil icon, or the
