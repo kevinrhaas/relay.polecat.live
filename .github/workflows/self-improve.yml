@@ -21,8 +21,10 @@ permissions:
   pages: write
   id-token: write
 
+# Shared with deploy.yml so a human push and a loop run can never deploy Pages
+# at the same moment (also keeps two scheduled loop runs from overlapping).
 concurrency:
-  group: relay-pages
+  group: relay-deploy
   cancel-in-progress: false
 
 jobs:

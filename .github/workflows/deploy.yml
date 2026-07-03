@@ -12,9 +12,10 @@ permissions:
   pages: write
   id-token: write
 
-# Only one concurrent deploy; let an in-progress run finish.
+# Shared with self-improve.yml so a human push and a loop run can never deploy
+# Pages at the same moment; let an in-progress run finish rather than cancel it.
 concurrency:
-  group: pages
+  group: relay-deploy
   cancel-in-progress: false
 
 jobs:
