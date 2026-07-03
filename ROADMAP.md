@@ -27,9 +27,6 @@ when you finish something, move it to **Done** with the date; add discoveries to
   more often than Dropbox's refresh-token flow does. Falls back to a one-click
   Reconnect, but worth watching for complaints.
 - Optional "always-on peer" (headless) for 24/7 availability without a DB.
-- Extend the new row-delete Undo to table delete and field delete — both still
-  only warn via `confirmDialog` with no way back. Table delete's confirm copy
-  currently says "This can't be undone", which would need updating too.
 
 ## Later
 - End-to-end encryption of records at rest / in transit beyond DTLS.
@@ -37,6 +34,25 @@ when you finish something, move it to **Done** with the date; add discoveries to
 - Multiple workspaces / workspace switcher.
 
 ## Done
+- 2026-07-03 — Undo a table or field delete: the row-delete Undo pattern
+  (confirmation toast with an "Undo" action button) now covers the two other
+  destructive table operations that previously only warned via
+  `confirmDialog` with no way back — deleting a whole table (Edit table →
+  Delete table) and deleting a field (a field's edit modal → Delete field).
+  New `Store.restoreEntity(key, snapshot)` and `Store.restoreField(entity,
+  key, valuesById, fieldType)` mirror `restore()`/`restoreMany()`'s pattern:
+  a fresh `updatedAt` newer than the delete wins LWW on peers the same way a
+  brand-new table/field value would, so undo propagates exactly like the
+  delete did. Table restore reuses the just-deleted entity object itself
+  (label/icon/fieldTypes/records) rather than a deep clone — safe since
+  nothing touches it once it's removed from the entities map — and
+  re-pins it if it had been pinned; field restore snapshots each row's prior
+  value and the field's type (if any) before deleting, so both come back
+  together. Also dropped "This cannot be undone" from the delete-table
+  confirm copy, since now it can be. Added two smoke checks driving the real
+  Edit table / edit-field UI through delete → confirm → Undo and verifying
+  the table (with its rows) and the field (with its value and type badge)
+  both come back.
 - 2026-07-03 — Keyboard accessibility polish, round 3: sorting a table by
   clicking a column header (`th.col-head` in `js/views/table.js`) was
   mouse-only — the `<th>` had an `onclick` but no `tabindex`, so keyboard

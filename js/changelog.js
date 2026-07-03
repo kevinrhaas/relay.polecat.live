@@ -10,6 +10,17 @@
 // .github/stamp-changelog.mjs regenerates every `date` from its `ts`.
 export const CHANGELOG = [
   {
+    v: 44,
+    title: 'Undo a table or field delete',
+    ts: '2026-07-03T23:24:39.823Z',
+    date: 'Jul 3, 2026, 6:24 PM CT',
+    items: [
+      'Deleting a table now shows an "Undo" button right on the confirmation toast, restoring the table and every row exactly as it was.',
+      'Deleting a field works the same way — undo brings back its value on every row, plus its type (Yes/No, Number, Date, Dropdown) if it had one.',
+      'The "Delete table" confirmation no longer claims it can’t be undone, since now it can.',
+    ],
+  },
+  {
     v: 43,
     title: 'Keyboard accessibility polish',
     ts: '2026-07-03T22:53:02.479Z',

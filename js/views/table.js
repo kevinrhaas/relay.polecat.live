@@ -854,10 +854,17 @@ function editEntity(root, ctx){
     (()=>{ const f=el('div',{class:'field'}); f.append(el('label',{text:'Icon'}), picker); return f; })(),
     el('p',{class:'muted tiny', text:'Renames and icon changes sync to your peers.'}));
   const del=el('button',{class:'btn danger', html:`${icon('trash')} Delete table`, onclick:async()=>{
-    if(await confirmDialog('Delete table',`Delete “${e.label}” and all its rows for you and your peers? This cannot be undone.`,{danger:true,okLabel:'Delete table'})){
-      hide(); Store.deleteEntity(current);
+    if(await confirmDialog('Delete table',`Delete “${e.label}” and all its rows for you and your peers?`,{danger:true,okLabel:'Delete table'})){
+      const key=current, snapshot={label:e.label, icon:e.icon, fieldTypes:e.fieldTypes, records:e.records, pinned:Store.isPinned(key)};
+      hide(); Store.deleteEntity(key);
       current=Store.entityNames()[0]||null;
-      renderTable(root,ctx,{entity:current}); toast('Table deleted',{kind:'ok'});
+      renderTable(root,ctx,{entity:current});
+      toast('Table deleted',{kind:'ok', action:{label:'Undo', onClick:()=>{
+        Store.restoreEntity(key, snapshot);
+        if(snapshot.pinned) Store.togglePin(key);
+        renderTable(root,ctx,{entity:key});
+        toast('Table restored',{kind:'ok'});
+      }}});
     }
   }});
   const save=el('button',{class:'btn primary', text:'Save', onclick:()=>{
@@ -887,7 +894,14 @@ function editField(field, root, ctx){
     el('p',{class:'muted tiny', text:'Applies across every row and syncs to your peers.'}));
   const del=el('button',{class:'btn danger', html:`${icon('trash')} Delete field`, onclick:async()=>{
     if(await confirmDialog('Delete field',`Remove “${field}” from every row in this table (for you and your peers)?`,{danger:true,okLabel:'Delete field'})){
-      hide(); Store.deleteField(current, field); renderTable(root,ctx,{entity:current}); toast('Field deleted',{kind:'ok'});
+      const key=current, fieldType=Store.fieldType(key, field);
+      const values={}; for(const r of Store.records(key)) if(field in (r.fields||{})) values[r.id]=r.fields[field];
+      hide(); Store.deleteField(key, field); renderTable(root,ctx,{entity:current});
+      toast('Field deleted',{kind:'ok', action:{label:'Undo', onClick:()=>{
+        Store.restoreField(key, field, values, fieldType);
+        if(key===current) renderTable(root,ctx,{entity:current});
+        toast('Field restored',{kind:'ok'});
+      }}});
     }
   }});
   const save=el('button',{class:'btn primary', text:'Save', onclick:()=>{

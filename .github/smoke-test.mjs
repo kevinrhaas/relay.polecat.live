@@ -576,6 +576,44 @@ try {
     const badges = await page.$$eval('.col-type-badge', (bs) => bs.map((b) => b.textContent.trim()));
     return !badges.includes('list') && badges.includes('y/n') && badges.includes('num') && badges.includes('date');
   });
+  await check('deleting a field via its edit modal shows an "Undo" toast that restores its value and type', async () => {
+    const before = await smokeTypesRecord();
+    if (!before || before.score !== 42) return false;
+    const headers = await page.$$('.col-head');
+    let btn = null;
+    for (const h of headers) {
+      const label = await h.$eval('.col-label', (n) => n.textContent.trim()).catch(() => '');
+      if (label === 'score') { btn = await h.$('.col-edit-btn'); break; }
+    }
+    if (!btn) return false;
+    await btn.click(); await page.waitForTimeout(300);
+    await page.click('.modal button.danger:has-text("Delete field")'); await page.waitForTimeout(200);
+    // two modals are stacked now (the edit-field modal behind, the confirm on
+    // top) and both have a same-labelled danger button — target the one in the
+    // most-recently-opened overlay so we hit the confirm, not the trigger.
+    await page.locator('.overlay').last().locator('button:has-text("Delete field")').click();
+    await page.waitForTimeout(300);
+    const afterDeleteBadges = await page.$$eval('.col-type-badge', (bs) => bs.map((b) => b.textContent.trim()));
+    const afterDelete = await smokeTypesRecord();
+    const undoBtn = await $('.toast-action'); if (!undoBtn) return false;
+    await undoBtn.click(); await page.waitForTimeout(300);
+    const restored = await smokeTypesRecord();
+    const restoredBadges = await page.$$eval('.col-type-badge', (bs) => bs.map((b) => b.textContent.trim()));
+    return !afterDeleteBadges.includes('num') && afterDelete?.score === undefined
+      && restored?.score === 42 && restoredBadges.includes('num');
+  });
+  await check('deleting a table via Edit table shows an "Undo" toast that restores it with its rows', async () => {
+    await page.click('button:has-text("Edit table")'); await page.waitForTimeout(300);
+    await page.click('.modal button.danger:has-text("Delete table")'); await page.waitForTimeout(200);
+    await page.locator('.overlay').last().locator('button:has-text("Delete table")').click();
+    await page.waitForTimeout(400);
+    const gone = !(await page.$$eval('.tree-row .tree-label', (t) => t.some((x) => /smoke types table/i.test(x.textContent))));
+    const undoBtn = await $('.toast-action'); if (!undoBtn) return false;
+    await undoBtn.click(); await page.waitForTimeout(400);
+    const restoredTree = await page.$$eval('.tree-row .tree-label', (t) => t.some((x) => /smoke types table/i.test(x.textContent)));
+    const rec = await smokeTypesRecord();
+    return gone && restoredTree && rec?.score === 42 && rec?.status === 'Done' && rec?.due === '2026-08-01' && typeof rec?.active === 'boolean';
+  });
 
   console.log('Messaging');
   await (await $('.rail-item[data-sec="messages"]')).click(); await page.waitForTimeout(300);

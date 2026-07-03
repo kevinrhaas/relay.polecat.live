@@ -126,6 +126,25 @@ export const Store = new (class extends Emitter{
     this._persist(); this.emit('entities'); this.emit('change',{type:'entity',key,origin:'local'});
   }
 
+  // undo a deleteEntity() — snapshot is the removed entity object itself
+  // (label/icon/fieldTypes/records), captured by the caller *before* calling
+  // deleteEntity. It's safe to reuse without cloning: once removed from
+  // `entities`, nothing else touches that object. Re-creating with a fresh
+  // updatedAt (newer than the delete's tombstone) makes it win LWW on peers
+  // the same way a brand-new table would, so no separate "un-tombstone"
+  // message type is needed.
+  restoreEntity(key, snapshot){
+    if(!snapshot || this.data.entities[key]) return false;
+    this.data.entities[key] = {
+      label: snapshot.label, icon: snapshot.icon,
+      fieldTypes: snapshot.fieldTypes, records: snapshot.records,
+      _meta: this._emeta(),
+    };
+    delete (this.data.entityTombstones||{})[key];
+    this._persist(); this.emit('entities'); this.emit('change',{type:'entity',key,origin:'local'});
+    return true;
+  }
+
   // ---- field (column) operations — applied across all records ----------
   renameField(entity, oldKey, newKey){
     const e=this.entity(entity); newKey=(newKey||'').trim().replace(/\s+/g,'_');
@@ -147,6 +166,29 @@ export const Store = new (class extends Emitter{
     }
     if(e.fieldTypes) delete e.fieldTypes[key];
     this._persist(); this.emit('records', entity); this.emit('change',{type:'record',entity,origin:'local'});
+  }
+
+  // undo a deleteField() — valuesById is a {id: value} snapshot of exactly the
+  // records that had the field set, captured by the caller before deleting,
+  // since deleteField only ever touches records that had the key in the first
+  // place. fieldType re-applies whatever Store.fieldType() returned pre-delete.
+  restoreField(entity, key, valuesById, fieldType){
+    const e=this.entity(entity); if(!e) return 0;
+    const updatedAt = Date.now();
+    let n=0;
+    for(const [id,value] of Object.entries(valuesById||{})){
+      const cur=e.records[id]; if(!cur || cur._meta.deleted) continue;
+      cur.fields = {...cur.fields, [key]:value};
+      cur._meta = { rev:(cur._meta.rev||0)+1, updatedAt, updatedBy:this.identity.id, deleted:false };
+      n++;
+    }
+    if(fieldType){ e.fieldTypes||={}; e.fieldTypes[key]=fieldType; e._meta=this._emeta(); }
+    if(n || fieldType){
+      this._touch(entity); this._persist();
+      this.emit('records', entity); this.emit('entities');
+      this.emit('change', {type:'record', entity, origin:'local'});
+    }
+    return n;
   }
 
   // ---- field types (optional per-field editor/validation hint) ---------
