@@ -512,6 +512,69 @@ try {
     return !!(await details.$('.db-block button:has-text("Connect Dropbox")'));
   });
 
+  await page.evaluate(() => {
+    // Google Drive uses Google Identity Services' token model (no redirect,
+    // no client secret) rather than a code exchange, so there's no real
+    // network call to fake a response for — stub the `google.accounts.oauth2`
+    // global itself the way a loaded GIS script would expose it, then stub
+    // the Drive REST endpoints the adapter talks to directly via fetch.
+    window.__fakeDrive = { file: null, fileId: 'fake-file-id' };
+    window.google = { accounts: { oauth2: { initTokenClient: (cfg) => ({
+      requestAccessToken: () => setTimeout(() => cfg.callback({ access_token: 'fake-token', expires_in: 3600 }), 0),
+    }) } } };
+    const realFetch = window.fetch.bind(window);
+    window.fetch = async (url, opts = {}) => {
+      const u = new URL(url, location.href);
+      if (u.hostname === 'oauth2.googleapis.com' && u.pathname === '/revoke') return new Response('', { status: 200 });
+      if (u.hostname !== 'www.googleapis.com') return realFetch(url, opts);
+      const state = window.__fakeDrive;
+      if (u.pathname === '/drive/v3/files' && (opts.method || 'GET').toUpperCase() === 'GET') {
+        return new Response(JSON.stringify({ files: state.file != null ? [{ id: state.fileId }] : [] }), { status: 200 });
+      }
+      if (u.pathname === '/drive/v3/files' && (opts.method || 'GET').toUpperCase() === 'POST') {
+        state.file = ''; // Drive creates an empty file immediately
+        return new Response(JSON.stringify({ id: state.fileId }), { status: 200 });
+      }
+      if (u.pathname === `/drive/v3/files/${state.fileId}` && (opts.method || 'GET').toUpperCase() === 'GET') {
+        return state.file != null ? new Response(state.file, { status: 200 }) : new Response('', { status: 404 });
+      }
+      if (u.pathname === `/upload/drive/v3/files/${state.fileId}` && (opts.method || 'GET').toUpperCase() === 'PATCH') {
+        state.file = opts.body;
+        return new Response('{}', { status: 200 });
+      }
+      return new Response('', { status: 404 });
+    };
+  });
+  await check('Google Drive sync: connect authorizes and writes a snapshot', async () => {
+    let details = await $('details.adv'); if (!details) return false;
+    if (!(await details.evaluate((d) => d.open))) { await (await details.$('summary')).click(); await page.waitForTimeout(250); }
+    const keyIn = await details.$('.gd-block input'); if (!keyIn) return false;
+    await keyIn.fill('smoke-client-id.apps.googleusercontent.com');
+    const btn = await details.$('.gd-block button:has-text("Connect Google Drive")'); if (!btn) return false;
+    await btn.click(); await page.waitForTimeout(300);
+    details = await $('details.adv'); if (!details) return false;
+    const chip = await details.$('.gd-block .chip');
+    const chipText = chip ? (await chip.evaluate((c) => c.textContent)).trim() : '';
+    const wrote = await page.evaluate(() => (window.__fakeDrive.file || '').includes('"entities"'));
+    return chipText === 'connected' && wrote;
+  });
+  await check('Google Drive sync: local edit re-writes the snapshot', async () => {
+    await page.evaluate(() => { window.__fakeDrive.file = ''; });
+    await page.evaluate(async () => {
+      const { Store } = await import('/js/store.js');
+      Store.createEntity('Smoke Drive Entity');
+    });
+    await page.waitForTimeout(1800);
+    return await page.evaluate(() => (window.__fakeDrive.file || '').includes('Smoke Drive Entity'));
+  });
+  await check('Google Drive sync: disconnect', async () => {
+    let details = await $('details.adv'); if (!details) return false;
+    const btn = await details.$('.gd-block button:has-text("Disconnect")'); if (!btn) return false;
+    await btn.click(); await page.waitForTimeout(300);   // renderSettings() rebuilds the DOM — re-query below
+    details = await $('details.adv'); if (!details) return false;
+    return !!(await details.$('.gd-block button:has-text("Connect Google Drive")'));
+  });
+
   if (errors.length) { console.error('\nConsole/page errors:\n' + errors.join('\n')); failed = true; }
 } catch (e) {
   console.error('SUITE CRASH: ' + e.message); failed = true;

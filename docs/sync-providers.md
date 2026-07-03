@@ -85,12 +85,33 @@ OAuth 2.0 with PKCE, so there's no client secret to protect — only an **app ke
 
 ---
 
-## 4. Google Drive (OAuth — planned)
-Not implemented yet (see ROADMAP.md). Will follow the same shape as Dropbox
-above: console.cloud.google.com → enable Drive API → OAuth consent screen →
-**OAuth Client ID (Web)** → `drive.file` scope (limits access to files Relay
-itself creates, so no broad Drive permission or Google app-verification review
-needed).
+## 4. Google Drive (OAuth — click-to-authorize, available now)
+Available now in **Settings → Advanced → Sync locations → Google Drive**. Unlike
+Dropbox, Google requires a client secret for its redirect-based authorization
+flow even with PKCE on "Web application" credentials — there's no truly
+secret-free redirect option for a static site. So Relay instead uses **Google
+Identity Services' token model**: a click gets you a short-lived (1 hour)
+access token with no secret involved, and Relay silently re-requests a fresh
+one whenever it's stale, which succeeds without any prompt as long as your
+browser still has an active Google session and you already granted consent.
+If that silent renewal ever fails (session signed out, third-party cookies
+blocked, etc.) Settings shows a one-click **Reconnect** button instead of an
+error. Setup:
+1. **console.cloud.google.com** → APIs & Services → *Enable* the **Google
+   Drive API** for your project.
+2. **APIs & Services → OAuth consent screen** → configure it (External is
+   fine; you don't need to publish or submit for verification since
+   `drive.file` is a non-sensitive scope).
+3. **APIs & Services → Credentials → Create Credentials → OAuth client ID**
+   → application type **Web application**.
+4. Under **Authorized JavaScript origins**, add the exact origin Relay is
+   served from (e.g. `https://relay.polecat.live`, no path). No redirect URI
+   is needed — the token model never navigates away from the page.
+5. Copy the **Client ID** and paste it into Settings → Advanced → Sync
+   locations → Google Drive → **Connect Google Drive**. You'll see Google's
+   account picker/consent popup, then land back connected — no redirect.
+- **Cost:** free. **Scope:** `drive.file` — Relay only ever sees the one file
+  it creates for the snapshot, never the rest of your Drive.
 
 ---
 
@@ -98,7 +119,7 @@ needed).
 - **Just me, easiest:** Local Folder pointed at your existing Dropbox/Drive folder.
 - **Small trusted group, cheap & fast:** Cloudflare R2 or Backblaze B2.
 - **Already self-host:** WebDAV / Nextcloud.
-- **Want click-to-authorize convenience:** Dropbox.
+- **Want click-to-authorize convenience:** Dropbox or Google Drive.
 
 All of these store only the snapshot JSON; Relay merges it with your local data,
 so turning a sync location on or off never loses anything.

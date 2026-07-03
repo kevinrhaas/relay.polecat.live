@@ -20,14 +20,15 @@
 //   on(event, fn)           — 'state' | 'synced'
 //
 // Today: local folder (File System Access API, no credentials),
-// S3-compatible (signed fetch, SigV4), WebDAV (Basic auth fetch), and
-// Dropbox (OAuth 2.0 + PKCE, redirect-based, no client secret).
-// Planned next (see ROADMAP.md): Google Drive (OAuth).
+// S3-compatible (signed fetch, SigV4), WebDAV (Basic auth fetch), Dropbox
+// (OAuth 2.0 + PKCE, redirect-based, no client secret), and Google Drive
+// (Google Identity Services token model, no client secret).
 // -----------------------------------------------------------------------
 import { LocalFolder } from './local-folder.js';
 import { S3Sync } from './s3.js';
 import { WebDAVSync } from './webdav.js';
 import { Dropbox } from './dropbox.js';
+import { GoogleDrive } from './google-drive.js';
 
-export const ADAPTERS = [LocalFolder, S3Sync, WebDAVSync, Dropbox];
-export { LocalFolder, S3Sync, WebDAVSync, Dropbox };
+export const ADAPTERS = [LocalFolder, S3Sync, WebDAVSync, Dropbox, GoogleDrive];
+export { LocalFolder, S3Sync, WebDAVSync, Dropbox, GoogleDrive };

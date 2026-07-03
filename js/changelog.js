@@ -10,6 +10,17 @@
 // .github/stamp-changelog.mjs regenerates every `date` from its `ts`.
 export const CHANGELOG = [
   {
+    v: 22,
+    title: 'Sync locations: Google Drive',
+    ts: '2026-07-03T01:16:15.055Z',
+    date: 'Jul 2, 2026, 8:16 PM CT',
+    items: [
+      'Settings → Advanced → Sync locations now has a Google Drive option — click "Connect Google Drive" with just an OAuth Client ID (no client secret, ever) and approve once.',
+      'A snapshot syncs to a single app-created file in your Drive on every change, same as the other sync locations (Local folder, S3, WebDAV, Dropbox) — Relay only ever sees that one file, never the rest of your Drive.',
+      'If your Google session ever needs re-approving, Settings shows a one-click Reconnect instead of an error.',
+    ],
+  },
+  {
     v: 21,
     title: 'Fix: pasting into a table cell no longer keeps rich formatting',
     ts: '2026-07-03T00:28:48.210Z',

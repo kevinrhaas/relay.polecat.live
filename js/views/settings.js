@@ -3,7 +3,7 @@
 import { Store } from '../store.js';
 import { Sync } from '../sync.js';
 import { Rendezvous } from '../rendezvous.js';
-import { LocalFolder, S3Sync, WebDAVSync, Dropbox } from '../storage/index.js';
+import { LocalFolder, S3Sync, WebDAVSync, Dropbox, GoogleDrive } from '../storage/index.js';
 import { Access } from '../access.js';
 import { el, escapeHtml, toast, confirmDialog, avatarColor, initials, ago } from '../ui.js';
 import { icon } from '../icons.js';
@@ -229,8 +229,39 @@ export function renderSettings(root, ctx){
   }
   adv.append(dbBlock);
 
+  // -- Google Drive sync (sync locations, phase 5 — OAuth token model) --
+  adv.append(el('div',{class:'divider'}));
+  const gdBlock=el('div',{class:'gd-block'});
+  const gdStatus = { connected:['connected','var(--success)'], error:['error','var(--danger)'],
+    'needs-permission':['needs permission','var(--warning)'], unsupported:['unsupported','var(--text-3)'],
+    off:['off','var(--text-3)'] }[GoogleDrive.state] || [GoogleDrive.state,'var(--text-3)'];
+  gdBlock.append(el('div',{class:'section-title', style:'margin:4px 0 4px', html:`
+    <h2 style="font-size:13px">Sync locations · Google Drive</h2><div class="sp"></div>
+    <span class="conn-state" style="color:${gdStatus[1]}"><span class="dot" style="background:${gdStatus[1]}"></span>${gdStatus[0]}</span>`}));
+  gdBlock.append(el('p',{class:'muted tiny', html:`Click-to-authorize — a snapshot syncs to a single app-created file in your Drive on every change.
+    Uses the <span class="kbd">drive.file</span> scope (Relay only ever sees that one file, never the rest of your Drive) and no client secret ever
+    touches this browser; you just need an <b>OAuth Client ID</b>. See <span class="kbd">docs/sync-providers.md</span> for creating it.`}));
+  if(GoogleDrive.state==='connected'){
+    const gdRow=el('div',{style:'display:flex;gap:10px;flex-wrap:wrap;align-items:center'});
+    gdRow.append(
+      el('span',{class:'chip', text:'connected'}),
+      el('span',{class:'muted tiny', text: GoogleDrive.lastSync?`synced ${ago(GoogleDrive.lastSync)}`:'syncing…'}),
+      el('button',{class:'btn danger sm', html:`${icon('x')} Disconnect`, onclick:()=>{ GoogleDrive.disconnect(); renderSettings(root,ctx); }}));
+    gdBlock.append(gdRow);
+  }else if(GoogleDrive.state==='needs-permission'){
+    gdBlock.append(el('button',{class:'btn primary sm', style:'margin-top:8px', html:`${icon('broadcast')} Reconnect`,
+      onclick:async()=>{ await GoogleDrive.reconnect(); renderSettings(root,ctx); }}));
+  }else{
+    const keyIn=el('input',{class:'input', placeholder:'OAuth Client ID', value:(GoogleDrive.cfg&&GoogleDrive.cfg.clientId)||''});
+    const field=(label,input)=>{ const f=el('div',{class:'field',style:'margin:0'}); f.append(el('label',{text:label}), input); return f; };
+    gdBlock.append(field('OAuth Client ID', keyIn));
+    gdBlock.append(el('button',{class:'btn primary sm', style:'margin-top:8px', html:`${icon('broadcast')} Connect Google Drive`, disabled:!GoogleDrive.isSupported(),
+      onclick:async()=>{ const okgd=await GoogleDrive.connect(keyIn.value.trim()); if(okgd) toast('Google Drive connected — synced',{kind:'ok'}); renderSettings(root,ctx); }}));
+  }
+  adv.append(gdBlock);
+
   // keep it open if the user already configured it, so state is visible
-  if(Rendezvous.configured()||connected||LocalFolder.state!=='off'||S3Sync.state!=='off'||WebDAVSync.state!=='off'||Dropbox.state!=='off') adv.open=true;
+  if(Rendezvous.configured()||connected||LocalFolder.state!=='off'||S3Sync.state!=='off'||WebDAVSync.state!=='off'||Dropbox.state!=='off'||GoogleDrive.state!=='off') adv.open=true;
   wrap.append(adv);
 
   // ---- data ------------------------------------------------------------

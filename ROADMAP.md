@@ -16,18 +16,16 @@ when you finish something, move it to **Done** with the date; add discoveries to
   (last-writer-wins; deletes use tombstones; entity/field ops sync).
 
 ## Now (highest value first)
-1. **Google Drive sync location** (OAuth) — the last planned `js/storage/`
-   adapter (Dropbox is done, see Done below). Same contract (`isSupported`,
-   `connect`/`reconnect`/`disconnect`/`autostart`, `state`, snapshot merge via
-   `Store.import(json,{merge:true})`, debounced write via `Store.export()`).
-   Use an OAuth Client ID (Web) + the `drive.file` scope (limits access to
-   files Relay itself creates — no broad Drive permission, no Google
-   app-verification review needed). See `docs/sync-providers.md` §4.
-2. **Keep the public site sexy.** Periodically refresh the landing page (`/`) to
+1. **Keep the public site sexy.** Periodically refresh the landing page (`/`) to
    showcase current features — updated screenshots, subtle animations, short
    loops/GIFs, feature highlights. It should always reflect what the app can do.
 
 ## Next
+- Google Drive sync's silent token renewal (`prompt:''`) depends on an active
+  Google session + third-party-cookie access to accounts.google.com — Safari
+  ITP or strict Firefox cookie blocking will force a "needs permission" state
+  more often than Dropbox's refresh-token flow does. Falls back to a one-click
+  Reconnect, but worth watching for complaints.
 - Per-thread unread counts in Messages.
 - Drag-to-resize the Tables tree panel (currently collapsible but fixed-width).
 - Column types / simple validation (text, number, bool, date, select) with nicer editors.
@@ -54,6 +52,21 @@ when you finish something, move it to **Done** with the date; add discoveries to
 - Multiple workspaces / workspace switcher.
 
 ## Done
+- 2026-07-03 — Sync locations, phase 5 (final adapter): Google Drive. Unlike
+  Dropbox, Google requires a client secret for its redirect-based
+  authorization-code flow even with PKCE on "Web application" credentials —
+  there's no truly secret-free redirect option for a static site — so this
+  adapter instead uses Google Identity Services' token model: click-to-
+  authorize with just an OAuth Client ID, a short-lived (1hr) access token
+  with no secret, and silent (`prompt:''`) renewal whenever it's stale, which
+  succeeds without any UI as long as the browser still has an active Google
+  session and prior consent. Falls back to a one-click Reconnect (rather than
+  a hard error) if silent renewal fails. Same connect-on-load / debounced-
+  write-on-change / LWW-merge contract as the other four adapters. New
+  `js/storage/google-drive.js`; `docs/sync-providers.md` §4 rewritten from
+  "planned" to real setup steps (Cloud Console → OAuth client ID → Drive
+  API); added three smoke checks stubbing `google.accounts.oauth2` and the
+  Drive REST endpoints.
 - 2026-07-03 — Fixed a table-cell editing rough edge: pasting into an editable
   cell (e.g. from Excel, Google Sheets, or Word) now always inserts plain text.
   Previously the browser's default rich paste kept the source's fonts/colors/
