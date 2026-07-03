@@ -10,6 +10,17 @@
 // .github/stamp-changelog.mjs regenerates every `date` from its `ts`.
 export const CHANGELOG = [
   {
+    v: 20,
+    title: 'Tables: tree navigation + record side panel',
+    ts: '2026-07-03T00:01:11.370Z',
+    date: 'Jul 2, 2026, 7:01 PM CT',
+    items: [
+      'Tables now browse like a DBeaver-style tree in a collapsible left panel — expand a table to see its fields, collapse the whole panel down to icons when you need the room.',
+      'Open any row for a slide-in record editor with a proper input per field (text, number, an on/off toggle, or JSON) instead of only inline cell editing.',
+      'Both panels stack full-width on mobile.',
+    ],
+  },
+  {
     v: 19,
     title: 'Easier-to-tap star on Home',
     ts: '2026-07-02T22:57:33.306Z',

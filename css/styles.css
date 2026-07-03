@@ -279,17 +279,48 @@ body{
 .pin-btn svg{width:16px;height:16px}
 
 /* ---- table view -------------------------------------------------------- */
+.table-shell{display:flex;gap:16px;align-items:flex-start}
+.table-main{flex:1;min-width:0}
 .tbl-toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px}
-.entity-tabs{display:flex;gap:6px;flex-wrap:wrap}
-.entity-tab{padding:6px 13px;border-radius:999px;border:1px solid var(--border);
-  background:var(--surface-2);color:var(--text-2);cursor:pointer;font-size:12.5px;
-  display:flex;align-items:center;gap:7px;transition:.15s}
-.entity-tab svg{width:15px;height:15px;flex:0 0 auto}
-.entity-tab:hover{color:var(--text)}
-.entity-tab.active{color:#fff;border-color:transparent;
-  background:linear-gradient(135deg,var(--brand-b),var(--consensus))}
-.entity-tab .c{background:rgba(255,255,255,.18);border-radius:999px;padding:0 6px;
-  font-size:10.5px;font-weight:700}
+.tbl-current{display:flex;align-items:center;gap:9px;font-size:14.5px}
+.tbl-current svg{width:17px;height:17px;color:var(--brand-b);flex:0 0 auto}
+
+/* left tree: entities, expandable to their fields (DBeaver-style browse) */
+.tree-panel{flex:0 0 auto;width:220px;display:flex;flex-direction:column;gap:8px;
+  border:1px solid var(--border);border-radius:var(--radius);
+  background:color-mix(in srgb,var(--surface) 88%,transparent);padding:10px;
+  align-self:stretch;overflow:auto;transition:width .18s}
+.tree-panel:not(.open){width:52px;padding:10px 6px}
+.tree-head{display:flex;align-items:center;gap:4px}
+.tree-title{flex:1;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-2)}
+.tree-toggle svg{width:14px;height:14px;transition:transform .18s;transform:rotate(180deg)}
+.tree-panel:not(.open) .tree-toggle svg{transform:none}
+.tree-panel:not(.open) .tree-title,.tree-panel:not(.open) .tree-head .btn:last-child{display:none}
+.tree-list{display:flex;flex-direction:column;gap:2px}
+.tree-row{display:flex;align-items:center;gap:7px;padding:7px 8px;border-radius:8px;cursor:pointer;
+  color:var(--text-2);font-size:12.5px;transition:background .12s,color .12s}
+.tree-row:hover{background:var(--surface-2);color:var(--text)}
+.tree-row.active{background:linear-gradient(135deg,var(--brand-b),var(--consensus));color:#fff}
+.tree-row.active .tree-count{background:rgba(255,255,255,.22)}
+.tree-row:focus-visible{outline:none;box-shadow:var(--ring)}
+.tree-ic{display:inline-flex;flex:0 0 auto}
+.tree-ic svg{width:15px;height:15px}
+.tree-label{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tree-count{flex:0 0 auto;font-size:10px;font-weight:700;background:var(--surface-3);
+  border-radius:999px;padding:1px 6px}
+.tree-caret{flex:0 0 auto;background:none;border:0;padding:2px;display:inline-flex;
+  color:inherit;cursor:pointer;opacity:.7}
+.tree-caret:hover{opacity:1}
+.tree-caret svg{width:11px;height:11px;transition:transform .15s}
+.tree-caret.open svg{transform:rotate(90deg)}
+.tree-panel:not(.open) .tree-label,.tree-panel:not(.open) .tree-count,
+.tree-panel:not(.open) .tree-caret,.tree-panel:not(.open) .tree-fields{display:none}
+.tree-panel:not(.open) .tree-row{justify-content:center}
+.tree-fields{display:flex;flex-direction:column;gap:1px;padding:2px 0 6px 29px;animation:expand .18s ease}
+.tree-field{background:none;border:0;text-align:left;padding:5px 8px;border-radius:6px;
+  font-size:11.5px;color:var(--text-3);cursor:pointer;font-family:var(--mono);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tree-field:hover{background:var(--surface-2);color:var(--text-2)}
 
 .table-scroll{overflow:auto;border:1px solid var(--border);border-radius:var(--radius);
   background:color-mix(in srgb,var(--surface) 88%,transparent)}
@@ -309,6 +340,9 @@ table.data tbody tr:hover{background:var(--surface-2)}
 table.data td[contenteditable]{outline:none;min-width:80px}
 table.data td[contenteditable]:focus{box-shadow:inset 0 0 0 2px var(--brand-b);
   border-radius:4px;background:var(--surface)}
+.open-head{width:34px}
+.open-cell{width:34px;padding-left:8px!important;padding-right:2px!important}
+.row-open svg{width:12px;height:12px}
 td.rowid{font-family:var(--mono);font-size:11px;color:var(--text-3)}
 td.meta-cell{font-size:11px;color:var(--text-3)}
 .cell-syncing{animation:flash .8s ease}
@@ -400,7 +434,7 @@ textarea{resize:vertical;font-family:var(--mono);font-size:12px}
 .seg button.on{background:var(--surface-3);color:var(--text)}
 
 /* ---- modal ------------------------------------------------------------- */
-.overlay{position:fixed;inset:0;z-index:1200;background:rgba(5,5,10,.6);
+.overlay{position:fixed;inset:0;z-index:1350;background:rgba(5,5,10,.6);
   backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;
   padding:24px;opacity:0;pointer-events:none;transition:.2s}
 .overlay.show{opacity:1;pointer-events:auto}
@@ -459,6 +493,10 @@ a.link:hover{text-decoration:underline}
 .sheet-head h3{margin:0;font-size:16px}
 .sheet-head .btn{margin-left:auto}
 .sheet-body{flex:1;min-height:0;overflow:auto;padding:4px 20px 24px}
+.sheet-foot{flex:0 0 auto;display:flex;justify-content:flex-end;gap:10px;padding:14px 20px;border-top:1px solid var(--border)}
+.record-sheet{width:min(480px,100%)}
+.record-fields{padding-top:14px}
+.record-field .toggle{margin-top:2px}
 .wn-entry{padding:16px 0;border-bottom:1px solid var(--border)}
 .wn-entry:last-child{border-bottom:0}
 .wn-top{display:flex;align-items:center;gap:10px}
@@ -580,6 +618,11 @@ a.link:hover{text-decoration:underline}
 
   /* tables stay usable via horizontal scroll; keep headers tight */
   table.data th,table.data td{padding:9px 11px}
+
+  /* tree panel stacks above the table instead of sitting beside it */
+  .table-shell{flex-direction:column}
+  .tree-panel{width:100%!important;max-height:180px;align-self:stretch}
+  .tree-panel:not(.open){max-height:44px}
 
   #toasts{left:14px;right:14px;bottom:14px}
   .toast{max-width:none}

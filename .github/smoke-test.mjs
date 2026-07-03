@@ -106,11 +106,40 @@ try {
     await (await $('.topbar .btn.primary')).click(); await page.waitForTimeout(300);
     await page.fill('.modal input', 'Smoke Table');
     await page.click('.modal button:has-text("Create")'); await page.waitForTimeout(500);
-    return await page.$$eval('.entity-tab', (t) => t.some((x) => /smoke table/i.test(x.textContent)));
+    return await page.$$eval('.tree-row .tree-label', (t) => t.some((x) => /smoke table/i.test(x.textContent)));
   });
   await check('add a row', async () => {
     await page.click('button:has-text("Row")'); await page.waitForTimeout(300);
     return (await count('tbody tr')) >= 1;
+  });
+  await check('tree panel: expanding the active table reveals its fields', async () => {
+    const row = page.locator('.tree-row.active');
+    if (!(await row.count())) return false;
+    await row.locator('.tree-caret').click(); await page.waitForTimeout(250);
+    return await page.$$eval('.tree-field', (f) => f.some((x) => x.textContent.trim() === 'name'));
+  });
+  await check('tree panel collapses to an icon rail and expands back', async () => {
+    // renderTable() rebuilds the whole subtree on every toggle — re-query the
+    // button each time rather than reusing a now-detached element handle.
+    if (!(await $('.tree-toggle'))) return false;
+    await (await $('.tree-toggle')).click(); await page.waitForTimeout(250);
+    const collapsed = await page.evaluate(() => !document.querySelector('.tree-panel').classList.contains('open'));
+    await (await $('.tree-toggle')).click(); await page.waitForTimeout(250);
+    const expanded = await page.evaluate(() => document.querySelector('.tree-panel').classList.contains('open'));
+    return collapsed && expanded;
+  });
+  await check('row expander opens the record side panel with a typed field input', async () => {
+    const btn = await $('tbody tr .row-open'); if (!btn) return false;
+    await btn.click(); await page.waitForTimeout(300);
+    return !!(await $('.record-sheet .record-field input'));
+  });
+  await check('editing a field in the record panel persists to the store', async () => {
+    const input = await $('.record-sheet .record-field input'); if (!input) return false;
+    await input.click({ clickCount: 3 }); await page.keyboard.type('panel-edit'); await page.keyboard.press('Tab');
+    await page.waitForTimeout(300);
+    const persisted = await page.evaluate(() => JSON.stringify(JSON.parse(localStorage.getItem('relay.workspace.v1'))).includes('panel-edit'));
+    await closeModal();
+    return persisted;
   });
   await check('icon-only buttons expose an accessible label', async () => {
     const delRow = await $('tbody tr .row-actions');
@@ -151,7 +180,7 @@ try {
       if (k) Store.deleteEntity(k);
     });
     await page.waitForTimeout(400);
-    return !(await page.$$eval('.entity-tab', (t) => t.some((x) => /smoke table/i.test(x.textContent))));
+    return !(await page.$$eval('.tree-row .tree-label', (t) => t.some((x) => /smoke table/i.test(x.textContent))));
   });
 
   console.log('Messaging');

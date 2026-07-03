@@ -16,24 +16,20 @@ when you finish something, move it to **Done** with the date; add discoveries to
   (last-writer-wins; deletes use tombstones; entity/field ops sync).
 
 ## Now (highest value first)
-1. **Tree / side-panel table navigation.** A DBeaver-style but *sexier* browse
-   experience: a collapsible tree of entities (and, expandable, their fields) in
-   a secondary left panel; selecting a row opens an animated **record editor in a
-   right-hand side panel** (field-by-field, typed inputs) instead of only inline
-   cell editing. Panels resizable, readable, and responsive (stack on mobile).
-2. **Google Drive sync location** (OAuth) — the last planned `js/storage/`
+1. **Google Drive sync location** (OAuth) — the last planned `js/storage/`
    adapter (Dropbox is done, see Done below). Same contract (`isSupported`,
    `connect`/`reconnect`/`disconnect`/`autostart`, `state`, snapshot merge via
    `Store.import(json,{merge:true})`, debounced write via `Store.export()`).
    Use an OAuth Client ID (Web) + the `drive.file` scope (limits access to
    files Relay itself creates — no broad Drive permission, no Google
    app-verification review needed). See `docs/sync-providers.md` §4.
-3. **Keep the public site sexy.** Periodically refresh the landing page (`/`) to
+2. **Keep the public site sexy.** Periodically refresh the landing page (`/`) to
    showcase current features — updated screenshots, subtle animations, short
    loops/GIFs, feature highlights. It should always reflect what the app can do.
 
 ## Next
 - Per-thread unread counts in Messages.
+- Drag-to-resize the Tables tree panel (currently collapsible but fixed-width).
 - Column types / simple validation (text, number, bool, date, select) with nicer editors.
 - Sort & filter rows; search within a table.
 - Presence cursors / "who's viewing this table".
@@ -47,6 +43,16 @@ when you finish something, move it to **Done** with the date; add discoveries to
 - Multiple workspaces / workspace switcher.
 
 ## Done
+- 2026-07-02 — Tree / side-panel table navigation: the horizontal entity tabs
+  are now a collapsible left-hand tree (DBeaver-style) — each table expands to
+  list its fields inline (click one to rename/delete it), and the whole panel
+  collapses to a slim icon rail to reclaim space. Opening a row (new expander
+  button per row) slides in a right-hand record editor with typed, field-by-
+  field inputs (text/number/boolean toggle/JSON) instead of only inline cell
+  editing; inline cell editing still works too. Both panels stack full-width on
+  mobile. Also bumped the generic modal's z-index above the slide-in sheet so a
+  confirm dialog (e.g. "Delete row" from the new record panel) never renders
+  hidden behind an open sheet.
 - 2026-07-02 — CI reliability: the hourly smoke suite was silently dialing out
   to the real, live production rendezvous room on every run (the app
   auto-joins the baked-in default room on boot — see `js/config.js`), merging
