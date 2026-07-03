@@ -182,11 +182,44 @@ try {
     const has = !!(await page.$('.modal button:has-text("Delete table")'));
     await closeModal(); return has;
   });
-  await check('field (column header) modal opens', async () => {
-    const th = await $('th.col-head'); if (!th) return false;
-    await th.click(); await page.waitForTimeout(300);
+  await check('field (column header) edit button opens the rename/delete modal', async () => {
+    const btn = await $('.col-edit-btn'); if (!btn) return false;
+    await btn.click(); await page.waitForTimeout(300);
     const has = !!(await page.$('.modal button:has-text("Delete field")'));
     await closeModal(); return has;
+  });
+  await check('search box filters rows by field value', async () => {
+    // two more rows so filter/sort have something to distinguish
+    await page.click('button:has-text("Row")'); await page.waitForTimeout(200);
+    await page.click('button:has-text("Row")'); await page.waitForTimeout(200);
+    if ((await count('tbody tr td[contenteditable]')) < 3) return false;
+    const values = ['apple', 'mango', 'zebra'];
+    // each edit's Store change triggers a full re-render, detaching prior
+    // cell handles — re-query fresh before every click (see the tree-toggle
+    // comment above for the same pattern)
+    for (let i = 0; i < 3; i++) {
+      const cells = await page.$$('tbody tr td[contenteditable]');
+      if (cells.length < 3) return false;
+      await cells[i].click({ clickCount: 3 });
+      await page.keyboard.type(values[i]);
+      await page.keyboard.press('Tab');
+      await page.waitForTimeout(150);
+    }
+    const input = await $('.tbl-search-input'); if (!input) return false;
+    await input.click(); await page.keyboard.type('mango'); await page.waitForTimeout(250);
+    const filtered = await page.$$eval('tbody tr td[contenteditable]', (tds) => tds.map((t) => t.textContent.trim()));
+    await input.fill(''); await page.waitForTimeout(250);
+    const restored = (await count('tbody tr')) === 3;
+    return filtered.length === 1 && filtered[0] === 'mango' && restored;
+  });
+  await check('clicking a column header sorts rows, and toggles direction', async () => {
+    let th = await $('th.col-head'); if (!th) return false;
+    await th.click(); await page.waitForTimeout(250);
+    const asc = await page.$$eval('tbody tr td[contenteditable]', (tds) => tds.map((t) => t.textContent.trim()));
+    th = await $('th.col-head'); if (!th) return false;  // header was rebuilt by the sort click
+    await th.click(); await page.waitForTimeout(250);
+    const desc = await page.$$eval('tbody tr td[contenteditable]', (tds) => tds.map((t) => t.textContent.trim()));
+    return asc.join() === 'apple,mango,zebra' && desc.join() === 'zebra,mango,apple';
   });
   await check('delete a table (store + UI update)', async () => {
     await page.evaluate(async () => {

@@ -10,6 +10,17 @@
 // .github/stamp-changelog.mjs regenerates every `date` from its `ts`.
 export const CHANGELOG = [
   {
+    v: 23,
+    title: 'Tables: search, filter & sort',
+    ts: '2026-07-03T02:19:41.300Z',
+    date: 'Jul 2, 2026, 9:19 PM CT',
+    items: [
+      'A filter box in the table toolbar narrows rows to ones matching your search, across every field.',
+      'Click a column header to sort by it — click again to reverse, a third click clears the sort.',
+      'Renaming/deleting a field moved to a small pencil button in the header so it doesn’t collide with the new sort click.',
+    ],
+  },
+  {
     v: 22,
     title: 'Sync locations: Google Drive',
     ts: '2026-07-03T01:16:15.055Z',

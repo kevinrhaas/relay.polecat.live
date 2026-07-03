@@ -12,6 +12,8 @@ const K_TREE_EXPANDED = 'relay.tree.expanded';
 let current = null;
 let treeOpen = localStorage.getItem(K_TREE_OPEN)!=='0';
 let expanded = loadExpanded();
+let filterText = '';
+let sortField = null, sortDir = 'asc';
 
 function loadExpanded(){
   try{ return new Set(JSON.parse(localStorage.getItem(K_TREE_EXPANDED)||'[]')); }catch{ return new Set(); }
@@ -21,8 +23,16 @@ function toggleExpanded(key){ expanded.has(key)?expanded.delete(key):expanded.ad
 
 export function renderTable(root, ctx, params={}){
   const names = Store.entityNames();
+  const prevEntity = current;
   current = params.entity && names.includes(params.entity) ? params.entity
           : (current && names.includes(current) ? current : names[0]);
+  if(current!==prevEntity){ filterText=''; sortField=null; sortDir='asc'; }
+
+  // preserve focus/cursor in the filter box across full re-renders (e.g. a
+  // remote sync landing mid-keystroke) — only the row area normally rebuilds
+  const searchFocused = document.activeElement?.classList?.contains('tbl-search-input');
+  const searchSel = searchFocused ? [document.activeElement.selectionStart, document.activeElement.selectionEnd] : null;
+
   root.innerHTML='';
   const wrap = el('div',{class:'wrap'});
   const shell = el('div',{class:'table-shell'});
@@ -39,47 +49,104 @@ export function renderTable(root, ctx, params={}){
 
   const e = Store.entity(current);
   const label = el('div',{class:'tbl-current', html:`${icon(e.icon||'table')}<b>${escapeHtml(e.label)}</b>`});
+  const search = el('div',{class:'search tbl-search'});
+  const searchInput = el('input',{class:'input tbl-search-input', type:'search', placeholder:'Filter rows…',
+    value:filterText, 'aria-label':`Filter rows in ${e.label}`});
+  search.append(el('span',{html:icon('search')}), searchInput);
   const spacer = el('div',{style:'flex:1'});
   const pin = el('button',{class:'btn sm', html:`${icon('star')} ${Store.isPinned(current)?'Pinned':'Pin'}`,
     onclick:()=>{Store.togglePin(current);renderTable(root,ctx,{entity:current});}});
   const editBtn = el('button',{class:'btn sm', html:`${icon('edit')} Edit table`, onclick:()=>editEntity(root,ctx)});
   const addCol = el('button',{class:'btn sm', html:`${icon('plus')} Field`, onclick:()=>addColumn(root,ctx)});
   const addRow = el('button',{class:'btn sm primary', html:`${icon('plus')} Row`, onclick:()=>addRowRec(root,ctx)});
-  toolbar.append(label, spacer, pin, editBtn, addCol, addRow);
+  toolbar.append(label, search, spacer, pin, editBtn, addCol, addRow);
   mainCol.append(toolbar);
 
-  // table
-  const cols = Store.columns(current);
-  const rows = Store.records(current);
-  const scroll = el('div',{class:'table-scroll'});
-  if(!rows.length){
-    scroll.append(el('div',{class:'empty', html:`${icon('grid')}<div>No rows yet in <b>${escapeHtml(e.label)}</b>.<br>Add a row — it syncs to your peers automatically.</div>`}));
-  }else{
-    const table=el('table',{class:'data'});
-    const thead=el('thead');
-    const hr=el('tr');
-    hr.append(el('th',{class:'open-head', text:''}));
-    hr.append(el('th',{text:'id'}));
-    cols.forEach(c=>hr.append(el('th',{class:'col-head', title:'Rename or delete this field',
-      html:`${escapeHtml(c)} <span class="col-caret">${icon('chevron')}</span>`,
-      onclick:()=>editField(c, root, ctx)})));
-    hr.append(el('th',{text:'updated'}), el('th',{text:''}));
-    thead.append(hr); table.append(thead);
+  const body = el('div');
+  mainCol.append(body);
+  refreshRows();
 
-    const tbody=el('tbody');
-    rows.forEach(r=>tbody.append(rowEl(r, cols, root, ctx)));
-    table.append(tbody);
-    scroll.append(table);
+  searchInput.addEventListener('input', ()=>{ filterText=searchInput.value; refreshRows(); });
+  if(searchFocused){
+    searchInput.focus();
+    if(searchSel) searchInput.setSelectionRange(searchSel[0], searchSel[1]);
   }
-  mainCol.append(scroll);
-
-  // footer summary
-  mainCol.append(el('div',{class:'muted tiny', style:'margin-top:12px',
-    html:`${rows.length} row${rows.length!==1?'s':''} · ${cols.length} field${cols.length!==1?'s':''} · edits sync to ${Sync.onlineCount()} peer(s) automatically`}));
 
   shell.append(mainCol);
   wrap.append(shell);
   root.append(wrap);
+
+  // rebuilds only the field header + rows + footer, so filtering/sorting
+  // never disturbs the toolbar (and the search box keeps its focus)
+  function refreshRows(){
+    body.innerHTML='';
+    const cols = Store.columns(current);
+    let rows = Store.records(current);
+    const total = rows.length;
+    const needle = filterText.trim().toLowerCase();
+    if(needle) rows = rows.filter(r=>rowMatches(r, cols, needle));
+    if(sortField) rows = rows.slice().sort((a,b)=>{
+      const d = cmpVals(a.fields[sortField], b.fields[sortField]);
+      return sortDir==='asc' ? d : -d;
+    });
+
+    const scroll = el('div',{class:'table-scroll'});
+    if(!total){
+      scroll.append(el('div',{class:'empty', html:`${icon('grid')}<div>No rows yet in <b>${escapeHtml(e.label)}</b>.<br>Add a row — it syncs to your peers automatically.</div>`}));
+    }else if(!rows.length){
+      scroll.append(el('div',{class:'empty', html:`${icon('search')}<div>No rows match “${escapeHtml(filterText.trim())}”.</div>`}));
+    }else{
+      const table=el('table',{class:'data'});
+      const thead=el('thead');
+      const hr=el('tr');
+      hr.append(el('th',{class:'open-head', text:''}));
+      hr.append(el('th',{text:'id'}));
+      cols.forEach(c=>{
+        const sorted = sortField===c;
+        const th = el('th',{class:'col-head'+(sorted?' sorted':''), title:`Sort by ${c}`,
+          onclick:()=>{ if(sortField!==c){ sortField=c; sortDir='asc'; } else if(sortDir==='asc'){ sortDir='desc'; } else { sortField=null; sortDir='asc'; } refreshRows(); }});
+        const inner = el('div',{class:'col-head-inner'});
+        inner.append(el('span',{class:'col-label', text:c}));
+        if(sorted) inner.append(el('span',{class:'col-sort-ic'+(sortDir==='desc'?' desc':''), html:icon('chevron')}));
+        inner.append(el('button',{class:'col-edit-btn', title:`Rename or delete field “${c}”`, 'aria-label':`Edit field ${c}`,
+          html:icon('edit'), onclick:(ev)=>{ ev.stopPropagation(); editField(c, root, ctx); }}));
+        th.append(inner);
+        hr.append(th);
+      });
+      hr.append(el('th',{text:'updated'}), el('th',{text:''}));
+      thead.append(hr); table.append(thead);
+
+      const tbody=el('tbody');
+      rows.forEach(r=>tbody.append(rowEl(r, cols, root, ctx)));
+      table.append(tbody);
+      scroll.append(table);
+    }
+    body.append(scroll);
+
+    // footer summary
+    const filtered = needle && rows.length!==total;
+    body.append(el('div',{class:'muted tiny', style:'margin-top:12px',
+      html:`${filtered?`${rows.length} of ${total}`:total} row${total!==1?'s':''} · ${cols.length} field${cols.length!==1?'s':''} · edits sync to ${Sync.onlineCount()} peer(s) automatically`}));
+  }
+}
+
+function rowMatches(r, cols, needle){
+  if(String(r.id).toLowerCase().includes(needle)) return true;
+  return cols.some(c=>{
+    const v = r.fields[c];
+    if(v==null) return false;
+    const s = typeof v==='object' ? JSON.stringify(v) : String(v);
+    return s.toLowerCase().includes(needle);
+  });
+}
+
+function cmpVals(a, b){
+  if(a==null && b==null) return 0;
+  if(a==null) return -1;
+  if(b==null) return 1;
+  if(typeof a==='number' && typeof b==='number') return a-b;
+  if(typeof a==='boolean' && typeof b==='boolean') return a===b ? 0 : (a?1:-1);
+  return String(a).localeCompare(String(b), undefined, {numeric:true, sensitivity:'base'});
 }
 
 // ---- left tree: entities, expandable to their fields ---------------------

@@ -29,7 +29,6 @@ when you finish something, move it to **Done** with the date; add discoveries to
 - Per-thread unread counts in Messages.
 - Drag-to-resize the Tables tree panel (currently collapsible but fixed-width).
 - Column types / simple validation (text, number, bool, date, select) with nicer editors.
-- Sort & filter rows; search within a table.
 - Presence cursors / "who's viewing this table".
 - Import CSV → new entity.
 - TURN fallback guidance for strict NATs.
@@ -52,6 +51,15 @@ when you finish something, move it to **Done** with the date; add discoveries to
 - Multiple workspaces / workspace switcher.
 
 ## Done
+- 2026-07-03 — Sort & filter rows; search within a table. Tables toolbar gained
+  a live filter box (matches any field value or the row id, case-insensitive)
+  that only rebuilds the row area — the input never loses focus or cursor
+  position, even across a remote sync landing mid-keystroke. Column headers
+  are now click-to-sort (asc → desc → unsorted, typed comparison for
+  numbers/booleans/text) with a direction indicator; the previous "click
+  header to rename" affordance moved to a small dedicated edit-pencil button
+  in the header so sort and rename don't collide. Added smoke checks for
+  both.
 - 2026-07-03 — Sync locations, phase 5 (final adapter): Google Drive. Unlike
   Dropbox, Google requires a client secret for its redirect-based
   authorization-code flow even with PKCE on "Web application" credentials —
