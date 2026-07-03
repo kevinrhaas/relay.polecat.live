@@ -10,6 +10,15 @@
 // .github/stamp-changelog.mjs regenerates every `date` from its `ts`.
 export const CHANGELOG = [
   {
+    v: 40,
+    title: 'More keyboard focus rings',
+    ts: '2026-07-03T21:29:13.018Z',
+    date: 'Jul 3, 2026, 4:29 PM CT',
+    items: [
+      'The nav rail, its collapse toggle, star/pin buttons, tree expand carets, toggle switches, segmented controls, and message thread tabs now show a focus ring when reached by keyboard, matching every other control in the app.',
+    ],
+  },
+  {
     v: 39,
     title: 'Bulk-export selected rows to CSV',
     ts: '2026-07-03T20:47:58.356Z',

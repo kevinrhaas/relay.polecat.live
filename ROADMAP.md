@@ -38,6 +38,23 @@ when you finish something, move it to **Done** with the date; add discoveries to
 - Multiple workspaces / workspace switcher.
 
 ## Done
+- 2026-07-03 — Keyboard-focus polish, round 2: the earlier keyboard-focus fix
+  (trash button, tree-field button) only covered two controls; a sweep for
+  every custom interactive element with a `:hover` style but no
+  `:focus-visible` counterpart turned up seven more, several of them
+  high-traffic — the primary nav rail buttons and its collapse toggle
+  (`js/shell.js`, used on every page), the Home "pin/star table" button,
+  the Tables tree's field-expand carets, every `.toggle` switch (peer
+  sharing, boolean fields), segmented controls (`.seg button`), and the
+  Messages thread-tab pills. All were real `<button>` elements — reachable
+  by Tab already — just invisible while focused, so keyboard users had no
+  way to tell which control was about to activate on Enter/Space. Added the
+  same `box-shadow:var(--ring)` treatment already used everywhere else
+  (`.btn`, `.tree-row`, `.col-edit-btn`, …); the nav rail uses an `inset`
+  ring so it doesn't get clipped by the rail's own overflow, and the
+  floating round collapse toggle layers the ring alongside its existing
+  drop shadow. Pure CSS, no behavior change, so no new smoke check —
+  verified all 60 existing checks still pass.
 - 2026-07-03 — Bulk-export selected rows to CSV: the bulk-select action bar
   (added alongside the bulk-delete feature) gained an "Export selected"
   button next to "Delete selected". Reuses `exportCsv()` — now accepting an
