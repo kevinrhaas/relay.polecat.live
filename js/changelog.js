@@ -10,6 +10,16 @@
 // .github/stamp-changelog.mjs regenerates every `date` from its `ts`.
 export const CHANGELOG = [
   {
+    v: 45,
+    title: 'Duplicate a table',
+    ts: '2026-07-03T23:54:42.341Z',
+    date: 'Jul 3, 2026, 6:54 PM CT',
+    items: [
+      'Edit table now has a "Duplicate" button that clones the table\'s fields, field types and current rows into a new table, named "<name> copy".',
+      'The copy gets fresh row IDs and syncs to peers like any other new table — nothing is linked back to the original.',
+    ],
+  },
+  {
     v: 44,
     title: 'Undo a table or field delete',
     ts: '2026-07-03T23:24:39.823Z',

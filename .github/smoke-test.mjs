@@ -614,6 +614,23 @@ try {
     const rec = await smokeTypesRecord();
     return gone && restoredTree && rec?.score === 42 && rec?.status === 'Done' && rec?.due === '2026-08-01' && typeof rec?.active === 'boolean';
   });
+  await check('duplicating a table via Edit table clones its fields, types and rows into a new table', async () => {
+    const before = await smokeTypesRecord();
+    await page.click('button:has-text("Edit table")'); await page.waitForTimeout(300);
+    await page.click('.modal button:has-text("Duplicate")'); await page.waitForTimeout(400);
+    const treeLabels = await page.$$eval('.tree-row .tree-label', (t) => t.map((x) => x.textContent.trim()));
+    if (!treeLabels.some((l) => /smoke types table$/i.test(l))) return false;   // original still present
+    if (!treeLabels.some((l) => /smoke types table copy$/i.test(l))) return false;
+    const dup = await page.evaluate(async () => {
+      const { Store } = await import('/js/store.js');
+      const k = Store.entityNames().find((n) => Store.entity(n).label === 'Smoke Types Table copy');
+      return k ? { key: k, fields: Store.records(k)[0]?.fields } : null;
+    });
+    if (!dup) return false;
+    const badges = await page.$$eval('.col-type-badge', (bs) => bs.map((b) => b.textContent.trim()));
+    return dup.fields?.score === before?.score && dup.fields?.due === before?.due && dup.fields?.active === before?.active
+      && badges.includes('num') && badges.includes('date');
+  });
 
   console.log('Messaging');
   await (await $('.rail-item[data-sec="messages"]')).click(); await page.waitForTimeout(300);

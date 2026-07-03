@@ -100,13 +100,34 @@ export const Store = new (class extends Emitter{
   entity(name){ return this.data.entities[name]; }
   entityNames(){ return Object.keys(this.data.entities); }
   _emeta(){ return { updatedAt: Date.now(), updatedBy: this.identity.id }; }
+  _slugify(label){
+    return label.toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'') || 'entity_'+uuid().slice(0,4);
+  }
   createEntity(label, iconName='table'){
-    const key = label.toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'') || 'entity_'+uuid().slice(0,4);
+    const key = this._slugify(label);
     if(this.data.entities[key]) throw new Error('An entity with that name already exists');
     this.data.entities[key] = { label, icon:iconName, records:{}, _meta:this._emeta() };
     (this.data.entityTombstones||={}) && delete this.data.entityTombstones[key];  // un-tombstone if recreated
     this._persist(); this.emit('entities'); this.emit('change',{type:'entity',key,origin:'local'});
     return key;
+  }
+  // clone a table's fields, field types and current rows into a brand-new
+  // entity — "<label> copy" (then "copy 2", "copy 3", ...) — with fresh ids
+  // and metadata so it syncs as an ordinary new table, not a linked copy.
+  duplicateEntity(key){
+    const e=this.entity(key); if(!e) return null;
+    let label=e.label+' copy', newKey=this._slugify(label), n=2;
+    while(this.data.entities[newKey]){ label=e.label+' copy '+n; newKey=this._slugify(label); n++; }
+    const records={};
+    for(const r of Object.values(e.records)){
+      if(r._meta.deleted) continue;
+      const id=uuid();
+      records[id] = { id, entity:newKey, fields:{...r.fields}, _meta:this._emeta() };
+    }
+    this.data.entities[newKey] = { label, icon:e.icon, fieldTypes: e.fieldTypes?{...e.fieldTypes}:undefined, records, _meta:this._emeta() };
+    delete (this.data.entityTombstones||{})[newKey];
+    this._persist(); this.emit('entities'); this.emit('change',{type:'entity',key:newKey,origin:'local'});
+    return newKey;
   }
   renameEntity(key, label){
     const e=this.entity(key); if(!e || !label.trim()) return;

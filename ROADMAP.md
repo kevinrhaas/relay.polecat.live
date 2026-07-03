@@ -27,6 +27,10 @@ when you finish something, move it to **Done** with the date; add discoveries to
   more often than Dropbox's refresh-token flow does. Falls back to a one-click
   Reconnect, but worth watching for complaints.
 - Optional "always-on peer" (headless) for 24/7 availability without a DB.
+- Reorder fields (drag columns in the tree/grid) — field order is currently
+  whatever `columns()` discovers first, with no way to control it.
+- "Duplicate row" alongside the existing per-row delete/export actions — same
+  one-off-copy convenience `duplicateEntity` now gives tables.
 
 ## Later
 - End-to-end encryption of records at rest / in transit beyond DTLS.
@@ -34,6 +38,18 @@ when you finish something, move it to **Done** with the date; add discoveries to
 - Multiple workspaces / workspace switcher.
 
 ## Done
+- 2026-07-03 — Duplicate a table: the Edit table modal (rename/icon/delete)
+  gained a "Duplicate" button that clones the table's fields, field types and
+  current (non-deleted) rows into a brand-new entity named "<name> copy" (then
+  "copy 2", "copy 3", ... if that's already taken). New
+  `Store.duplicateEntity(key)` mirrors `createEntity`'s key-slugging (factored
+  into a shared `_slugify` helper) but gives every copied row a fresh UUID and
+  `_meta`, so the clone syncs to peers as an ordinary new table — nothing
+  stays linked to the original, and deleted/tombstoned rows aren't carried
+  over. Switches the view to the new table on completion. Added a smoke check
+  that duplicates the column-types smoke table and verifies the copy's field
+  type badges (number/date) and a row's values match the original while the
+  original table is untouched.
 - 2026-07-03 — Undo a table or field delete: the row-delete Undo pattern
   (confirmation toast with an "Undo" action button) now covers the two other
   destructive table operations that previously only warned via

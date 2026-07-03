@@ -867,11 +867,15 @@ function editEntity(root, ctx){
       }}});
     }
   }});
+  const dup=el('button',{class:'btn', html:`${icon('copy')} Duplicate`, onclick:()=>{
+    const key=Store.duplicateEntity(current);
+    hide(); current=key; renderTable(root,ctx,{entity:key}); toast(`Duplicated as “${Store.entity(key).label}”`,{kind:'ok'});
+  }});
   const save=el('button',{class:'btn primary', text:'Save', onclick:()=>{
     Store.renameEntity(current, name.value); Store.setEntityIcon(current, chosen);
     hide(); renderTable(root,ctx,{entity:current}); toast('Table updated',{kind:'ok'});
   }});
-  const { hide }=modal({ title:'Edit table', icon:'edit', body, foot:[del, el('div',{style:'flex:1'}),
+  const { hide }=modal({ title:'Edit table', icon:'edit', body, foot:[del, dup, el('div',{style:'flex:1'}),
     el('button',{class:'btn', text:'Cancel', onclick:()=>hide()}), save] });
   setTimeout(()=>name.focus(),50);
 }
