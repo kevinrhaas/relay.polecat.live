@@ -34,6 +34,17 @@ when you finish something, move it to **Done** with the date; add discoveries to
 - Multiple workspaces / workspace switcher.
 
 ## Done
+- 2026-07-03 — Landing page refresh: the hero screenshot and copy hadn't kept
+  pace with several recent shipped features (per-table live presence, CSV
+  export, typed/dropdown fields with sort). Re-captured the hero shot to show
+  the current Tables view mid-sort on a dropdown-typed column, with the
+  "Export CSV" button and a live presence badge (a peer avatar next to the
+  table name and in the tree row, plus the topbar online count) all visible
+  at once. Swapped the hero "what's new" pill from the now-old CSV-import
+  callout to live presence, and touched up three feature cards ("Dynamic JSON
+  tables", "Live chat & presence", "Yours to keep") plus the meta/OG
+  descriptions to mention typed fields, sort/filter, per-table presence, and
+  CSV export alongside import.
 - 2026-07-03 — Chunked CSV import for large files: confirming an import used to
   run every row through `Store.upsert` (a full workspace persist + re-render
   event, one per row) in a single synchronous pass — flagged as a known risk

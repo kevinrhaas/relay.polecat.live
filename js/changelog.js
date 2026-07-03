@@ -10,6 +10,16 @@
 // .github/stamp-changelog.mjs regenerates every `date` from its `ts`.
 export const CHANGELOG = [
   {
+    v: 37,
+    title: 'Landing page refresh',
+    ts: '2026-07-03T19:29:50.337Z',
+    date: 'Jul 3, 2026, 2:29 PM CT',
+    items: [
+      'New hero screenshot showing live presence, typed dropdown fields, sorting, and CSV export.',
+      'Updated the homepage copy to spotlight who\'s-viewing presence and the fuller table toolkit.',
+    ],
+  },
+  {
     v: 36,
     title: 'Smoother large CSV imports',
     ts: '2026-07-03T19:16:10.780Z',
