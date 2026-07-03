@@ -135,6 +135,7 @@ export const Store = new (class extends Emitter{
       const f={...r.fields}; f[newKey]=f[oldKey]; delete f[oldKey];
       r.fields=f; r._meta={ rev:(r._meta.rev||0)+1, updatedAt:Date.now(), updatedBy:this.identity.id, deleted:false };
     }
+    if(e.fieldTypes && oldKey in e.fieldTypes){ e.fieldTypes[newKey]=e.fieldTypes[oldKey]; delete e.fieldTypes[oldKey]; }
     this._persist(); this.emit('records', entity); this.emit('change',{type:'record',entity,origin:'local'});
   }
   deleteField(entity, key){
@@ -144,18 +145,36 @@ export const Store = new (class extends Emitter{
       const f={...r.fields}; delete f[key];
       r.fields=f; r._meta={ rev:(r._meta.rev||0)+1, updatedAt:Date.now(), updatedBy:this.identity.id, deleted:false };
     }
+    if(e.fieldTypes) delete e.fieldTypes[key];
     this._persist(); this.emit('records', entity); this.emit('change',{type:'record',entity,origin:'local'});
+  }
+
+  // ---- field types (optional per-field editor/validation hint) ---------
+  // undefined/absent = "auto": editors infer from the current value, same as
+  // before this feature existed. An explicit type is entity-level metadata
+  // (like label/icon), so it syncs the same way and survives empty columns.
+  fieldType(entity, field){
+    const e=this.entity(entity);
+    return (e && e.fieldTypes && e.fieldTypes[field]) || null;
+  }
+  setFieldType(entity, field, type, options){
+    const e=this.entity(entity); if(!e) return;
+    e.fieldTypes||={};
+    if(!type || type==='auto') delete e.fieldTypes[field];
+    else e.fieldTypes[field] = (type==='select' && options && options.length) ? {type, options} : {type};
+    e._meta=this._emeta();
+    this._persist(); this.emit('entities'); this.emit('change',{type:'entity',key:entity,origin:'local'});
   }
 
   // ---- entity definitions + tombstones for sync ------------------------
   entityDefs(filter){
     return Object.entries(this.data.entities)
       .filter(([k])=>!filter || filter.includes(k))
-      .map(([key,e])=>({ key, label:e.label, icon:e.icon||'table', _meta:e._meta||{updatedAt:0,updatedBy:'?'} }));
+      .map(([key,e])=>({ key, label:e.label, icon:e.icon||'table', fieldTypes:e.fieldTypes||{}, _meta:e._meta||{updatedAt:0,updatedBy:'?'} }));
   }
   tombstoneDefs(){ return Object.entries(this.data.entityTombstones||{}).map(([key,t])=>({key,...t})); }
 
-  // create-or-update an entity from a peer's definition (LWW on label/icon)
+  // create-or-update an entity from a peer's definition (LWW on label/icon/fieldTypes)
   ensureEntity(def){
     if(!def || !def.key) return false;
     const tomb=(this.data.entityTombstones||{})[def.key];
@@ -163,12 +182,13 @@ export const Store = new (class extends Emitter{
     if(tomb && tomb.at >= incoming) return false;              // a newer delete wins
     const e=this.data.entities[def.key];
     if(!e){
-      this.data.entities[def.key] = { label:def.label||def.key, icon:def.icon||'table', records:{}, _meta:def._meta||this._emeta() };
+      this.data.entities[def.key] = { label:def.label||def.key, icon:def.icon||'table', fieldTypes:def.fieldTypes||{}, records:{}, _meta:def._meta||this._emeta() };
       this._persist(); this.emit('entities'); this.emit('change',{type:'entity',key:def.key,origin:'remote'});
       return 'created';
     }
-    if(incoming > (e._meta?.updatedAt||0) && (e.label!==def.label || e.icon!==def.icon)){
-      e.label=def.label; e.icon=def.icon||e.icon; e._meta=def._meta;
+    const ftChanged = JSON.stringify(e.fieldTypes||{}) !== JSON.stringify(def.fieldTypes||{});
+    if(incoming > (e._meta?.updatedAt||0) && (e.label!==def.label || e.icon!==def.icon || ftChanged)){
+      e.label=def.label; e.icon=def.icon||e.icon; e.fieldTypes=def.fieldTypes||{}; e._meta=def._meta;
       this._persist(); this.emit('entities'); this.emit('change',{type:'entity',key:def.key,origin:'remote'});
       return 'updated';
     }

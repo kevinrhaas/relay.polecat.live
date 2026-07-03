@@ -10,6 +10,18 @@
 // .github/stamp-changelog.mjs regenerates every `date` from its `ts`.
 export const CHANGELOG = [
   {
+    v: 31,
+    title: 'Column types with nicer editors',
+    ts: '2026-07-03T13:51:25.736Z',
+    date: 'Jul 3, 2026, 8:51 AM CT',
+    items: [
+      'Give any field a type — Text, Number, Yes/No, Date, or Dropdown — from its edit menu or right when you add it.',
+      'Typed fields get a dedicated control instead of plain text: a toggle for Yes/No, a native date picker for Date, and a dropdown for a fixed list of choices, both in the table grid and the record panel.',
+      'Number fields reject non-numeric input instead of silently storing bad data.',
+      'A small badge on the column header shows its type; switch back to Auto anytime to return to the original text-based editing.',
+    ],
+  },
+  {
     v: 30,
     title: 'Confirm before disconnecting a sync location',
     ts: '2026-07-03T11:50:59.714Z',

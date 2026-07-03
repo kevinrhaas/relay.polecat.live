@@ -26,7 +26,6 @@ when you finish something, move it to **Done** with the date; add discoveries to
   ITP or strict Firefox cookie blocking will force a "needs permission" state
   more often than Dropbox's refresh-token flow does. Falls back to a one-click
   Reconnect, but worth watching for complaints.
-- Column types / simple validation (text, number, bool, date, select) with nicer editors.
 - Presence cursors / "who's viewing this table".
 - CSV import currently reads the whole file with `FileReader.readAsText` and
   builds every row in memory before the first `Store.upsert` — fine for
@@ -35,6 +34,9 @@ when you finish something, move it to **Done** with the date; add discoveries to
   comes up.
 - TURN fallback guidance for strict NATs.
 - Optional "always-on peer" (headless) for 24/7 availability without a DB.
+- CSV import always auto-types imported columns; it could offer to assign a
+  column type (esp. Dropdown, since a CSV of repeated string values is exactly
+  where a fixed option list pays off) in the import preview modal.
 
 ## Later
 - End-to-end encryption of records at rest / in transit beyond DTLS.
@@ -42,6 +44,25 @@ when you finish something, move it to **Done** with the date; add discoveries to
 - Multiple workspaces / workspace switcher.
 
 ## Done
+- 2026-07-03 — Column types with nicer editors: any field can now be given an
+  explicit type — Text, Number, Yes/No, Date, or Dropdown (fixed list of
+  options) — from the field's edit modal (column header's pencil icon, or the
+  tree panel's field list) or right when adding a new field. An explicit type
+  overrides the previous purely value-based guessing and swaps in a dedicated
+  control in both the table grid and the record side-panel: a toggle for
+  Yes/No, a native `<input type=date>` for Date, and a `<select>` for
+  Dropdown (prepending the field's current value as an extra option if it
+  isn't in the configured list, so retyping a field never silently drops
+  data). Number fields keep the grid's plain-text cell but now validate on
+  commit — non-numeric input is rejected with a toast and the cell reverts,
+  instead of silently coercing to a string. "Auto" (the default, unset) keeps
+  the exact original behavior of inferring the editor from whatever value is
+  present. Field types are entity-level metadata (`Store.fieldTypes`,
+  alongside label/icon) so they sync to peers the same way, and survive
+  rename/delete-field. A small badge on the column header shows a field's
+  type. Added seven smoke checks covering boolean/dropdown/number/date field
+  creation through the UI, persistence, the record panel rendering matching
+  controls, and clearing a type back to Auto.
 - 2026-07-03 — Confirm before disconnecting a sync location: every other
   destructive action in the app (delete row/table/field, revoke/remove invite,
   reset workspace) goes through the shared `confirmDialog`, but the six

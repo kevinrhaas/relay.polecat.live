@@ -275,6 +275,90 @@ try {
     return !(await page.$$eval('.tree-row .tree-label', (t) => t.some((x) => /smoke table/i.test(x.textContent))));
   });
 
+  console.log('Tables — column types (nicer editors)');
+  const smokeTypesRecord = async () => page.evaluate(async () => {
+    const { Store } = await import('/js/store.js');
+    const k = Store.entityNames().find((n) => Store.entity(n).label === 'Smoke Types Table');
+    return k ? Store.records(k)[0]?.fields : null;
+  });
+  await check('create a table for column-type checks', async () => {
+    await (await $('.topbar .btn.primary')).click(); await page.waitForTimeout(300);
+    await page.fill('.modal input', 'Smoke Types Table');
+    await page.click('.modal button:has-text("Create")'); await page.waitForTimeout(500);
+    await page.click('button:has-text("Row")'); await page.waitForTimeout(300); // seed a row so fields materialize
+    return await page.$$eval('.tree-row .tree-label', (t) => t.some((x) => /smoke types table/i.test(x.textContent)));
+  });
+  await check('boolean field: Add field modal creates a grid toggle that persists on click', async () => {
+    await page.click('button:has-text("Field")'); await page.waitForTimeout(300);
+    await page.fill('.modal input:visible', 'active');
+    await page.selectOption('.modal select', 'boolean');
+    await page.click('.modal button:has-text("Add field")'); await page.waitForTimeout(300);
+    const toggle = await $('tbody tr .bool-cell .toggle'); if (!toggle) return false;
+    const before = await toggle.evaluate((b) => b.classList.contains('on'));
+    await toggle.click(); await page.waitForTimeout(300);
+    const after = (await smokeTypesRecord())?.active;
+    return after === !before;
+  });
+  await check('dropdown field: Add field modal with options creates a grid select that persists a choice', async () => {
+    await page.click('button:has-text("Field")'); await page.waitForTimeout(300);
+    await page.fill('.modal input:visible', 'status');
+    await page.selectOption('.modal select', 'select');
+    await page.waitForTimeout(150);
+    const optsInput = await page.$('.modal input[placeholder*="Comma-separated"]'); if (!optsInput) return false;
+    await optsInput.fill('Open, In progress, Done');
+    await page.click('.modal button:has-text("Add field")'); await page.waitForTimeout(300);
+    const badges = await page.$$eval('.col-type-badge', (bs) => bs.map((b) => b.textContent.trim()));
+    if (!badges.includes('list')) return false;
+    const sel = await $('tbody tr .cell-select'); if (!sel) return false;
+    await sel.selectOption('Done'); await page.waitForTimeout(300);
+    return (await smokeTypesRecord())?.status === 'Done';
+  });
+  await check('number field: rejects non-numeric input and accepts valid numbers', async () => {
+    await page.click('button:has-text("Field")'); await page.waitForTimeout(300);
+    await page.fill('.modal input:visible', 'score');
+    await page.selectOption('.modal select', 'number');
+    await page.click('.modal button:has-text("Add field")'); await page.waitForTimeout(300);
+    const cells = await page.$$('tbody tr td[contenteditable]');
+    const cell = cells[cells.length - 1]; if (!cell) return false;
+    await cell.click({ clickCount: 3 }); await page.keyboard.type('not-a-number'); await page.keyboard.press('Tab');
+    await page.waitForTimeout(300);
+    const rejectedText = await cell.evaluate((c) => c.textContent.trim());
+    await cell.click({ clickCount: 3 }); await page.keyboard.type('42'); await page.keyboard.press('Tab');
+    await page.waitForTimeout(300);
+    return rejectedText === '' && (await smokeTypesRecord())?.score === 42;
+  });
+  await check('date field: renders a native date input that persists a value', async () => {
+    await page.click('button:has-text("Field")'); await page.waitForTimeout(300);
+    await page.fill('.modal input:visible', 'due');
+    await page.selectOption('.modal select', 'date');
+    await page.click('.modal button:has-text("Add field")'); await page.waitForTimeout(300);
+    const dateInput = await $('tbody tr .cell-date'); if (!dateInput) return false;
+    await dateInput.fill('2026-08-01'); await page.waitForTimeout(300);
+    return (await smokeTypesRecord())?.due === '2026-08-01';
+  });
+  await check('record panel: typed fields render matching dedicated controls (toggle + dropdown)', async () => {
+    const openBtn = await $('tbody tr .row-open'); if (!openBtn) return false;
+    await openBtn.click(); await page.waitForTimeout(300);
+    const hasToggle = !!(await page.$('.record-sheet .record-field .toggle'));
+    const hasSelect = !!(await page.$('.record-sheet .record-field select'));
+    await closeModal();
+    return hasToggle && hasSelect;
+  });
+  await check('editField: switching a typed field back to Auto clears its type badge', async () => {
+    const headers = await page.$$('.col-head');
+    let btn = null;
+    for (const h of headers) {
+      const label = await h.$eval('.col-label', (n) => n.textContent.trim()).catch(() => '');
+      if (label === 'status') { btn = await h.$('.col-edit-btn'); break; }
+    }
+    if (!btn) return false;
+    await btn.click(); await page.waitForTimeout(300);
+    await page.selectOption('.modal select', 'auto');
+    await page.click('.modal button:has-text("Save")'); await page.waitForTimeout(300);
+    const badges = await page.$$eval('.col-type-badge', (bs) => bs.map((b) => b.textContent.trim()));
+    return !badges.includes('list') && badges.includes('y/n') && badges.includes('num') && badges.includes('date');
+  });
+
   console.log('Messaging');
   await (await $('.rail-item[data-sec="messages"]')).click(); await page.waitForTimeout(300);
   await check('send a message appears in the feed', async () => {

@@ -344,6 +344,9 @@ table.data th.col-head:hover{color:var(--text)}
 table.data th.col-head.sorted{color:var(--brand-b)}
 .col-head-inner{display:flex;align-items:center;gap:5px}
 .col-label{white-space:nowrap}
+.col-type-badge{font-size:8.5px;font-weight:700;letter-spacing:.03em;color:var(--text-3);
+  background:var(--surface-3);border-radius:4px;padding:1px 4px;flex:0 0 auto;
+  text-transform:uppercase;cursor:help}
 .col-sort-ic{display:inline-flex;flex:0 0 auto}
 .col-sort-ic svg{width:11px;height:11px;transform:rotate(-90deg);transition:transform .15s}
 .col-sort-ic.desc svg{transform:rotate(90deg)}
@@ -357,6 +360,12 @@ table.data tbody tr:hover{background:var(--surface-2)}
 table.data td[contenteditable]{outline:none;min-width:80px}
 table.data td[contenteditable]:focus{box-shadow:inset 0 0 0 2px var(--brand-b);
   border-radius:4px;background:var(--surface)}
+.select-cell,.date-cell{min-width:110px}
+.cell-select,.cell-date{width:100%;border:0;background:transparent;color:inherit;
+  font:inherit;font-size:13px;padding:3px 2px;cursor:pointer;border-radius:4px}
+.cell-select:focus,.cell-date:focus{outline:none;box-shadow:inset 0 0 0 2px var(--brand-b);
+  background:var(--surface)}
+.bool-cell .toggle{margin:2px 0}
 .open-head{width:34px}
 .open-cell{width:34px;padding-left:8px!important;padding-right:2px!important}
 .row-open svg{width:12px;height:12px}

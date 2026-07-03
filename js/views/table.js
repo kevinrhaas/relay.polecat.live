@@ -11,6 +11,19 @@ const K_TREE_EXPANDED = 'relay.tree.expanded';
 const K_TREE_WIDTH = 'relay.tree.width';
 const TREE_MINW = 180, TREE_MAXW = 420, TREE_DEFAULTW = 220;
 
+// field types: an optional per-field hint that swaps the auto-detected
+// text/number/JSON editor for a dedicated one. Unset ("auto") keeps the
+// original behavior of inferring the editor from whatever value is present.
+const FIELD_TYPES = [
+  ['auto', 'Auto (detect from value)'],
+  ['text', 'Text'],
+  ['number', 'Number'],
+  ['boolean', 'Yes / No'],
+  ['date', 'Date'],
+  ['select', 'Dropdown (choose from list)'],
+];
+const TYPE_BADGE = { number:'num', boolean:'y/n', date:'date', select:'list' };
+
 let current = null;
 let treeOpen = localStorage.getItem(K_TREE_OPEN)!=='0';
 let treeWidth = clampTreeW(parseInt(localStorage.getItem(K_TREE_WIDTH)||String(TREE_DEFAULTW),10));
@@ -103,10 +116,12 @@ export function renderTable(root, ctx, params={}){
       hr.append(el('th',{text:'id'}));
       cols.forEach(c=>{
         const sorted = sortField===c;
+        const ft = Store.fieldType(current, c);
         const th = el('th',{class:'col-head'+(sorted?' sorted':''), title:`Sort by ${c}`,
           onclick:()=>{ if(sortField!==c){ sortField=c; sortDir='asc'; } else if(sortDir==='asc'){ sortDir='desc'; } else { sortField=null; sortDir='asc'; } refreshRows(); }});
         const inner = el('div',{class:'col-head-inner'});
         inner.append(el('span',{class:'col-label', text:c}));
+        if(ft) inner.append(el('span',{class:'col-type-badge', title:FIELD_TYPES.find(([v])=>v===ft.type)?.[1]||ft.type, text:TYPE_BADGE[ft.type]||ft.type}));
         if(sorted) inner.append(el('span',{class:'col-sort-ic'+(sortDir==='desc'?' desc':''), html:icon('chevron')}));
         inner.append(el('button',{class:'col-edit-btn', title:`Rename or delete field “${c}”`, 'aria-label':`Edit field ${c}`,
           html:icon('edit'), onclick:(ev)=>{ ev.stopPropagation(); editField(c, root, ctx); }}));
@@ -252,26 +267,7 @@ function rowEl(r, cols, root, ctx){
     html:icon('chevron'), onclick:()=>openRecordPanel(r, cols, root, ctx)}));
   tr.append(openTd);
   tr.append(el('td',{class:'rowid', text:shortId(r.id), title:r.id}));
-  cols.forEach(c=>{
-    const val=r.fields[c];
-    const td=el('td',{contenteditable:'true', text: cellText(val)});
-    td.dataset.field=c;
-    td.addEventListener('blur',()=>commitCell(r, c, td));
-    td.addEventListener('keydown',ev=>{ if(ev.key==='Enter'){ev.preventDefault();td.blur();} });
-    td.addEventListener('paste',ev=>{
-      // force plain text — pasting from Sheets/Excel/Word otherwise drops
-      // fonts/colors/spans into the cell that persist until the next full
-      // table re-render, since commitCell only reads text back out.
-      ev.preventDefault();
-      const text=(ev.clipboardData||window.clipboardData).getData('text/plain');
-      const sel=window.getSelection();
-      if(!sel.rangeCount) return;
-      sel.deleteFromDocument();
-      sel.getRangeAt(0).insertNode(document.createTextNode(text));
-      sel.collapseToEnd();
-    });
-    tr.append(td);
-  });
+  cols.forEach(c=>tr.append(fieldCell(r, c, Store.fieldType(current, c))));
   tr.append(el('td',{class:'meta-cell', text:ago(r._meta.updatedAt), title:`rev ${r._meta.rev} · by ${shortId(r._meta.updatedBy)}`}));
   const act=el('td');
   const del=el('button',{class:'btn ghost icon sm row-actions', html:icon('trash'), title:'Delete row', 'aria-label':'Delete row',
@@ -280,10 +276,86 @@ function rowEl(r, cols, root, ctx){
   return tr;
 }
 
-function commitCell(r, field, td){
+// a typed field renders a dedicated control (toggle / dropdown / date
+// picker); an untyped ("auto") field keeps the original plain-text
+// contenteditable cell, whose value is inferred on commit.
+function fieldCell(r, field, ft){
+  const val = r.fields[field];
+  if(ft?.type==='boolean'){
+    const td=el('td',{class:'bool-cell'});
+    const isOn = toBool(val);
+    const btn=el('button',{class:'toggle'+(isOn?' on':''), type:'button', role:'switch',
+      'aria-checked':String(isOn), 'aria-label':`${field}: ${isOn?'on':'off'}`});
+    btn.addEventListener('click',()=>{
+      const nv=!btn.classList.contains('on');
+      btn.classList.toggle('on',nv); btn.setAttribute('aria-checked',String(nv));
+      commitCellValue(r, field, nv, td);
+    });
+    td.append(btn);
+    return td;
+  }
+  if(ft?.type==='select'){
+    const td=el('td',{class:'select-cell'});
+    const opts = ft.options||[];
+    const cur = val==null ? '' : String(val);
+    const values = cur && !opts.includes(cur) ? [cur, ...opts] : opts;
+    const sel=el('select',{class:'cell-select', 'aria-label':`${field} value`});
+    sel.append(el('option',{value:'', text:'—'}));
+    values.forEach(o=>sel.append(el('option',{value:o, text:o})));
+    sel.value = cur;
+    sel.addEventListener('change',()=>commitCellValue(r, field, sel.value, td));
+    td.append(sel);
+    return td;
+  }
+  if(ft?.type==='date'){
+    const td=el('td',{class:'date-cell'});
+    const inp=el('input',{class:'cell-date', type:'date', value: val||'', 'aria-label':`${field} date`});
+    inp.addEventListener('change',()=>commitCellValue(r, field, inp.value, td));
+    td.append(inp);
+    return td;
+  }
+  const td=el('td',{contenteditable:'true', text: cellText(val)});
+  td.dataset.field=field;
+  td.addEventListener('blur',()=>commitCell(r, field, td, ft));
+  td.addEventListener('keydown',ev=>{ if(ev.key==='Enter'){ev.preventDefault();td.blur();} });
+  td.addEventListener('paste',ev=>{
+    // force plain text — pasting from Sheets/Excel/Word otherwise drops
+    // fonts/colors/spans into the cell that persist until the next full
+    // table re-render, since commitCell only reads text back out.
+    ev.preventDefault();
+    const text=(ev.clipboardData||window.clipboardData).getData('text/plain');
+    const sel=window.getSelection();
+    if(!sel.rangeCount) return;
+    sel.deleteFromDocument();
+    sel.getRangeAt(0).insertNode(document.createTextNode(text));
+    sel.collapseToEnd();
+  });
+  return td;
+}
+
+function commitCell(r, field, td, ft){
   const raw=td.textContent.trim();
   const prev=r.fields[field];
-  const val=inferValue(raw);
+  let val;
+  if(ft?.type==='number'){
+    if(raw===''){ val=''; }
+    else{
+      const n=Number(raw);
+      if(isNaN(n)){ toast('Not a number',{body:`“${raw}” isn’t a valid number for “${field}”.`,kind:'err'}); td.textContent=cellText(prev); return; }
+      val=n;
+    }
+  }else{
+    val=inferValue(raw);
+  }
+  if(JSON.stringify(val)===JSON.stringify(prev)) return;
+  Store.upsert(current, {[field]:val}, r.id);
+  td.classList.add('cell-syncing'); setTimeout(()=>td.classList.remove('cell-syncing'),800);
+}
+
+// commit a value that a dedicated control (toggle/select/date) already typed
+// correctly — no text inference needed.
+function commitCellValue(r, field, val, td){
+  const prev=r.fields[field];
   if(JSON.stringify(val)===JSON.stringify(prev)) return;
   Store.upsert(current, {[field]:val}, r.id);
   td.classList.add('cell-syncing'); setTimeout(()=>td.classList.remove('cell-syncing'),800);
@@ -301,6 +373,14 @@ function inferValue(raw){
 // the inverse of inferValue's typing for display/export: objects flatten to JSON text
 function cellText(val){
   return val==null ? '' : (typeof val==='object' ? JSON.stringify(val) : String(val));
+}
+
+// coerce a value to a boolean for the toggle control — a plain `!!val` would
+// treat leftover strings like "false" (truthy in JS) as on, which bites
+// whenever a field already held free-form data before being retyped
+function toBool(val){
+  if(typeof val==='string') return !['','false','0','no'].includes(val.trim().toLowerCase());
+  return !!val;
 }
 
 // ---- export current table (respecting filter + sort) → .csv --------------
@@ -360,17 +440,36 @@ function openRecordPanel(rec, cols, root, ctx){
 
 function recordFieldRow(rec, field){
   const val = rec.fields[field];
+  const ft = Store.fieldType(current, field);
+  // an explicit field type overrides guessing the editor from the current
+  // value; "auto" (no type set) keeps the original value-based heuristic.
+  const kind = ft?.type || (typeof val==='boolean' ? 'boolean'
+    : typeof val==='number' ? 'number'
+    : (val && typeof val==='object') ? 'json' : 'text');
   const row = el('div',{class:'field record-field'});
   row.append(el('label',{text:field}));
   let input;
-  if(typeof val==='boolean'){
-    input = el('button',{class:'toggle'+(val?' on':''), type:'button', role:'switch', 'aria-checked':String(!!val),
+  if(kind==='boolean'){
+    const isOn = toBool(val);
+    input = el('button',{class:'toggle'+(isOn?' on':''), type:'button', role:'switch', 'aria-checked':String(isOn),
       onclick:()=>{ const nv=!input.classList.contains('on'); input.classList.toggle('on',nv); input.setAttribute('aria-checked',String(nv)); commitField(rec, field, nv, input); }});
-  }else if(typeof val==='number'){
+  }else if(kind==='number'){
     input = el('input',{class:'input', type:'number', value: val==null?'':String(val)});
     input.addEventListener('blur',()=>commitField(rec, field, input.value===''?'':Number(input.value), input));
     input.addEventListener('keydown',ev=>{ if(ev.key==='Enter'){ ev.preventDefault(); input.blur(); } });
-  }else if(val && typeof val==='object'){
+  }else if(kind==='date'){
+    input = el('input',{class:'input', type:'date', value: val||''});
+    input.addEventListener('change',()=>commitField(rec, field, input.value, input));
+  }else if(kind==='select'){
+    const opts = ft.options||[];
+    const cur = val==null ? '' : String(val);
+    const values = cur && !opts.includes(cur) ? [cur, ...opts] : opts;
+    input = el('select',{class:'input'});
+    input.append(el('option',{value:'', text:'—'}));
+    values.forEach(o=>input.append(el('option',{value:o, text:o})));
+    input.value = cur;
+    input.addEventListener('change',()=>commitField(rec, field, input.value, input));
+  }else if(kind==='json'){
     input = el('textarea',{class:'input', rows:'3', text: JSON.stringify(val,null,2)});
     input.addEventListener('blur',()=>{ let nv; try{ nv=JSON.parse(input.value); }catch{ nv=input.value; } commitField(rec, field, nv, input); });
   }else{
@@ -392,15 +491,28 @@ function commitField(rec, field, val, inputEl){
 
 function addColumn(root, ctx){
   const input=el('input',{class:'input', placeholder:'field name (e.g. status)'});
+  const typeSel=el('select',{class:'input'});
+  FIELD_TYPES.forEach(([v,l])=>typeSel.append(el('option',{value:v, text:l})));
+  const optsInput=el('input',{class:'input', placeholder:'Comma-separated options, e.g. Open, In progress, Done'});
+  const optsField=el('div',{class:'field', style:'display:none'},[el('label',{text:'Options'}), optsInput]);
+  typeSel.addEventListener('change',()=>{ optsField.style.display = typeSel.value==='select' ? '' : 'none'; });
   const {hide}=modal({ title:'Add field', icon:'plus',
-    body: el('div',{},[el('div',{class:'field'},[el('label',{text:'Field name'}), input])]),
+    body: el('div',{},[
+      el('div',{class:'field'},[el('label',{text:'Field name'}), input]),
+      el('div',{class:'field'},[el('label',{text:'Type'}), typeSel]),
+      optsField]),
     foot:[ el('button',{class:'btn', text:'Cancel', onclick:()=>hide()}),
       el('button',{class:'btn primary', text:'Add field', onclick:()=>{
         const name=input.value.trim().replace(/\s+/g,'_'); if(!name) return;
         // materialise the column onto the first row (or a fresh row) so it shows
+        const defaultVal = typeSel.value==='boolean' ? false : '';
         const rows=Store.records(current);
-        if(rows.length) Store.upsert(current,{[name]:''},rows[0].id);
-        else Store.upsert(current,{[name]:''});
+        if(rows.length) Store.upsert(current,{[name]:defaultVal},rows[0].id);
+        else Store.upsert(current,{[name]:defaultVal});
+        if(typeSel.value!=='auto'){
+          const opts=optsInput.value.split(',').map(s=>s.trim()).filter(Boolean);
+          Store.setFieldType(current, name, typeSel.value, opts);
+        }
         hide(); renderTable(root,ctx,{entity:current}); toast('Field added',{kind:'ok'});
       }})]});
   setTimeout(()=>input.focus(),50);
@@ -536,22 +648,34 @@ function editEntity(root, ctx){
   setTimeout(()=>name.focus(),50);
 }
 
-// ---- rename / delete a field (column) -----------------------------------
+// ---- rename / retype / delete a field (column) --------------------------
 function editField(field, root, ctx){
   const input=el('input',{class:'input', value:field});
+  const ft=Store.fieldType(current, field);
+  const typeSel=el('select',{class:'input'});
+  FIELD_TYPES.forEach(([v,l])=>typeSel.append(el('option',{value:v, text:l})));
+  typeSel.value = ft?.type || 'auto';
+  const optsInput=el('input',{class:'input', placeholder:'Comma-separated options, e.g. Open, In progress, Done', value:(ft?.options||[]).join(', ')});
+  const optsField=el('div',{class:'field', style: typeSel.value==='select'?'':'display:none'},[el('label',{text:'Options'}), optsInput]);
+  typeSel.addEventListener('change',()=>{ optsField.style.display = typeSel.value==='select' ? '' : 'none'; });
   const body=el('div');
   body.append(
     (()=>{ const f=el('div',{class:'field'}); f.append(el('label',{text:'Field name'}), input); return f; })(),
+    (()=>{ const f=el('div',{class:'field'}); f.append(el('label',{text:'Type'}), typeSel); return f; })(),
+    optsField,
     el('p',{class:'muted tiny', text:'Applies across every row and syncs to your peers.'}));
   const del=el('button',{class:'btn danger', html:`${icon('trash')} Delete field`, onclick:async()=>{
     if(await confirmDialog('Delete field',`Remove “${field}” from every row in this table (for you and your peers)?`,{danger:true,okLabel:'Delete field'})){
       hide(); Store.deleteField(current, field); renderTable(root,ctx,{entity:current}); toast('Field deleted',{kind:'ok'});
     }
   }});
-  const save=el('button',{class:'btn primary', text:'Rename', onclick:()=>{
+  const save=el('button',{class:'btn primary', text:'Save', onclick:()=>{
     const nn=input.value.trim().replace(/\s+/g,'_');
+    const finalField = (nn && nn!==field) ? nn : field;
     if(nn && nn!==field) Store.renameField(current, field, nn);
-    hide(); renderTable(root,ctx,{entity:current}); toast('Field renamed',{kind:'ok'});
+    const opts=optsInput.value.split(',').map(s=>s.trim()).filter(Boolean);
+    Store.setFieldType(current, finalField, typeSel.value, opts);
+    hide(); renderTable(root,ctx,{entity:current}); toast('Field updated',{kind:'ok'});
   }});
   const { hide }=modal({ title:`Field: ${field}`, icon:'edit', body, foot:[del, el('div',{style:'flex:1'}),
     el('button',{class:'btn', text:'Cancel', onclick:()=>hide()}), save] });
