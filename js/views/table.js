@@ -157,6 +157,7 @@ function buildTree(root, ctx, names){
     title: treeOpen?'Collapse panel':'Expand panel', 'aria-label': treeOpen?'Collapse tables panel':'Expand tables panel',
     html:icon('chevron'), onclick:()=>{ treeOpen=!treeOpen; localStorage.setItem(K_TREE_OPEN, treeOpen?'1':'0'); renderTable(root,ctx,{entity:current}); }});
   head.append(toggle, el('span',{class:'tree-title', text:'Tables'}),
+    el('button',{class:'btn ghost icon sm', title:'Import CSV', 'aria-label':'Import CSV', html:icon('upload'), onclick:()=>importCsv(root,ctx)}),
     el('button',{class:'btn ghost icon sm', title:'New table', 'aria-label':'New table', html:icon('plus'), onclick:()=>ctx.newEntity()}));
   panel.append(head);
 
@@ -226,15 +227,21 @@ function rowEl(r, cols, root, ctx){
 }
 
 function commitCell(r, field, td){
-  let raw=td.textContent.trim();
+  const raw=td.textContent.trim();
   const prev=r.fields[field];
-  let val=raw;
-  if(raw==='true') val=true; else if(raw==='false') val=false;
-  else if(raw!=='' && !isNaN(Number(raw)) && String(Number(raw))===raw) val=Number(raw);
-  else if((raw.startsWith('{')||raw.startsWith('['))){ try{ val=JSON.parse(raw); }catch{} }
+  const val=inferValue(raw);
   if(JSON.stringify(val)===JSON.stringify(prev)) return;
   Store.upsert(current, {[field]:val}, r.id);
   td.classList.add('cell-syncing'); setTimeout(()=>td.classList.remove('cell-syncing'),800);
+}
+
+// same auto-typing rules used for inline cell edits, reused for CSV import
+function inferValue(raw){
+  if(raw==='true') return true;
+  if(raw==='false') return false;
+  if(raw!=='' && !isNaN(Number(raw)) && String(Number(raw))===raw) return Number(raw);
+  if(raw.startsWith('{')||raw.startsWith('[')){ try{ return JSON.parse(raw); }catch{} }
+  return raw;
 }
 
 // ---- right-hand record editor: field-by-field, typed inputs ---------------
@@ -329,6 +336,90 @@ function addRowRec(root, ctx){
   // focus first editable cell of the new (top) row
   setTimeout(()=>{ const td=root.querySelector('tbody tr td[contenteditable]'); td&&td.focus(); },30);
   toast('Row added',{kind:'ok'});
+}
+
+// ---- import CSV → new table ------------------------------------------
+function importCsv(root, ctx){
+  const inp=el('input',{type:'file', accept:'.csv,text/csv', style:'display:none'});
+  inp.onchange=()=>{
+    const f=inp.files[0]; if(!f) return;
+    const r=new FileReader();
+    r.onload=()=>{
+      try{
+        const rows=parseCSV(String(r.result));
+        if(!rows.length) throw new Error('The file has no rows');
+        const headers=dedupeHeaders(rows[0].map(sanitizeHeader));
+        const dataRows=rows.slice(1).filter(row=>row.some(v=>v!==''));
+        if(!dataRows.length) throw new Error('No data rows found under the header');
+        openImportPreview(root, ctx, f.name, headers, dataRows);
+      }catch(e){ toast('Could not read CSV',{body:e.message,kind:'err'}); }
+    };
+    r.readAsText(f);
+  };
+  document.body.append(inp); inp.click(); inp.remove();
+}
+
+// minimal RFC4180 parser: quoted fields, "" escapes, commas/newlines inside quotes
+function parseCSV(text){
+  const rows=[]; let row=[], field='', inQuotes=false;
+  for(let i=0;i<text.length;i++){
+    const c=text[i];
+    if(inQuotes){
+      if(c==='"'){ if(text[i+1]==='"'){ field+='"'; i++; } else inQuotes=false; }
+      else field+=c;
+    }else if(c==='"') inQuotes=true;
+    else if(c===','){ row.push(field); field=''; }
+    else if(c==='\n'){ row.push(field); rows.push(row); row=[]; field=''; }
+    else if(c!=='\r') field+=c;
+  }
+  if(field!==''||row.length){ row.push(field); rows.push(row); }
+  return rows.filter(r=>!(r.length===1 && r[0]===''));
+}
+
+function sanitizeHeader(h,i){
+  return (h||'').trim().replace(/\s+/g,'_').replace(/[^\w-]/g,'') || `field_${i+1}`;
+}
+function dedupeHeaders(headers){
+  const seen={};
+  return headers.map(h=>{ seen[h]=(seen[h]||0)+1; return seen[h]>1 ? `${h}_${seen[h]}` : h; });
+}
+
+function openImportPreview(root, ctx, filename, headers, dataRows){
+  const suggested = filename.replace(/\.csv$/i,'').replace(/[_-]+/g,' ').trim() || 'Imported table';
+  const name=el('input',{class:'input', value:suggested});
+  const previewRows = dataRows.slice(0,5);
+  const table=el('table',{class:'data'});
+  const thead=el('thead'); const hr=el('tr');
+  headers.forEach(h=>hr.append(el('th',{text:h})));
+  thead.append(hr); table.append(thead);
+  const tbody=el('tbody');
+  previewRows.forEach(row=>{
+    const tr=el('tr');
+    headers.forEach((_,i)=>tr.append(el('td',{text:row[i]??''})));
+    tbody.append(tr);
+  });
+  table.append(tbody);
+  const body=el('div');
+  body.append(
+    (()=>{ const f=el('div',{class:'field'}); f.append(el('label',{text:'Table name'}), name); return f; })(),
+    el('p',{class:'muted tiny', text:`${dataRows.length} row${dataRows.length!==1?'s':''} · ${headers.length} field${headers.length!==1?'s':''}`
+      + (dataRows.length>previewRows.length ? ` · showing first ${previewRows.length}` : '')}),
+    el('div',{class:'table-scroll', style:'max-height:240px'}, table));
+  const { hide }=modal({ title:'Import CSV', icon:'upload', wide:true, body,
+    foot:[ el('button',{class:'btn', text:'Cancel', onclick:()=>hide()}),
+      el('button',{class:'btn primary', text:`Import ${dataRows.length} row${dataRows.length!==1?'s':''}`, onclick:()=>{
+        const label=name.value.trim(); if(!label) return;
+        let key;
+        try{ key=Store.createEntity(label, 'table'); }
+        catch(e){ toast('Could not create table',{body:e.message,kind:'err'}); return; }
+        dataRows.forEach(row=>{
+          const fields={};
+          headers.forEach((h,i)=>{ if(row[i]) fields[h]=inferValue(row[i]); });
+          if(Object.keys(fields).length) Store.upsert(key, fields);
+        });
+        hide(); renderTable(root, ctx, {entity:key}); toast('Table imported',{kind:'ok'});
+      }})]});
+  setTimeout(()=>{ name.focus(); name.select(); },50);
 }
 
 // ---- edit / delete a table (rename, icon, delete) -----------------------

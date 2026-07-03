@@ -297,7 +297,7 @@ body{
 .tree-title{flex:1;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-2)}
 .tree-toggle svg{width:14px;height:14px;transition:transform .18s;transform:rotate(180deg)}
 .tree-panel:not(.open) .tree-toggle svg{transform:none}
-.tree-panel:not(.open) .tree-title,.tree-panel:not(.open) .tree-head .btn:last-child{display:none}
+.tree-panel:not(.open) .tree-title,.tree-panel:not(.open) .tree-head .btn:not(.tree-toggle){display:none}
 .tree-list{display:flex;flex-direction:column;gap:2px}
 .tree-row{display:flex;align-items:center;gap:7px;padding:7px 8px;border-radius:8px;cursor:pointer;
   color:var(--text-2);font-size:12.5px;transition:background .12s,color .12s}

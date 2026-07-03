@@ -221,6 +221,28 @@ try {
     const desc = await page.$$eval('tbody tr td[contenteditable]', (tds) => tds.map((t) => t.textContent.trim()));
     return asc.join() === 'apple,mango,zebra' && desc.join() === 'zebra,mango,apple';
   });
+  await check('import CSV creates a new table with typed rows', async () => {
+    const [chooser] = await Promise.all([
+      page.waitForEvent('filechooser'),
+      page.click('button[title="Import CSV"]'),
+    ]);
+    await chooser.setFiles({ name: 'smoke-import.csv', mimeType: 'text/csv',
+      buffer: Buffer.from('name,age,active\nAda,30,true\nAlan,41,false\n') });
+    await page.waitForTimeout(300);
+    if (!(await $('.modal input'))) return false;
+    await page.fill('.modal input', 'Smoke CSV Table');
+    await page.click('.modal button:has-text("Import 2 rows")');
+    await page.waitForTimeout(400);
+    const created = await page.$$eval('.tree-row .tree-label', (t) => t.some((x) => /smoke csv table/i.test(x.textContent)));
+    if (!created) return false;
+    return await page.evaluate(async () => {
+      const { Store } = await import('/js/store.js');
+      const k = Store.entityNames().find((n) => Store.entity(n).label === 'Smoke CSV Table');
+      if (!k) return false;
+      const rows = Store.records(k);
+      return rows.length === 2 && rows.some((r) => r.fields.name === 'Ada' && r.fields.age === 30 && r.fields.active === true);
+    });
+  });
   await check('delete a table (store + UI update)', async () => {
     await page.evaluate(async () => {
       const { Store } = await import('/js/store.js');

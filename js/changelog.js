@@ -10,6 +10,17 @@
 // .github/stamp-changelog.mjs regenerates every `date` from its `ts`.
 export const CHANGELOG = [
   {
+    v: 26,
+    title: 'Import CSV → new table',
+    ts: '2026-07-03T06:45:32.471Z',
+    date: 'Jul 3, 2026, 1:45 AM CT',
+    items: [
+      'A new "Import CSV" button next to "New table" lets you turn a .csv file straight into a table — pick a file and it shows a preview (field names, row count, first few rows) before creating anything.',
+      'Values are auto-typed the same way inline cell edits are: numbers, true/false, and JSON all come in as their real type instead of plain text.',
+      'The suggested table name comes from the filename, but you can rename it before importing.',
+    ],
+  },
+  {
     v: 25,
     title: 'Messages: per-thread unread badges',
     ts: '2026-07-03T05:18:49.083Z',

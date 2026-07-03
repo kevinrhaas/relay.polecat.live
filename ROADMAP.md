@@ -29,7 +29,12 @@ when you finish something, move it to **Done** with the date; add discoveries to
 - Drag-to-resize the Tables tree panel (currently collapsible but fixed-width).
 - Column types / simple validation (text, number, bool, date, select) with nicer editors.
 - Presence cursors / "who's viewing this table".
-- Import CSV → new entity.
+- CSV import currently reads the whole file with `FileReader.readAsText` and
+  builds every row in memory before the first `Store.upsert` — fine for
+  typical exports, but a very large file (tens of thousands of rows) would
+  block the main thread for the whole import. Worth chunking/yielding if that
+  comes up.
+- CSV *export* (an entity → `.csv` download) to pair with the new CSV import.
 - TURN fallback guidance for strict NATs.
 - Optional "always-on peer" (headless) for 24/7 availability without a DB.
 
@@ -39,6 +44,17 @@ when you finish something, move it to **Done** with the date; add discoveries to
 - Multiple workspaces / workspace switcher.
 
 ## Done
+- 2026-07-03 — Import CSV → new table. A new upload-icon button next to "New
+  table" in the Tables tree header opens a file picker; the CSV is parsed
+  client-side (a small RFC4180-ish parser handling quoted fields, embedded
+  commas/newlines, and `""` escapes — no library), then a preview modal shows
+  the detected field names, row/field counts, and the first 5 rows alongside
+  an editable table-name field (defaulted from the filename). Confirming
+  creates the entity and upserts every row, reusing the same auto-typing
+  rules inline cell edits already use (booleans, numbers, JSON, else string)
+  — refactored that logic out of `commitCell` into a shared `inferValue()` so
+  both paths stay in sync. Added a smoke check that imports a 2-row CSV and
+  verifies both the tree entry and the typed field values in the store.
 - 2026-07-03 — Per-thread unread counts in Messages: each thread pill (General
   and every DM) now shows its own unread badge, computed from a persisted
   per-thread last-read timestamp (`Sync.markRead`/`unreadCount`/`totalUnread`
