@@ -227,6 +227,23 @@ try {
     const has = !!(await page.$('.modal button:has-text("Delete table")'));
     await closeModal(); return has;
   });
+  await check('modal traps Tab focus inside itself and restores it to the trigger on close', async () => {
+    const trigger = await $('button:has-text("Edit table")');
+    await trigger.click(); await page.waitForTimeout(300);
+    const focusableCount = await page.$$eval(
+      '.modal a[href],.modal button:not([disabled]),.modal textarea:not([disabled]),.modal input:not([disabled]),.modal select:not([disabled])',
+      (els) => els.length);
+    if (focusableCount < 2) return false;
+    // A full cycle of `focusableCount` Tab presses must land back where it started — proving
+    // Tab never escapes the modal to whatever's behind the overlay.
+    const before = await page.evaluate(() => document.activeElement?.outerHTML);
+    for (let i = 0; i < focusableCount; i++) await page.keyboard.press('Tab');
+    const after = await page.evaluate(() => document.activeElement?.outerHTML);
+    const cycled = !!before && before === after;
+    await closeModal();
+    const restored = await page.evaluate(() => document.activeElement?.textContent?.includes('Edit table'));
+    return cycled && restored;
+  });
   await check('field (column header) edit button opens the rename/delete modal', async () => {
     const btn = await $('.col-edit-btn'); if (!btn) return false;
     await btn.click(); await page.waitForTimeout(300);

@@ -3,7 +3,7 @@
 // record editor that slides in from the right when a row is opened.
 import { Store } from '../store.js';
 import { Sync } from '../sync.js';
-import { el, escapeHtml, ago, shortId, toast, modal, confirmDialog, avatarColor, initials } from '../ui.js';
+import { el, escapeHtml, ago, shortId, toast, modal, sheet, confirmDialog, avatarColor, initials } from '../ui.js';
 import { icon } from '../icons.js';
 
 const K_TREE_OPEN = 'relay.tree.open';
@@ -441,37 +441,26 @@ function csvField(v){
 // ---- right-hand record editor: field-by-field, typed inputs ---------------
 function openRecordPanel(rec, cols, root, ctx){
   const e = Store.entity(current);
-  const overlay = el('div',{class:'sheet-overlay'});
-  const sheet = el('div',{class:'sheet record-sheet', role:'dialog', 'aria-label':'Record editor'});
 
-  const head = el('div',{class:'sheet-head'});
-  head.innerHTML = `<div><h3>${escapeHtml(e.label)} record</h3>
-    <div class="muted tiny">${shortId(rec.id)} · updated ${ago(rec._meta.updatedAt)}</div></div>`;
-  head.append(el('button',{class:'btn ghost sm', text:'Close', onclick:()=>hide()}));
-
-  const body = el('div',{class:'sheet-body record-fields'});
+  const bodyFrag = document.createDocumentFragment();
   const allCols = cols.length ? cols : Object.keys(rec.fields||{});
-  if(!allCols.length) body.append(el('div',{class:'empty muted', text:'No fields yet — add one from the table toolbar.'}));
-  allCols.forEach(c=>body.append(recordFieldRow(rec, c)));
+  if(!allCols.length) bodyFrag.append(el('div',{class:'empty muted', text:'No fields yet — add one from the table toolbar.'}));
+  allCols.forEach(c=>bodyFrag.append(recordFieldRow(rec, c)));
 
-  const foot = el('div',{class:'sheet-foot'});
   const del = el('button',{class:'btn danger', html:`${icon('trash')} Delete row`, onclick:async()=>{
     if(await confirmDialog('Delete row','This tombstone will propagate to your peers.',{danger:true,okLabel:'Delete'})){
-      Store.remove(current, rec.id); toast('Row deleted',{kind:'ok'}); hide();
+      Store.remove(current, rec.id); toast('Row deleted',{kind:'ok'}); s.hide();
     }
   }});
-  foot.append(del);
 
-  sheet.append(head, body, foot);
-  overlay.append(sheet);
-  overlay.addEventListener('mousedown', ev=>{ if(ev.target===overlay) hide(); });
-  document.body.append(overlay);
-  requestAnimationFrame(()=>overlay.classList.add('show'));
-
-  function hide(){ overlay.classList.remove('show'); setTimeout(()=>overlay.remove(),240); document.removeEventListener('keydown',esc); renderTable(root,ctx,{entity:current}); }
-  function esc(ev){ if(ev.key==='Escape') hide(); }
-  document.addEventListener('keydown', esc);
-  setTimeout(()=>{ const first=body.querySelector('input,textarea'); first&&first.focus(); },60);
+  const s = sheet({
+    className:'record-sheet', ariaLabel:'Record editor', bodyClass:'record-fields',
+    head:`<div><h3>${escapeHtml(e.label)} record</h3>
+      <div class="muted tiny">${shortId(rec.id)} · updated ${ago(rec._meta.updatedAt)}</div></div>`,
+    body:bodyFrag, foot:del,
+    onHide:()=>renderTable(root,ctx,{entity:current}),
+  });
+  setTimeout(()=>{ const first=s.body.querySelector('input,textarea'); first&&first.focus(); },60);
 }
 
 function recordFieldRow(rec, field){

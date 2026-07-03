@@ -65,7 +65,7 @@ export function shortId(id){ return String(id).slice(0,8); }
 
 // ---- toasts ------------------------------------------------------------
 export function toast(title, {body='', kind='info', ms=3800}={}){
-  const host = $('#toasts') || document.body.appendChild(el('div',{id:'toasts'}));
+  const host = $('#toasts') || document.body.appendChild(el('div',{id:'toasts', role:'status', 'aria-live':'polite'}));
   const ic = {ok:'check',err:'x',info:'info',warn:'info'}[kind]||'info';
   const t = el('div',{class:`toast ${kind}`, html:
     `<span class="ic">${icon(ic)}</span><div><b>${escapeHtml(title)}</b>${body?`<p>${escapeHtml(body)}</p>`:''}</div>`});
@@ -77,12 +77,36 @@ export function toast(title, {body='', kind='info', ms=3800}={}){
   return kill;
 }
 
+// ---- dialog focus trap (shared by modal() and sheet()) -----------------
+// Focuses the first focusable element on open, cycles Tab/Shift+Tab within
+// the container instead of leaking to the page behind the overlay, closes
+// on Escape, and restores focus to whatever triggered the dialog on close.
+const FOCUSABLE = 'a[href],button:not([disabled]),textarea:not([disabled]),input:not([disabled]),select:not([disabled]),[tabindex]:not([tabindex="-1"])';
+function trapDialog(container, requestHide){
+  const prevFocus = document.activeElement;
+  (container.querySelector(FOCUSABLE)||container).focus();
+  function onKeydown(e){
+    if(e.key==='Escape'){ requestHide(); return; }
+    if(e.key!=='Tab') return;
+    const items = $$(FOCUSABLE, container);
+    if(!items.length) return;
+    const first=items[0], last=items[items.length-1];
+    if(e.shiftKey && document.activeElement===first){ e.preventDefault(); last.focus(); }
+    else if(!e.shiftKey && document.activeElement===last){ e.preventDefault(); first.focus(); }
+  }
+  document.addEventListener('keydown', onKeydown);
+  return { release(){ document.removeEventListener('keydown', onKeydown); if(prevFocus?.isConnected) prevFocus.focus(); } };
+}
+
 // ---- modal -------------------------------------------------------------
+let modalTitleSeq = 0;
+
 export function modal({title='', body, foot, wide=false, icon:ic}={}){
+  const titleId = `modal-title-${++modalTitleSeq}`;
   const overlay = el('div',{class:'overlay'});
-  const m = el('div',{class:'modal'+(wide?' wide':'')});
+  const m = el('div',{class:'modal'+(wide?' wide':''), role:'dialog', 'aria-modal':'true', 'aria-labelledby':titleId, tabindex:'-1'});
   const head = el('div',{class:'modal-head', html:
-    `${ic?`<span style="color:var(--brand-b)">${icon(ic)}</span>`:''}<h3>${escapeHtml(title)}</h3>`});
+    `${ic?`<span style="color:var(--brand-b)">${icon(ic)}</span>`:''}<h3 id="${titleId}">${escapeHtml(title)}</h3>`});
   const close = el('button',{class:'btn ghost icon', title:'Close', 'aria-label':'Close', html:icon('x'), onclick:()=>hide()});
   head.append(close);
   const bodyEl = el('div',{class:'modal-body'});
@@ -93,9 +117,37 @@ export function modal({title='', body, foot, wide=false, icon:ic}={}){
   overlay.addEventListener('mousedown',e=>{if(e.target===overlay) hide()});
   document.body.append(overlay);
   requestAnimationFrame(()=>overlay.classList.add('show'));
-  function hide(){overlay.classList.remove('show');setTimeout(()=>overlay.remove(),220);document.removeEventListener('keydown',esc)}
-  function esc(e){if(e.key==='Escape') hide()}
-  document.addEventListener('keydown',esc);
+  const focusGuard = trapDialog(m, ()=>hide());
+  function hide(){
+    overlay.classList.remove('show'); setTimeout(()=>overlay.remove(),220);
+    focusGuard.release();
+  }
+  return {overlay, body:bodyEl, hide};
+}
+
+// ---- sheet (slide-in panel, e.g. record editor / what's new) -----------
+export function sheet({head, extra, body, bodyClass='', foot, className='', ariaLabel, onHide}={}){
+  const overlay = el('div',{class:'sheet-overlay'});
+  const s = el('div',{class:'sheet'+(className?' '+className:''), role:'dialog', 'aria-modal':'true', 'aria-label':ariaLabel, tabindex:'-1'});
+  const headEl = el('div',{class:'sheet-head'});
+  if(typeof head==='string') headEl.innerHTML=head; else if(head) headEl.append(head);
+  headEl.append(el('button',{class:'btn ghost sm', text:'Close', onclick:()=>hide()}));
+  s.append(headEl);
+  if(extra) s.append(extra);
+  const bodyEl = el('div',{class:'sheet-body'+(bodyClass?' '+bodyClass:'')});
+  if(typeof body==='string') bodyEl.innerHTML=body; else if(body) bodyEl.append(body);
+  s.append(bodyEl);
+  if(foot){ const f=el('div',{class:'sheet-foot'}); (Array.isArray(foot)?foot:[foot]).forEach(b=>f.append(b)); s.append(f); }
+  overlay.append(s);
+  overlay.addEventListener('mousedown',e=>{if(e.target===overlay) hide()});
+  document.body.append(overlay);
+  requestAnimationFrame(()=>overlay.classList.add('show'));
+  const focusGuard = trapDialog(s, ()=>hide());
+  function hide(){
+    overlay.classList.remove('show'); setTimeout(()=>overlay.remove(),240);
+    if(onHide) onHide();
+    focusGuard.release();
+  }
   return {overlay, body:bodyEl, hide};
 }
 
