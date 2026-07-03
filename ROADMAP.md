@@ -21,10 +21,6 @@ when you finish something, move it to **Done** with the date; add discoveries to
    loops/GIFs, feature highlights. It should always reflect what the app can do.
 
 ## Next
-- The row-selection checkboxes (`selected` in `js/views/table.js`) now power
-  both bulk delete and bulk export. Natural next step on the same selection:
-  bulk-set a single field's value across every checked row (e.g. mark a batch
-  of rows "Done" in one action instead of editing each cell).
 - Google Drive sync's silent token renewal (`prompt:''`) depends on an active
   Google session + third-party-cookie access to accounts.google.com — Safari
   ITP or strict Firefox cookie blocking will force a "needs permission" state
@@ -38,6 +34,20 @@ when you finish something, move it to **Done** with the date; add discoveries to
 - Multiple workspaces / workspace switcher.
 
 ## Done
+- 2026-07-03 — Bulk-set a field's value on selected rows: the bulk-select
+  action bar (`selected` in `js/views/table.js`) gained a "Set field…" button
+  alongside "Delete selected" and "Export selected" — the natural next step
+  on that same selection called out in this file's Next section. Opens a
+  small modal with a field picker and a value editor that swaps to match the
+  chosen field's type (toggle for Yes/No, dropdown for Dropdown fields, a
+  native date input, a validated number input, or plain text) — the same
+  controls the grid/record panel already use, so a typed field can't be
+  bulk-set to a value it wouldn't otherwise accept. New
+  `Store.setFieldMany(entity, ids, field, value)` mirrors `removeMany()`'s
+  pattern: one persist/emit for the whole batch instead of one per row, so it
+  syncs to peers as a single change. Added a smoke check that bulk-selects two
+  rows and confirms the field updates on both while the unchecked row is
+  untouched.
 - 2026-07-03 — Keyboard-focus polish, round 2: the earlier keyboard-focus fix
   (trash button, tree-field button) only covered two controls; a sweep for
   every custom interactive element with a `:hover` style but no

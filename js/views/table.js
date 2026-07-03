@@ -110,6 +110,7 @@ export function renderTable(root, ctx, params={}){
       el('span',{class:'bulk-count', text:`${ids.length} selected`}),
       el('button',{class:'btn ghost sm', text:'Clear', onclick:()=>{ selected.clear(); refreshRows(); }}),
       el('div',{style:'flex:1 0 0;min-width:0'}),
+      el('button',{class:'btn ghost sm', title:'Set one field’s value on every checked row', html:`${icon('edit')} Set field…`, onclick:()=>bulkSetField(root, ctx, ids)}),
       el('button',{class:'btn ghost sm', title:'Export just the checked rows to a .csv file', html:`${icon('download')} Export selected`, onclick:()=>{
         const idSet = new Set(ids);
         exportCsv(Store.records(current).filter(r=>idSet.has(r.id)));
@@ -487,6 +488,68 @@ function exportCsv(rowsOverride){
 }
 function csvField(v){
   return /[",\r\n]/.test(v) ? `"${v.replace(/"/g,'""')}"` : v;
+}
+
+// ---- bulk-set a single field's value across the checked rows -------------
+// value editor swaps to match the chosen field's type, same controls the
+// grid/record-panel already use, so a typed field (dropdown/date/yes-no)
+// can't be bulk-set to a value it wouldn't otherwise accept.
+function bulkSetField(root, ctx, ids){
+  const cols = Store.columns(current);
+  if(!cols.length){ toast('No fields to set',{kind:'err'}); return; }
+  const fieldSel = el('select',{class:'input', 'aria-label':'Field to set'});
+  cols.forEach(c=>fieldSel.append(el('option',{value:c, text:c})));
+  const valueWrap = el('div',{class:'field'});
+  let getValue = ()=>'';
+  function buildValueInput(){
+    valueWrap.innerHTML='';
+    const field = fieldSel.value;
+    const ft = Store.fieldType(current, field);
+    const label = el('label',{text:'Value'});
+    if(ft?.type==='boolean'){
+      let on=false;
+      const btn=el('button',{class:'toggle', type:'button', role:'switch', 'aria-checked':'false', 'aria-label':`${field} value`,
+        onclick:()=>{ on=!on; btn.classList.toggle('on',on); btn.setAttribute('aria-checked',String(on)); }});
+      valueWrap.append(label, btn);
+      getValue=()=>on;
+    }else if(ft?.type==='select'){
+      const opts=ft.options||[];
+      const sel=el('select',{class:'input'});
+      sel.append(el('option',{value:'', text:'—'}));
+      opts.forEach(o=>sel.append(el('option',{value:o, text:o})));
+      valueWrap.append(label, sel);
+      getValue=()=>sel.value;
+    }else if(ft?.type==='date'){
+      const inp=el('input',{class:'input', type:'date'});
+      valueWrap.append(label, inp);
+      getValue=()=>inp.value;
+    }else if(ft?.type==='number'){
+      const inp=el('input',{class:'input', type:'number', placeholder:'New value'});
+      valueWrap.append(label, inp);
+      getValue=()=>{ const raw=inp.value.trim(); if(raw==='') return ''; const n=Number(raw); return isNaN(n) ? undefined : n; };
+    }else{
+      const inp=el('input',{class:'input', type:'text', placeholder:'New value for every selected row'});
+      valueWrap.append(label, inp);
+      getValue=()=>inferValue(inp.value);
+    }
+  }
+  fieldSel.addEventListener('change', buildValueInput);
+  buildValueInput();
+  const body = el('div',{},[
+    el('div',{class:'field'},[el('label',{text:'Field'}), fieldSel]),
+    valueWrap,
+    el('p',{class:'muted tiny', text:`Sets this field on all ${ids.length} selected row${ids.length!==1?'s':''} and syncs to your peers.`}),
+  ]);
+  const { hide } = modal({ title:'Set field on selected rows', icon:'edit', body,
+    foot:[ el('button',{class:'btn', text:'Cancel', onclick:()=>hide()}),
+      el('button',{class:'btn primary', text:'Apply', onclick:()=>{
+        const field=fieldSel.value, val=getValue();
+        if(val===undefined){ toast('Not a number',{kind:'err'}); return; }
+        Store.setFieldMany(current, ids, field, val);
+        hide(); selected.clear(); renderTable(root, ctx, {entity:current});
+        toast(`Updated ${ids.length} row${ids.length!==1?'s':''}`,{kind:'ok'});
+      }})]});
+  setTimeout(()=>fieldSel.focus(),50);
 }
 
 // ---- right-hand record editor: field-by-field, typed inputs ---------------

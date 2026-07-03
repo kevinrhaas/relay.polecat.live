@@ -10,6 +10,17 @@
 // .github/stamp-changelog.mjs regenerates every `date` from its `ts`.
 export const CHANGELOG = [
   {
+    v: 41,
+    title: 'Bulk-set a field on selected rows',
+    ts: '2026-07-03T21:50:35.054Z',
+    date: 'Jul 3, 2026, 4:50 PM CT',
+    items: [
+      'The bulk-select action bar gained a "Set field…" button next to "Delete selected" and "Export selected".',
+      'Pick a field and a value once, and it applies to every checked row in one action — the value editor matches the field\'s type (toggle, dropdown, date, number, or text).',
+      'Handy for things like marking a batch of rows "Done" without opening each one individually.',
+    ],
+  },
+  {
     v: 40,
     title: 'More keyboard focus rings',
     ts: '2026-07-03T21:29:13.018Z',

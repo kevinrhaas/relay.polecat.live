@@ -343,6 +343,29 @@ try {
     await page.setViewportSize({ width: 1280, height: 860 }); await page.waitForTimeout(250);
     return fits;
   });
+  await check('bulk-select "Set field…" applies one field\'s value to every checked row', async () => {
+    // the mobile-layout check above left "zebra" (the sole surviving row) checked
+    if (await $('.bulk-bar')) { await page.click('.bulk-bar button:has-text("Clear")'); await page.waitForTimeout(150); }
+    await page.click('button:has-text("Row")'); await page.waitForTimeout(200);
+    await page.click('button:has-text("Row")'); await page.waitForTimeout(200);
+    if ((await count('tbody tr')) !== 3) return false;
+    // still sorted desc by name — "zebra" sorts above the two new blank rows
+    let rowChecks = await page.$$('tbody tr .row-check');
+    if (rowChecks.length !== 3) return false;
+    await rowChecks[1].click(); await page.waitForTimeout(150);
+    rowChecks = await page.$$('tbody tr .row-check');
+    await rowChecks[2].click(); await page.waitForTimeout(150);
+    const bar = await $('.bulk-bar'); if (!bar) return false;
+    if ((await page.$eval('.bulk-count', (e) => e.textContent)) !== '2 selected') return false;
+    await page.click('.bulk-bar button:has-text("Set field")'); await page.waitForTimeout(300);
+    const valueInput = await $('.modal input[placeholder="New value for every selected row"]');
+    if (!valueInput) return false;
+    await valueInput.fill('kiwi');
+    await page.click('.modal button:has-text("Apply")'); await page.waitForTimeout(300);
+    const names = await page.$$eval('tbody tr td[contenteditable]', (tds) => tds.map((t) => t.textContent.trim()));
+    return names.length === 3 && names.filter((n) => n === 'kiwi').length === 2
+      && names.includes('zebra') && !(await $('.bulk-bar'));
+  });
   await check('import CSV creates a new table with typed rows', async () => {
     const [chooser] = await Promise.all([
       page.waitForEvent('filechooser'),

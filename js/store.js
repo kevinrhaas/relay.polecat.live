@@ -309,6 +309,27 @@ export const Store = new (class extends Emitter{
     return n;
   }
 
+  // set a single field's value across a batch of existing records with one
+  // persist/emit instead of one per row — same rationale as upsertMany/
+  // removeMany, for the bulk-select action bar's "Set field" action.
+  setFieldMany(entity, ids, field, value){
+    const e=this.entity(entity); if(!e) return 0;
+    const updatedAt = Date.now();
+    let n=0;
+    for(const id of ids){
+      const cur=e.records[id]; if(!cur || cur._meta.deleted) continue;
+      cur.fields = {...cur.fields, [field]:value};
+      cur._meta = { rev:(cur._meta.rev||0)+1, updatedAt, updatedBy:this.identity.id, deleted:false };
+      n++;
+    }
+    if(n){
+      this._touch(entity); this._persist();
+      this.emit('records', entity);
+      this.emit('change', {type:'record', entity, origin:'local'});
+    }
+    return n;
+  }
+
   // ---- sync helpers ----------------------------------------------------
   // full snapshot of one or more entities (tombstones included) for sync
   snapshot(entityFilter){
