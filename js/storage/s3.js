@@ -155,5 +155,5 @@ export const S3Sync = new (class extends Emitter{
     }finally{ this._writing = false; }
   }
 
-  _set(s){ this.state = s; this.emit('state', s); }
+  _set(s){ if(this.state===s) return; this.state = s; this.emit('state', s); }
 })();

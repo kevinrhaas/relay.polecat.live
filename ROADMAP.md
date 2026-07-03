@@ -33,17 +33,6 @@ when you finish something, move it to **Done** with the date; add discoveries to
 - Import CSV → new entity.
 - TURN fallback guidance for strict NATs.
 - Optional "always-on peer" (headless) for 24/7 availability without a DB.
-- Flaky smoke check: `"Custom" expands the per-table grid and toggles persist`
-  intermittently fails with "Element is not attached to the DOM" (~1 in 3 local
-  runs, reproduces on plain `main` too — not caused by any single feature).
-  Suspect: the permission-toggle `onclick` in `js/views/peers.js` calls
-  `Sync.setPerm`/`setAllPerms` (which synchronously emits `'perms'`, and
-  `js/app.js`'s listener does a full section re-render since we're always on
-  the peers section when this fires) *and then* calls its own local
-  `rerender()` right after — a redundant double full-rebuild of `.peer` on
-  every click that likely races Playwright's click-stability check. Worth
-  collapsing to a single render path (careful: the `expanded` set mutation
-  order relative to the emit matters for correctness).
 
 ## Later
 - End-to-end encryption of records at rest / in transit beyond DTLS.
@@ -51,6 +40,25 @@ when you finish something, move it to **Done** with the date; add discoveries to
 - Multiple workspaces / workspace switcher.
 
 ## Done
+- 2026-07-03 — Fixed the flaky smoke check (`"Custom" expands the per-table
+  grid and toggles persist`, ~1 in 3 local runs, "Element is not attached to
+  the DOM") and its real-world cause: every sync-location adapter's `_set(s)`
+  state helper (`js/rendezvous.js`, `js/storage/*.js`) unconditionally
+  emitted `'state'` even when the state hadn't changed. `Rendezvous._open()`'s
+  2500ms auto-reconnect retry loop re-enters `'connecting'` twice per attempt
+  (once from `_open()`, once from its own `onclose` handler), and each emit
+  triggers a full re-render of whatever section is open (`js/app.js`) — so a
+  user sitting on Peers or Settings while a connection retries got the whole
+  panel silently rebuilt under them roughly every 1.25s, which is exactly
+  what raced Playwright's click-stability check. All six `_set()` helpers now
+  no-op when the incoming state equals the current one. Separately collapsed
+  a real (smaller) redundant double-render in `js/views/peers.js`: permission
+  toggles called `Sync.setPerm`/`setAllPerms` (which already emits `'perms'`
+  and triggers a re-render via `js/app.js`) and then *also* called their own
+  local `rerender()` — now a single render path per click, with the
+  `expanded`-set mutation reordered before the emit-triggering call so the
+  synchronous re-render sees the right expand/collapse state. 10/10 clean
+  local smoke runs after the fix (was failing roughly 1 in 3 before).
 - 2026-07-03 — Sort & filter rows; search within a table. Tables toolbar gained
   a live filter box (matches any field value or the row id, case-insensitive)
   that only rebuilds the row area — the input never loses focus or cursor

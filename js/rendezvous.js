@@ -153,5 +153,10 @@ export const Rendezvous = new (class extends Emitter{
     }catch(e){ Sync._err('Signaling failed: '+e.message); }
   }
 
-  _set(s){ this.state=s; this.emit('state', s); }
+  // Dedupe: the 2500ms auto-reconnect retry (see ws.onclose above) re-enters
+  // 'connecting' twice per attempt (once from _open(), once from onclose) —
+  // without this guard every retry fires two spurious full re-renders of
+  // whatever section is open, which raced Playwright mid-click on the Peers
+  // page (and looks the same as UI flicker to a real user sitting there).
+  _set(s){ if(this.state===s) return; this.state=s; this.emit('state', s); }
 })();

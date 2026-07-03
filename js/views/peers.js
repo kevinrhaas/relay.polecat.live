@@ -104,9 +104,12 @@ function peerCard(p, ctx){
       title:key==='all'?'Share every table, both ways':key==='none'?'Share nothing with this peer':'Choose per table below'});
     if(key==='custom') btn.classList.toggle('open',isOpen);
     btn.onclick=()=>{
-      if(key==='all'||key==='none'){ Sync.setAllPerms(uid,key==='all'); expanded.delete(uid); }
-      else{ isOpen?expanded.delete(uid):expanded.add(uid); }
-      rerender();
+      // Sync.setAllPerms emits 'perms' synchronously, which the app shell
+      // turns into its own full re-render of this section — so mutate
+      // `expanded` *first* (the re-render must see the collapsed state) and
+      // don't also rerender() here, or every click rebuilds `.peer` twice.
+      if(key==='all'||key==='none'){ expanded.delete(uid); Sync.setAllPerms(uid,key==='all'); }
+      else{ isOpen?expanded.delete(uid):expanded.add(uid); rerender(); }
     };
     seg.append(btn);
   });
@@ -122,7 +125,8 @@ function peerCard(p, ctx){
       ['read','write'].forEach(mode=>{
         const on=Sync.can(uid,mode,ent);
         const t=el('button',{class:'toggle'+(on?' on':''), title:`${mode==='read'?'Peer can read this from you':'Peer can write this to you'}`,
-          onclick:()=>{ Sync.setPerm(uid,mode,ent,!Sync.can(uid,mode,ent)); rerender(); }});
+          // Sync.setPerm's own 'perms' emit already re-renders this section.
+          onclick:()=>{ Sync.setPerm(uid,mode,ent,!Sync.can(uid,mode,ent)); }});
         const lbl=el('span',{class:'muted tiny', style:'width:38px;text-align:right', text:mode});
         row.append(lbl, t);
       });
@@ -141,7 +145,8 @@ function peerCard(p, ctx){
     actions.append(
       el('span',{class:'muted tiny', style:'flex:1;align-self:center', text:'Saved peer · permissions kept'}),
       el('button',{class:'btn sm ghost', html:`${icon('trash')} Forget`,
-        onclick:()=>{ Sync.forgetPeer(uid); toast('Peer forgotten',{kind:'ok'}); rerender(); }}));
+        // Sync.forgetPeer's own 'peers' emit already re-renders this section.
+        onclick:()=>{ Sync.forgetPeer(uid); toast('Peer forgotten',{kind:'ok'}); }}));
   }
   c.append(actions);
   return c;

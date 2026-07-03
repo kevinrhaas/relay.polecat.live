@@ -153,7 +153,7 @@ export const Sync = new (class extends Emitter{
     this._saveKnown();
   }
   knownPeers(){ return Object.values(this.known); }
-  forgetPeer(uid){ delete this.known[uid]; delete this.perms[uid]; this._saveKnown(); this._savePerms(); this.emit('peers'); this.emit('perms'); }
+  forgetPeer(uid){ delete this.known[uid]; delete this.perms[uid]; this._saveKnown(); this._savePerms(); this.emit('peers'); }
   nameForUid(uid){ return this.known[uid]?.name || uid?.slice(0,6) || 'peer'; }
   _dropPeer(id){
     const p=this.peers.get(id);

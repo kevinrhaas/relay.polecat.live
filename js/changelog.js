@@ -10,6 +10,17 @@
 // .github/stamp-changelog.mjs regenerates every `date` from its `ts`.
 export const CHANGELOG = [
   {
+    v: 24,
+    title: 'Fix: flickering/unstable Peers & Settings while auto-connect retries',
+    ts: '2026-07-03T03:54:58.725Z',
+    date: 'Jul 2, 2026, 10:54 PM CT',
+    items: [
+      'The rendezvous auto-connect relay (and each Sync location adapter) re-announced its own status even when it hadn\'t actually changed — most noticeably every ~2.5s while it retried a failed connection — causing the whole Peers or Settings panel to silently rebuild under your cursor.',
+      'Status changes now only fire when the status actually changes, so those panels stay stable while you\'re clicking around.',
+      'Also collapsed a redundant double-rebuild on every sharing-permission click on the Peers page.',
+    ],
+  },
+  {
     v: 23,
     title: 'Tables: search, filter & sort',
     ts: '2026-07-03T02:19:41.300Z',
