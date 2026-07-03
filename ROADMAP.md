@@ -36,6 +36,17 @@ when you finish something, move it to **Done** with the date; add discoveries to
 - Import CSV → new entity.
 - TURN fallback guidance for strict NATs.
 - Optional "always-on peer" (headless) for 24/7 availability without a DB.
+- Flaky smoke check: `"Custom" expands the per-table grid and toggles persist`
+  intermittently fails with "Element is not attached to the DOM" (~1 in 3 local
+  runs, reproduces on plain `main` too — not caused by any single feature).
+  Suspect: the permission-toggle `onclick` in `js/views/peers.js` calls
+  `Sync.setPerm`/`setAllPerms` (which synchronously emits `'perms'`, and
+  `js/app.js`'s listener does a full section re-render since we're always on
+  the peers section when this fires) *and then* calls its own local
+  `rerender()` right after — a redundant double full-rebuild of `.peer` on
+  every click that likely races Playwright's click-stability check. Worth
+  collapsing to a single render path (careful: the `expanded` set mutation
+  order relative to the emit matters for correctness).
 
 ## Later
 - End-to-end encryption of records at rest / in transit beyond DTLS.
@@ -43,6 +54,14 @@ when you finish something, move it to **Done** with the date; add discoveries to
 - Multiple workspaces / workspace switcher.
 
 ## Done
+- 2026-07-03 — Fixed a table-cell editing rough edge: pasting into an editable
+  cell (e.g. from Excel, Google Sheets, or Word) now always inserts plain text.
+  Previously the browser's default rich paste kept the source's fonts/colors/
+  links in the cell's DOM — `commitCell` only ever reads `textContent` back out
+  for storage, so the *stored* value was fine, but the cell kept looking
+  formatted (bold, colored, etc.) until the table happened to fully re-render.
+  Added a smoke check that pastes HTML+plaintext clipboard data into a cell and
+  asserts only the plain text lands.
 - 2026-07-02 — Tree / side-panel table navigation: the horizontal entity tabs
   are now a collapsible left-hand tree (DBeaver-style) — each table expands to
   list its fields inline (click one to rename/delete it), and the whole panel

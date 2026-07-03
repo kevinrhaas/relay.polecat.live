@@ -10,6 +10,15 @@
 // .github/stamp-changelog.mjs regenerates every `date` from its `ts`.
 export const CHANGELOG = [
   {
+    v: 21,
+    title: 'Fix: pasting into a table cell no longer keeps rich formatting',
+    ts: '2026-07-03T00:28:48.210Z',
+    date: 'Jul 2, 2026, 7:28 PM CT',
+    items: [
+      'Pasting from Excel, Sheets, or Word into a table cell now always inserts plain text — previously the pasted fonts/colors/links stuck around visually until the table happened to fully re-render.',
+    ],
+  },
+  {
     v: 20,
     title: 'Tables: tree navigation + record side panel',
     ts: '2026-07-03T00:01:11.370Z',

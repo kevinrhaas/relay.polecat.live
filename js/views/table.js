@@ -136,6 +136,18 @@ function rowEl(r, cols, root, ctx){
     td.dataset.field=c;
     td.addEventListener('blur',()=>commitCell(r, c, td));
     td.addEventListener('keydown',ev=>{ if(ev.key==='Enter'){ev.preventDefault();td.blur();} });
+    td.addEventListener('paste',ev=>{
+      // force plain text — pasting from Sheets/Excel/Word otherwise drops
+      // fonts/colors/spans into the cell that persist until the next full
+      // table re-render, since commitCell only reads text back out.
+      ev.preventDefault();
+      const text=(ev.clipboardData||window.clipboardData).getData('text/plain');
+      const sel=window.getSelection();
+      if(!sel.rangeCount) return;
+      sel.deleteFromDocument();
+      sel.getRangeAt(0).insertNode(document.createTextNode(text));
+      sel.collapseToEnd();
+    });
     tr.append(td);
   });
   tr.append(el('td',{class:'meta-cell', text:ago(r._meta.updatedAt), title:`rev ${r._meta.rev} · by ${shortId(r._meta.updatedBy)}`}));

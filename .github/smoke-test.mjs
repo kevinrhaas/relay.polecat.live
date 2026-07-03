@@ -162,6 +162,21 @@ try {
     await page.waitForTimeout(300);
     return await page.evaluate(() => JSON.stringify(JSON.parse(localStorage.getItem('relay.workspace.v1'))).includes('smoke-value'));
   });
+  await check('pasting into a cell strips rich formatting to plain text', async () => {
+    const sel = 'tbody tr td[contenteditable]';
+    const cell = await $(sel); if (!cell) return false;
+    await cell.click({ clickCount: 3 }); // select existing content so paste replaces it
+    await page.evaluate((s) => {
+      const node = document.querySelector(s); node.focus();
+      const dt = new DataTransfer();
+      dt.setData('text/plain', 'pasted-plain');
+      dt.setData('text/html', '<b style="color:red">pasted-plain</b>');
+      node.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true }));
+    }, sel);
+    await page.keyboard.press('Tab'); await page.waitForTimeout(300);
+    const html = await page.$eval(sel, (e) => e.innerHTML);
+    return html.includes('pasted-plain') && !/<b|style=/i.test(html);
+  });
   await check('edit-table modal (rename/delete) opens', async () => {
     await page.click('button:has-text("Edit table")'); await page.waitForTimeout(300);
     const has = !!(await page.$('.modal button:has-text("Delete table")'));
