@@ -57,9 +57,10 @@ export function renderTable(root, ctx, params={}){
   const pin = el('button',{class:'btn sm', html:`${icon('star')} ${Store.isPinned(current)?'Pinned':'Pin'}`,
     onclick:()=>{Store.togglePin(current);renderTable(root,ctx,{entity:current});}});
   const editBtn = el('button',{class:'btn sm', html:`${icon('edit')} Edit table`, onclick:()=>editEntity(root,ctx)});
+  const exportBtn = el('button',{class:'btn sm', title:'Export the current view to a .csv file', html:`${icon('download')} Export CSV`, onclick:()=>exportCsv()});
   const addCol = el('button',{class:'btn sm', html:`${icon('plus')} Field`, onclick:()=>addColumn(root,ctx)});
   const addRow = el('button',{class:'btn sm primary', html:`${icon('plus')} Row`, onclick:()=>addRowRec(root,ctx)});
-  toolbar.append(label, search, spacer, pin, editBtn, addCol, addRow);
+  toolbar.append(label, search, spacer, pin, editBtn, exportBtn, addCol, addRow);
   mainCol.append(toolbar);
 
   const body = el('div');
@@ -81,14 +82,9 @@ export function renderTable(root, ctx, params={}){
   function refreshRows(){
     body.innerHTML='';
     const cols = Store.columns(current);
-    let rows = Store.records(current);
-    const total = rows.length;
+    const total = Store.records(current).length;
     const needle = filterText.trim().toLowerCase();
-    if(needle) rows = rows.filter(r=>rowMatches(r, cols, needle));
-    if(sortField) rows = rows.slice().sort((a,b)=>{
-      const d = cmpVals(a.fields[sortField], b.fields[sortField]);
-      return sortDir==='asc' ? d : -d;
-    });
+    const rows = visibleRows(cols);
 
     const scroll = el('div',{class:'table-scroll'});
     if(!total){
@@ -128,6 +124,19 @@ export function renderTable(root, ctx, params={}){
     body.append(el('div',{class:'muted tiny', style:'margin-top:12px',
       html:`${filtered?`${rows.length} of ${total}`:total} row${total!==1?'s':''} · ${cols.length} field${cols.length!==1?'s':''} · edits sync to ${Sync.onlineCount()} peer(s) automatically`}));
   }
+}
+
+// same filter + sort the toolbar applies, shared with CSV export so a
+// download always matches what's currently on screen
+function visibleRows(cols){
+  let rows = Store.records(current);
+  const needle = filterText.trim().toLowerCase();
+  if(needle) rows = rows.filter(r=>rowMatches(r, cols, needle));
+  if(sortField) rows = rows.slice().sort((a,b)=>{
+    const d = cmpVals(a.fields[sortField], b.fields[sortField]);
+    return sortDir==='asc' ? d : -d;
+  });
+  return rows;
 }
 
 function rowMatches(r, cols, needle){
@@ -200,7 +209,7 @@ function rowEl(r, cols, root, ctx){
   tr.append(el('td',{class:'rowid', text:shortId(r.id), title:r.id}));
   cols.forEach(c=>{
     const val=r.fields[c];
-    const td=el('td',{contenteditable:'true', text: val==null?'' : (typeof val==='object'?JSON.stringify(val):String(val))});
+    const td=el('td',{contenteditable:'true', text: cellText(val)});
     td.dataset.field=c;
     td.addEventListener('blur',()=>commitCell(r, c, td));
     td.addEventListener('keydown',ev=>{ if(ev.key==='Enter'){ev.preventDefault();td.blur();} });
@@ -242,6 +251,30 @@ function inferValue(raw){
   if(raw!=='' && !isNaN(Number(raw)) && String(Number(raw))===raw) return Number(raw);
   if(raw.startsWith('{')||raw.startsWith('[')){ try{ return JSON.parse(raw); }catch{} }
   return raw;
+}
+
+// the inverse of inferValue's typing for display/export: objects flatten to JSON text
+function cellText(val){
+  return val==null ? '' : (typeof val==='object' ? JSON.stringify(val) : String(val));
+}
+
+// ---- export current table (respecting filter + sort) → .csv --------------
+function exportCsv(){
+  const cols = Store.columns(current);
+  const rows = visibleRows(cols);
+  if(!rows.length){ toast('No rows to export',{kind:'err'}); return; }
+  const e = Store.entity(current);
+  const lines = [cols.map(csvField).join(',')];
+  rows.forEach(r=>lines.push(cols.map(c=>csvField(cellText(r.fields[c]))).join(',')));
+  const blob = new Blob([lines.join('\r\n')], {type:'text/csv;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = el('a',{href:url, download:`${(e.label||'table').trim().replace(/[^\w-]+/g,'_')||'table'}.csv`});
+  document.body.append(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url), 1000);
+  toast(`Exported ${rows.length} row${rows.length!==1?'s':''}`,{kind:'ok'});
+}
+function csvField(v){
+  return /[",\r\n]/.test(v) ? `"${v.replace(/"/g,'""')}"` : v;
 }
 
 // ---- right-hand record editor: field-by-field, typed inputs ---------------

@@ -10,6 +10,16 @@
 // .github/stamp-changelog.mjs regenerates every `date` from its `ts`.
 export const CHANGELOG = [
   {
+    v: 28,
+    title: 'Export a table to CSV',
+    ts: '2026-07-03T09:39:03.495Z',
+    date: 'Jul 3, 2026, 4:39 AM CT',
+    items: [
+      'A new "Export CSV" button next to "Edit table" downloads the current table as a .csv file, ready to open in Excel, Sheets, or re-import elsewhere.',
+      'If you\'ve filtered or sorted the table, the download matches exactly what you\'re looking at.',
+    ],
+  },
+  {
     v: 27,
     title: 'Landing page refresh',
     ts: '2026-07-03T08:05:29.270Z',

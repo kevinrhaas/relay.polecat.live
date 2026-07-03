@@ -221,6 +221,16 @@ try {
     const desc = await page.$$eval('tbody tr td[contenteditable]', (tds) => tds.map((t) => t.textContent.trim()));
     return asc.join() === 'apple,mango,zebra' && desc.join() === 'zebra,mango,apple';
   });
+  await check('export CSV downloads the current (filtered/sorted) view', async () => {
+    const [download] = await Promise.all([
+      page.waitForEvent('download'),
+      page.click('button:has-text("Export CSV")'),
+    ]);
+    const text = fs.readFileSync(await download.path(), 'utf8');
+    const lines = text.trim().split('\r\n');
+    // the sort check above left the table sorted by name, descending
+    return lines.join('|') === ['name', 'zebra', 'mango', 'apple'].join('|');
+  });
   await check('import CSV creates a new table with typed rows', async () => {
     const [chooser] = await Promise.all([
       page.waitForEvent('filechooser'),

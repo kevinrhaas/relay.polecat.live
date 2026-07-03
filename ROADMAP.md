@@ -34,7 +34,6 @@ when you finish something, move it to **Done** with the date; add discoveries to
   typical exports, but a very large file (tens of thousands of rows) would
   block the main thread for the whole import. Worth chunking/yielding if that
   comes up.
-- CSV *export* (an entity → `.csv` download) to pair with the new CSV import.
 - TURN fallback guidance for strict NATs.
 - Optional "always-on peer" (headless) for 24/7 availability without a DB.
 
@@ -44,6 +43,16 @@ when you finish something, move it to **Done** with the date; add discoveries to
 - Multiple workspaces / workspace switcher.
 
 ## Done
+- 2026-07-03 — CSV export: an "Export CSV" button in the Tables toolbar
+  downloads the current table as a `.csv` file — same field columns CSV
+  import creates (no `id`/meta columns), and it honors whatever filter/sort
+  is currently applied so the download always matches what's on screen.
+  Values round-trip through the same typing rules as inline edits/import
+  (`inferValue`/`cellText`), and fields containing a comma, quote, or newline
+  are quoted per RFC4180. Refactored the row-filter/sort logic `refreshRows`
+  already had into a shared `visibleRows()` so export can't drift from the
+  on-screen view. Added a smoke check that exports the sorted smoke table
+  and verifies the downloaded file's header and row order.
 - 2026-07-03 — Landing page refresh: copy and the hero screenshot were stale
   (the shot still showed the old horizontal entity tabs, pre-dating the
   tree/side-panel navigation; "what's new" and the meta description only
