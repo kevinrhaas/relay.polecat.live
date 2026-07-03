@@ -288,11 +288,18 @@ body{
 .tbl-search .input{padding-top:6px;padding-bottom:6px;font-size:12.5px}
 
 /* left tree: entities, expandable to their fields (DBeaver-style browse) */
-.tree-panel{flex:0 0 auto;width:220px;display:flex;flex-direction:column;gap:8px;
+.tree-panel{position:relative;flex:0 0 auto;width:220px;display:flex;flex-direction:column;gap:8px;
   border:1px solid var(--border);border-radius:var(--radius);
   background:color-mix(in srgb,var(--surface) 88%,transparent);padding:10px;
   align-self:stretch;overflow:auto;transition:width .18s}
 .tree-panel:not(.open){width:52px;padding:10px 6px}
+.tree-panel.dragging{transition:none;user-select:none}
+
+/* drag-to-resize handle, open state only (icon rail has no room to resize) */
+.tree-resize{position:absolute;top:0;right:-3px;width:7px;height:100%;cursor:col-resize;z-index:5}
+.tree-resize::after{content:"";position:absolute;top:0;right:3px;width:2px;height:100%;
+  background:transparent;transition:.15s}
+.tree-resize:hover::after,.tree-panel.dragging .tree-resize::after{background:var(--brand-b)}
 .tree-head{display:flex;align-items:center;gap:4px}
 .tree-title{flex:1;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-2)}
 .tree-toggle svg{width:14px;height:14px;transition:transform .18s;transform:rotate(180deg)}
@@ -636,6 +643,7 @@ a.link:hover{text-decoration:underline}
   .table-shell{flex-direction:column}
   .tree-panel{width:100%!important;max-height:180px;align-self:stretch}
   .tree-panel:not(.open){max-height:44px}
+  .tree-resize{display:none}                 /* no drag-resize on touch; panel is full-width */
 
   #toasts{left:14px;right:14px;bottom:14px}
   .toast{max-width:none}

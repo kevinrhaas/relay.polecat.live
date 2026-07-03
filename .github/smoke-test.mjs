@@ -128,6 +128,18 @@ try {
     const expanded = await page.evaluate(() => document.querySelector('.tree-panel').classList.contains('open'));
     return collapsed && expanded;
   });
+  await check('tree panel: drag the divider to resize, and it persists', async () => {
+    const before = await page.evaluate(() => document.querySelector('.tree-panel').getBoundingClientRect().width);
+    const handle = await $('.tree-resize'); if (!handle) return false;
+    const box = await handle.boundingBox(); if (!box) return false;
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(box.x + box.width / 2 + 80, box.y + box.height / 2, { steps: 5 });
+    await page.mouse.up(); await page.waitForTimeout(200);
+    const after = await page.evaluate(() => document.querySelector('.tree-panel').getBoundingClientRect().width);
+    const stored = parseInt(await page.evaluate(() => localStorage.getItem('relay.tree.width')), 10);
+    return after > before + 40 && Math.abs(stored - Math.round(after)) <= 1;
+  });
   await check('row expander opens the record side panel with a typed field input', async () => {
     const btn = await $('tbody tr .row-open'); if (!btn) return false;
     await btn.click(); await page.waitForTimeout(300);

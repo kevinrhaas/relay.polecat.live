@@ -8,9 +8,12 @@ import { icon } from '../icons.js';
 
 const K_TREE_OPEN = 'relay.tree.open';
 const K_TREE_EXPANDED = 'relay.tree.expanded';
+const K_TREE_WIDTH = 'relay.tree.width';
+const TREE_MINW = 180, TREE_MAXW = 420, TREE_DEFAULTW = 220;
 
 let current = null;
 let treeOpen = localStorage.getItem(K_TREE_OPEN)!=='0';
+let treeWidth = clampTreeW(parseInt(localStorage.getItem(K_TREE_WIDTH)||String(TREE_DEFAULTW),10));
 let expanded = loadExpanded();
 let filterText = '';
 let sortField = null, sortDir = 'asc';
@@ -20,6 +23,7 @@ function loadExpanded(){
 }
 function saveExpanded(){ try{ localStorage.setItem(K_TREE_EXPANDED, JSON.stringify([...expanded])); }catch{} }
 function toggleExpanded(key){ expanded.has(key)?expanded.delete(key):expanded.add(key); saveExpanded(); }
+function clampTreeW(w){ return Math.max(TREE_MINW, Math.min(TREE_MAXW, w||TREE_DEFAULTW)); }
 
 export function renderTable(root, ctx, params={}){
   const names = Store.entityNames();
@@ -161,6 +165,7 @@ function cmpVals(a, b){
 // ---- left tree: entities, expandable to their fields ---------------------
 function buildTree(root, ctx, names){
   const panel = el('div',{class:'tree-panel'+(treeOpen?' open':'')});
+  if(treeOpen) panel.style.width = treeWidth+'px';
   const head = el('div',{class:'tree-head'});
   const toggle = el('button',{class:'btn ghost icon sm tree-toggle',
     title: treeOpen?'Collapse panel':'Expand panel', 'aria-label': treeOpen?'Collapse tables panel':'Expand tables panel',
@@ -197,7 +202,47 @@ function buildTree(root, ctx, names){
     list.append(node);
   });
   panel.append(list);
+  if(treeOpen){
+    const resize = el('div',{class:'tree-resize', title:'Drag to resize', role:'separator', 'aria-orientation':'vertical', 'aria-label':'Resize tables panel'});
+    panel.append(resize);
+    wireTreeResize(panel, resize);
+  }
   return panel;
+}
+
+// drag-to-resize the tree panel; mirrors the rail nav's resize handle
+// (js/shell.js) but scoped to this panel instead of a global CSS var, since
+// the panel is torn down and rebuilt on every renderTable() call anyway
+function wireTreeResize(panel, handle){
+  let startX=0, startW=0, active=false;
+  const onMove=(e)=>{
+    if(!active) return;
+    const x = e.touches?e.touches[0].clientX:e.clientX;
+    panel.style.width = clampTreeW(startW + (x-startX))+'px';
+  };
+  const onUp=()=>{
+    if(!active) return;
+    active=false; panel.classList.remove('dragging');
+    treeWidth = clampTreeW(parseInt(panel.style.width,10));
+    localStorage.setItem(K_TREE_WIDTH, treeWidth);
+    document.removeEventListener('mousemove',onMove); document.removeEventListener('mouseup',onUp);
+    document.removeEventListener('touchmove',onMove); document.removeEventListener('touchend',onUp);
+  };
+  const onDown=(e)=>{
+    active=true; panel.classList.add('dragging');
+    startX = e.touches?e.touches[0].clientX:e.clientX;
+    startW = panel.getBoundingClientRect().width;
+    document.addEventListener('mousemove',onMove); document.addEventListener('mouseup',onUp);
+    document.addEventListener('touchmove',onMove,{passive:false}); document.addEventListener('touchend',onUp);
+    e.preventDefault();
+  };
+  handle.addEventListener('mousedown',onDown);
+  handle.addEventListener('touchstart',onDown,{passive:false});
+  handle.addEventListener('dblclick',()=>{
+    treeWidth = TREE_DEFAULTW;
+    panel.style.width = treeWidth+'px';
+    localStorage.setItem(K_TREE_WIDTH, treeWidth);
+  });
 }
 
 function rowEl(r, cols, root, ctx){

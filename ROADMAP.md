@@ -26,7 +26,6 @@ when you finish something, move it to **Done** with the date; add discoveries to
   ITP or strict Firefox cookie blocking will force a "needs permission" state
   more often than Dropbox's refresh-token flow does. Falls back to a one-click
   Reconnect, but worth watching for complaints.
-- Drag-to-resize the Tables tree panel (currently collapsible but fixed-width).
 - Column types / simple validation (text, number, bool, date, select) with nicer editors.
 - Presence cursors / "who's viewing this table".
 - CSV import currently reads the whole file with `FileReader.readAsText` and
@@ -43,6 +42,16 @@ when you finish something, move it to **Done** with the date; add discoveries to
 - Multiple workspaces / workspace switcher.
 
 ## Done
+- 2026-07-03 — Drag-to-resize the Tables tree panel: the left-hand tree/
+  side-panel (entities + fields) was collapsible but fixed at 220px, which
+  cramped long table or field names. A drag handle on its right edge (mirrors
+  the rail nav's own resize handle in `js/shell.js`) now lets it stretch from
+  180px to 420px; double-clicking the handle snaps back to the 220px default.
+  Width is persisted to `localStorage` (`relay.tree.width`) and restored on
+  reload, same pattern as the rail's width. Disabled on mobile (≤720px) where
+  the panel is already forced full-width above the table. Added a smoke check
+  that drags the handle and verifies both the rendered width and the
+  persisted value change together.
 - 2026-07-03 — CSV export: an "Export CSV" button in the Tables toolbar
   downloads the current table as a `.csv` file — same field columns CSV
   import creates (no `id`/meta columns), and it honors whatever filter/sort

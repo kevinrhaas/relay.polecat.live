@@ -10,6 +10,17 @@
 // .github/stamp-changelog.mjs regenerates every `date` from its `ts`.
 export const CHANGELOG = [
   {
+    v: 29,
+    title: 'Drag-to-resize the Tables tree panel',
+    ts: '2026-07-03T10:53:55.899Z',
+    date: 'Jul 3, 2026, 5:53 AM CT',
+    items: [
+      'The tree panel on the left of the Tables view can now be dragged wider or narrower from its right edge — handy for long table or field names.',
+      'Double-click the divider to snap back to the default width.',
+      'Your chosen width is remembered across visits.',
+    ],
+  },
+  {
     v: 28,
     title: 'Export a table to CSV',
     ts: '2026-07-03T09:39:03.495Z',
