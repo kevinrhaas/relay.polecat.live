@@ -110,6 +110,10 @@ export function renderTable(root, ctx, params={}){
       el('span',{class:'bulk-count', text:`${ids.length} selected`}),
       el('button',{class:'btn ghost sm', text:'Clear', onclick:()=>{ selected.clear(); refreshRows(); }}),
       el('div',{style:'flex:1 0 0;min-width:0'}),
+      el('button',{class:'btn ghost sm', title:'Export just the checked rows to a .csv file', html:`${icon('download')} Export selected`, onclick:()=>{
+        const idSet = new Set(ids);
+        exportCsv(Store.records(current).filter(r=>idSet.has(r.id)));
+      }}),
       el('button',{class:'btn danger sm', html:`${icon('trash')} Delete selected`, onclick:async()=>{
         if(await confirmDialog('Delete rows', `Delete ${ids.length} row${ids.length!==1?'s':''}? This will propagate to your peers.`, {danger:true, okLabel:'Delete'})){
           selected.clear();
@@ -464,16 +468,19 @@ function toBool(val){
 }
 
 // ---- export current table (respecting filter + sort) → .csv --------------
-function exportCsv(){
+// rowsOverride lets the bulk-select bar export just the checked rows instead
+// of whatever the toolbar's filter/sort currently shows.
+function exportCsv(rowsOverride){
   const cols = Store.columns(current);
-  const rows = visibleRows(cols);
+  const rows = rowsOverride || visibleRows(cols);
   if(!rows.length){ toast('No rows to export',{kind:'err'}); return; }
   const e = Store.entity(current);
   const lines = [cols.map(csvField).join(',')];
   rows.forEach(r=>lines.push(cols.map(c=>csvField(cellText(r.fields[c]))).join(',')));
   const blob = new Blob([lines.join('\r\n')], {type:'text/csv;charset=utf-8'});
   const url = URL.createObjectURL(blob);
-  const a = el('a',{href:url, download:`${(e.label||'table').trim().replace(/[^\w-]+/g,'_')||'table'}.csv`});
+  const base = (e.label||'table').trim().replace(/[^\w-]+/g,'_')||'table';
+  const a = el('a',{href:url, download:`${base}${rowsOverride?'_selected':''}.csv`});
   document.body.append(a); a.click(); a.remove();
   setTimeout(()=>URL.revokeObjectURL(url), 1000);
   toast(`Exported ${rows.length} row${rows.length!==1?'s':''}`,{kind:'ok'});

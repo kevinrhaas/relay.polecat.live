@@ -293,6 +293,25 @@ try {
     // the sort check above left the table sorted by name, descending
     return lines.join('|') === ['name', 'zebra', 'mango', 'apple'].join('|');
   });
+  await check('bulk-select "Export selected" downloads only the checked rows', async () => {
+    // table still sorted desc from the sort check above: zebra, mango, apple
+    // re-query checkboxes between clicks — each check re-renders the tbody
+    // (refreshRows), which detaches any handle grabbed before the rebuild
+    let rowChecks = await page.$$('tbody tr .row-check');
+    if (rowChecks.length !== 3) return false;
+    await rowChecks[0].click(); await page.waitForTimeout(150);
+    rowChecks = await page.$$('tbody tr .row-check');
+    await rowChecks[1].click(); await page.waitForTimeout(200);
+    const bar = await $('.bulk-bar'); if (!bar) return false;
+    const [download] = await Promise.all([
+      page.waitForEvent('download'),
+      page.click('.bulk-bar button:has-text("Export selected")'),
+    ]);
+    const text = fs.readFileSync(await download.path(), 'utf8');
+    const lines = text.trim().split('\r\n');
+    await page.click('.bulk-bar button:has-text("Clear")'); await page.waitForTimeout(200);
+    return lines.join('|') === ['name', 'zebra', 'mango'].join('|');
+  });
   await check('bulk row selection: "select all" checks every row, unchecking one shows a live count, and Delete selected removes only the checked rows', async () => {
     // table is still sorted desc from the check above: zebra, mango, apple
     const selectAll = await $('th.chk-head .row-check'); if (!selectAll) return false;

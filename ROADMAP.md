@@ -21,11 +21,10 @@ when you finish something, move it to **Done** with the date; add discoveries to
    loops/GIFs, feature highlights. It should always reflect what the app can do.
 
 ## Next
-- The new row-selection checkboxes (`selected` in `js/views/table.js`) only
-  power bulk delete so far. Natural next steps on the same selection: bulk
-  "export selected to CSV" (reusing `exportCsv()`'s logic against `[...selected]`
-  instead of `visibleRows()`), or bulk-set a single field's value across every
-  checked row.
+- The row-selection checkboxes (`selected` in `js/views/table.js`) now power
+  both bulk delete and bulk export. Natural next step on the same selection:
+  bulk-set a single field's value across every checked row (e.g. mark a batch
+  of rows "Done" in one action instead of editing each cell).
 - Google Drive sync's silent token renewal (`prompt:''`) depends on an active
   Google session + third-party-cookie access to accounts.google.com — Safari
   ITP or strict Firefox cookie blocking will force a "needs permission" state
@@ -39,6 +38,15 @@ when you finish something, move it to **Done** with the date; add discoveries to
 - Multiple workspaces / workspace switcher.
 
 ## Done
+- 2026-07-03 — Bulk-export selected rows to CSV: the bulk-select action bar
+  (added alongside the bulk-delete feature) gained an "Export selected"
+  button next to "Delete selected". Reuses `exportCsv()` — now accepting an
+  optional row list — against the checked rows instead of the toolbar's
+  filtered/sorted view, so pulling out a handful of flagged rows no longer
+  requires exporting (or filtering down to) the whole table first. The
+  downloaded filename gets a `_selected` suffix so it's distinguishable from
+  a full-table export of the same table. Added a smoke check that selects two
+  rows, exports, and verifies the downloaded CSV contains exactly those rows.
 - 2026-07-03 — Bulk-select and delete rows: every row in the table grid now has
   a checkbox (plus a header "select all" that respects whatever filter/sort is
   active), and checking one or more shows a "Delete selected" action bar with a

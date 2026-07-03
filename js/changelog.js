@@ -10,6 +10,17 @@
 // .github/stamp-changelog.mjs regenerates every `date` from its `ts`.
 export const CHANGELOG = [
   {
+    v: 39,
+    title: 'Bulk-export selected rows to CSV',
+    ts: '2026-07-03T20:47:58.356Z',
+    date: 'Jul 3, 2026, 3:47 PM CT',
+    items: [
+      'The bulk-select action bar now has an "Export selected" button alongside "Delete selected".',
+      'Downloads just the checked rows as a .csv — same column layout and typing rules as the regular Export CSV button.',
+      'Handy for pulling out a subset (e.g. flagged rows) without exporting or filtering the whole table.',
+    ],
+  },
+  {
     v: 38,
     title: 'Bulk-select and delete rows',
     ts: '2026-07-03T20:14:59.936Z',
