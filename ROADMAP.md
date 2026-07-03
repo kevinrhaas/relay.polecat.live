@@ -42,6 +42,19 @@ when you finish something, move it to **Done** with the date; add discoveries to
 - Multiple workspaces / workspace switcher.
 
 ## Done
+- 2026-07-03 — Confirm before disconnecting a sync location: every other
+  destructive action in the app (delete row/table/field, revoke/remove invite,
+  reset workspace) goes through the shared `confirmDialog`, but the six
+  "Disconnect" buttons in Settings → Advanced (rendezvous, local folder, S3,
+  WebDAV, Dropbox, Google Drive) fired immediately on click — a stray tap
+  could drop a configured connection and force re-entering credentials or
+  re-authorizing. All six now confirm first, with a message naming what gets
+  lost. Also gave the WebRTC invite modal's "Join with invite" tab an
+  autofocus on its offer textarea (every other modal/sheet with an input
+  already autofocuses it; this one was the odd one out, leaving users to
+  click before they could paste). Updated the five existing sync-location
+  disconnect smoke checks to click through the new confirm step, and added a
+  smoke check for the invite-modal autofocus.
 - 2026-07-03 — Drag-to-resize the Tables tree panel: the left-hand tree/
   side-panel (entities + fields) was collapsible but fixed at 220px, which
   cramped long table or field names. A drag handle on its right edge (mirrors

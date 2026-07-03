@@ -85,7 +85,9 @@ export function renderSettings(root, ctx){
   const rf=el('div',{class:'field'}); rf.append(el('label',{text:'Room'}), rroom);
   const connected = st==='online'||st==='connecting';
   const actionBtn = connected
-    ? el('button',{class:'btn danger', html:`${icon('x')} Disconnect`, onclick:()=>{ Rendezvous.disconnect(); toast('Left rendezvous',{kind:'ok'}); renderSettings(root,ctx); }})
+    ? el('button',{class:'btn danger', html:`${icon('x')} Disconnect`, onclick:async()=>{
+        if(await confirmDialog('Disconnect rendezvous',"You'll stop auto-connecting to peers in this room until you reconnect.",{danger:true,okLabel:'Disconnect'})){
+          Rendezvous.disconnect(); toast('Left rendezvous',{kind:'ok'}); renderSettings(root,ctx); } }})
     : el('button',{class:'btn primary', html:`${icon('broadcast')} Connect`, onclick:()=>{
         if(!rurl.value.trim()||!rroom.value.trim()){ toast('URL and room required',{kind:'err'}); return; }
         Rendezvous.connect(rurl.value, rroom.value); toast('Connecting to rendezvous…',{kind:'ok'}); renderSettings(root,ctx); }});
@@ -108,7 +110,9 @@ export function renderSettings(root, ctx){
     lfRow.append(
       el('span',{class:'chip', text:LocalFolder.folderName}),
       el('span',{class:'muted tiny', text: LocalFolder.lastSync?`synced ${ago(LocalFolder.lastSync)}`:'syncing…'}),
-      el('button',{class:'btn danger sm', html:`${icon('x')} Disconnect`, onclick:()=>{ LocalFolder.disconnect(); renderSettings(root,ctx); }}));
+      el('button',{class:'btn danger sm', html:`${icon('x')} Disconnect`, onclick:async()=>{
+        if(await confirmDialog('Disconnect local folder',"You'll need to re-choose the folder to resume syncing here.",{danger:true,okLabel:'Disconnect'})){
+          LocalFolder.disconnect(); renderSettings(root,ctx); } }}));
   }else if(LocalFolder.state==='needs-permission'){
     lfRow.append(
       el('span',{class:'chip', text:LocalFolder.folderName}),
@@ -136,7 +140,9 @@ export function renderSettings(root, ctx){
     s3Row.append(
       el('span',{class:'chip', text:S3Sync.cfg.bucket}),
       el('span',{class:'muted tiny', text: S3Sync.lastSync?`synced ${ago(S3Sync.lastSync)}`:'syncing…'}),
-      el('button',{class:'btn danger sm', html:`${icon('x')} Disconnect`, onclick:()=>{ S3Sync.disconnect(); renderSettings(root,ctx); }}));
+      el('button',{class:'btn danger sm', html:`${icon('x')} Disconnect`, onclick:async()=>{
+        if(await confirmDialog('Disconnect S3 bucket',"You'll need to re-enter the bucket details to resume syncing here.",{danger:true,okLabel:'Disconnect'})){
+          S3Sync.disconnect(); renderSettings(root,ctx); } }}));
     s3Block.append(s3Row);
   }else{
     const cfg = S3Sync.cfg || {};
@@ -180,7 +186,9 @@ export function renderSettings(root, ctx){
     wdRow.append(
       el('span',{class:'chip', text:WebDAVSync.cfg.username}),
       el('span',{class:'muted tiny', text: WebDAVSync.lastSync?`synced ${ago(WebDAVSync.lastSync)}`:'syncing…'}),
-      el('button',{class:'btn danger sm', html:`${icon('x')} Disconnect`, onclick:()=>{ WebDAVSync.disconnect(); renderSettings(root,ctx); }}));
+      el('button',{class:'btn danger sm', html:`${icon('x')} Disconnect`, onclick:async()=>{
+        if(await confirmDialog('Disconnect WebDAV',"You'll need to re-enter the server details to resume syncing here.",{danger:true,okLabel:'Disconnect'})){
+          WebDAVSync.disconnect(); renderSettings(root,ctx); } }}));
     wdBlock.append(wdRow);
   }else{
     const cfg = WebDAVSync.cfg || {};
@@ -218,7 +226,9 @@ export function renderSettings(root, ctx){
     dbRow.append(
       el('span',{class:'chip', text:Dropbox.cfg.email||'connected'}),
       el('span',{class:'muted tiny', text: Dropbox.lastSync?`synced ${ago(Dropbox.lastSync)}`:'syncing…'}),
-      el('button',{class:'btn danger sm', html:`${icon('x')} Disconnect`, onclick:()=>{ Dropbox.disconnect(); renderSettings(root,ctx); }}));
+      el('button',{class:'btn danger sm', html:`${icon('x')} Disconnect`, onclick:async()=>{
+        if(await confirmDialog('Disconnect Dropbox',"You'll need to reconnect and re-authorize to resume syncing here.",{danger:true,okLabel:'Disconnect'})){
+          Dropbox.disconnect(); renderSettings(root,ctx); } }}));
     dbBlock.append(dbRow);
   }else{
     const keyIn=el('input',{class:'input', placeholder:'app key', value:(Dropbox.cfg&&Dropbox.cfg.appKey)||''});
@@ -246,7 +256,9 @@ export function renderSettings(root, ctx){
     gdRow.append(
       el('span',{class:'chip', text:'connected'}),
       el('span',{class:'muted tiny', text: GoogleDrive.lastSync?`synced ${ago(GoogleDrive.lastSync)}`:'syncing…'}),
-      el('button',{class:'btn danger sm', html:`${icon('x')} Disconnect`, onclick:()=>{ GoogleDrive.disconnect(); renderSettings(root,ctx); }}));
+      el('button',{class:'btn danger sm', html:`${icon('x')} Disconnect`, onclick:async()=>{
+        if(await confirmDialog('Disconnect Google Drive',"You'll need to reconnect and re-authorize to resume syncing here.",{danger:true,okLabel:'Disconnect'})){
+          GoogleDrive.disconnect(); renderSettings(root,ctx); } }}));
     gdBlock.append(gdRow);
   }else if(GoogleDrive.state==='needs-permission'){
     gdBlock.append(el('button',{class:'btn primary sm', style:'margin-top:8px', html:`${icon('broadcast')} Reconnect`,

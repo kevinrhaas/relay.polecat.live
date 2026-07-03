@@ -347,6 +347,13 @@ try {
     const btns2 = await (await $('.peer')).$$('.sharing-seg button');
     return await btns2[1].evaluate((b) => b.classList.contains('on'));
   });
+  await check('WebRTC invite modal: "Join with invite" autofocuses the offer field', async () => {
+    await page.click('button:has-text("WebRTC invite")'); await page.waitForTimeout(300);
+    await page.click('.modal button:has-text("Join with invite")'); await page.waitForTimeout(150);
+    const focused = await page.evaluate(() => document.activeElement?.placeholder || '');
+    await closeModal();
+    return focused.includes('offer');
+  });
 
   console.log('What\'s new');
   await check('what\'s new panel opens, lists entries, searches', async () => {
@@ -439,7 +446,9 @@ try {
   await check('local folder sync: disconnect', async () => {
     let details = await $('details.adv'); if (!details) return false;
     const btn = await details.$('.lf-block button:has-text("Disconnect")'); if (!btn) return false;
-    await btn.click(); await page.waitForTimeout(300);   // renderSettings() rebuilds the DOM — re-query below
+    await btn.click(); await page.waitForTimeout(200);   // opens a confirm dialog first
+    const confirmBtn = await page.$('.modal button:has-text("Disconnect")'); if (!confirmBtn) return false;
+    await confirmBtn.click(); await page.waitForTimeout(300);   // renderSettings() rebuilds the DOM — re-query below
     details = await $('details.adv'); if (!details) return false;
     return !!(await details.$('.lf-block button:has-text("Choose folder")'));
   });
@@ -489,7 +498,9 @@ try {
   await check('S3 sync: disconnect', async () => {
     let details = await $('details.adv'); if (!details) return false;
     const btn = await details.$('.s3-block button:has-text("Disconnect")'); if (!btn) return false;
-    await btn.click(); await page.waitForTimeout(300);   // renderSettings() rebuilds the DOM — re-query below
+    await btn.click(); await page.waitForTimeout(200);   // opens a confirm dialog first
+    const confirmBtn = await page.$('.modal button:has-text("Disconnect")'); if (!confirmBtn) return false;
+    await confirmBtn.click(); await page.waitForTimeout(300);   // renderSettings() rebuilds the DOM — re-query below
     details = await $('details.adv'); if (!details) return false;
     return !!(await details.$('.s3-block button:has-text("Connect bucket")'));
   });
@@ -538,7 +549,9 @@ try {
   await check('WebDAV sync: disconnect', async () => {
     let details = await $('details.adv'); if (!details) return false;
     const btn = await details.$('.wd-block button:has-text("Disconnect")'); if (!btn) return false;
-    await btn.click(); await page.waitForTimeout(300);   // renderSettings() rebuilds the DOM — re-query below
+    await btn.click(); await page.waitForTimeout(200);   // opens a confirm dialog first
+    const confirmBtn = await page.$('.modal button:has-text("Disconnect")'); if (!confirmBtn) return false;
+    await confirmBtn.click(); await page.waitForTimeout(300);   // renderSettings() rebuilds the DOM — re-query below
     details = await $('details.adv'); if (!details) return false;
     return !!(await details.$('.wd-block button:has-text("Connect WebDAV")'));
   });
@@ -610,7 +623,9 @@ try {
   await check('Dropbox sync: disconnect', async () => {
     let details = await $('details.adv'); if (!details) return false;
     const btn = await details.$('.db-block button:has-text("Disconnect")'); if (!btn) return false;
-    await btn.click(); await page.waitForTimeout(300);   // renderSettings() rebuilds the DOM — re-query below
+    await btn.click(); await page.waitForTimeout(200);   // opens a confirm dialog first
+    const confirmBtn = await page.$('.modal button:has-text("Disconnect")'); if (!confirmBtn) return false;
+    await confirmBtn.click(); await page.waitForTimeout(300);   // renderSettings() rebuilds the DOM — re-query below
     details = await $('details.adv'); if (!details) return false;
     return !!(await details.$('.db-block button:has-text("Connect Dropbox")'));
   });
@@ -673,7 +688,9 @@ try {
   await check('Google Drive sync: disconnect', async () => {
     let details = await $('details.adv'); if (!details) return false;
     const btn = await details.$('.gd-block button:has-text("Disconnect")'); if (!btn) return false;
-    await btn.click(); await page.waitForTimeout(300);   // renderSettings() rebuilds the DOM — re-query below
+    await btn.click(); await page.waitForTimeout(200);   // opens a confirm dialog first
+    const confirmBtn = await page.$('.modal button:has-text("Disconnect")'); if (!confirmBtn) return false;
+    await confirmBtn.click(); await page.waitForTimeout(300);   // renderSettings() rebuilds the DOM — re-query below
     details = await $('details.adv'); if (!details) return false;
     return !!(await details.$('.gd-block button:has-text("Connect Google Drive")'));
   });

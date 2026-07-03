@@ -10,6 +10,16 @@
 // .github/stamp-changelog.mjs regenerates every `date` from its `ts`.
 export const CHANGELOG = [
   {
+    v: 30,
+    title: 'Confirm before disconnecting a sync location',
+    ts: '2026-07-03T11:50:59.714Z',
+    date: 'Jul 3, 2026, 6:50 AM CT',
+    items: [
+      'Disconnecting rendezvous, local folder, S3, WebDAV, Dropbox, or Google Drive sync now asks you to confirm first, matching every other destructive action in the app.',
+      'Prevents losing a configured connection (and needing to re-enter credentials) from a stray click.',
+    ],
+  },
+  {
     v: 29,
     title: 'Drag-to-resize the Tables tree panel',
     ts: '2026-07-03T10:53:55.899Z',

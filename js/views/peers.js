@@ -226,6 +226,7 @@ function signalingModal(){
         gen.disabled=false; gen.innerHTML=`${icon('bolt')} Generate answer`; }});
     pane.append(field('Their offer', offIn, gen),
       field('Your answer', out, copyBtn(()=>out.value)));
+    setTimeout(()=>offIn.focus(),60);
   }
   function field(label, control, ...btns){
     const f=el('div',{class:'field'});
