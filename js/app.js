@@ -82,6 +82,7 @@ function buildTopbar(){
 // ---- routing -------------------------------------------------------------
 function go(section, params={}){
   if(!RENDERERS[section]) section='home';
+  if(currentSection==='table' && section!=='table') Sync.setViewing(null);   // leaving Tables clears our presence
   currentSection=section; currentParams=params;
   location.hash=section;
   topTitle.textContent=TITLES[section]||'Relay';

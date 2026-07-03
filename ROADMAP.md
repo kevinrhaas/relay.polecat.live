@@ -26,7 +26,6 @@ when you finish something, move it to **Done** with the date; add discoveries to
   ITP or strict Firefox cookie blocking will force a "needs permission" state
   more often than Dropbox's refresh-token flow does. Falls back to a one-click
   Reconnect, but worth watching for complaints.
-- Presence cursors / "who's viewing this table".
 - CSV import currently reads the whole file with `FileReader.readAsText` and
   builds every row in memory before the first `Store.upsert` — fine for
   typical exports, but a very large file (tens of thousands of rows) would
@@ -41,6 +40,22 @@ when you finish something, move it to **Done** with the date; add discoveries to
 - Multiple workspaces / workspace switcher.
 
 ## Done
+- 2026-07-03 — Presence: "who's viewing this table". Every peer currently
+  looking at a table now shows as a small live avatar badge — in the Tables
+  tree row for that entity, and next to the table name in the toolbar.
+  Hovering lists names; it updates instantly as peers open, switch, or close
+  a table, and clears the moment they navigate away or drop offline. This is
+  a purely ephemeral signal (`Sync.setViewing()`/`viewersOf()` in `js/sync.js`)
+  broadcast over the existing mesh/WebRTC transports as a new lightweight
+  `presence` message (also piggybacked on the periodic `hello`/`welcome`
+  heartbeat so a late-joining peer learns the current view immediately) —
+  nothing is written to the Store or synced as data. `js/views/table.js`
+  paints the badges in place via a targeted `Sync.on('peers', …)` listener
+  (same pattern as the Messages thread-pill live-patch) so it never disturbs
+  an in-progress filter/edit with a full re-render. Added a smoke check that
+  injects a synthetic peer's presence messages straight through `Sync`'s real
+  routing (two same-origin tabs would collide on identity, since they'd share
+  `localStorage`) and confirms both badges appear and clear on departure.
 - 2026-07-03 — CSV import per-column field types: the import preview modal
   (`openImportPreview` in `js/views/table.js`) now shows a Type picker
   (Auto/Text/Number/Yes-No/Date/Dropdown — the same `FIELD_TYPES` list used

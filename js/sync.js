@@ -48,6 +48,7 @@ export const Sync = new (class extends Emitter{
     this.log = [];
     this.stats = { sent:0, received:0, applied:0, sessions:0 };
     this.meshOn = false;
+    this.viewingEntity = null;    // entity key the LOCAL user currently has open in Tables, or null
     this.chat = this._loadChat();   // light P2P messaging history
     this._seenChat = new Set(this.chat.map(m=>m.id));
     this.readState = this._loadReadState(); // threadKey -> last-read timestamp, per-device
@@ -84,7 +85,7 @@ export const Sync = new (class extends Emitter{
   }
   _hello(){
     this._say('*', { kind:'hello', id:this.selfId, uid:this.uid, name:Store.identity.name,
-      offers:this._readableEntities('*') });
+      offers:this._readableEntities('*'), entity:this.viewingEntity });
   }
   _say(to, msg){ if(this.meshOn) this.mesh.postMessage({ ...msg, from:this.selfId, to }); }
 
@@ -99,14 +100,14 @@ export const Sync = new (class extends Emitter{
     switch(m.kind){
       case 'hello':{
         const known=this.peers.has(from);
-        this._seePeer(from, m.name, transport, m.offers, m.uid);
+        this._seePeer(from, m.name, transport, m.offers, m.uid, m.entity);
         if(!known){ this._conn(`${m.name} appeared on the network`); }
         // reply so the newcomer learns about us too
         if(m.to==='*' || !known) this._reply(from, transport,{ kind:'welcome',
-          id:this.selfId, uid:this.uid, name:Store.identity.name, offers:this._readableEntities(from) });
+          id:this.selfId, uid:this.uid, name:Store.identity.name, offers:this._readableEntities(from), entity:this.viewingEntity });
         break; }
       case 'welcome':
-        this._seePeer(from, m.name, transport, m.offers, m.uid); break;
+        this._seePeer(from, m.name, transport, m.offers, m.uid, m.entity); break;
       case 'bye':
         this._dropPeer(from); break;
       case 'sync-req':
@@ -115,6 +116,8 @@ export const Sync = new (class extends Emitter{
         this._onPush(from, m.records, m.entities, m.tombstones); break;
       case 'chat':
         this._recvChat(m.msg); break;
+      case 'presence':
+        this._seePeer(from, m.name, transport, undefined, m.uid, m.entity); break;
     }
   }
   _reply(to, transport, msg){
@@ -123,7 +126,7 @@ export const Sync = new (class extends Emitter{
   }
 
   // ---- peer registry ---------------------------------------------------
-  _seePeer(id, name, transport, offers, uid){
+  _seePeer(id, name, transport, offers, uid, entity){
     const isNew = !this.peers.has(id);
     const p = this.peers.get(id) || { id, transport };
     p.name = name || p.name || id.slice(0,6);
@@ -132,6 +135,7 @@ export const Sync = new (class extends Emitter{
     p.lastSeen = Date.now();
     p.offers = offers || p.offers || [];
     if(uid) p.uid = uid;
+    if(entity!==undefined) p.entity = entity;   // table currently open in their Tables view, or null
     this.peers.set(id, p);
     if(p.uid) this._rememberPeer(p.uid, p.name);
     this.emit('peers');
@@ -172,6 +176,27 @@ export const Sync = new (class extends Emitter{
   }
   peerList(){ return [...this.peers.values()].sort((a,b)=>(a.name||'').localeCompare(b.name||'')); }
   onlineCount(){ return [...this.peers.values()].filter(p=>p.state==='connected').length; }
+
+  // ---- ephemeral "who's viewing this table" presence -------------------
+  // Not persisted, not a Store record — just a live signal broadcast to
+  // connected peers so it disappears the instant someone navigates away or
+  // drops offline (peers.delete already clears it).
+  setViewing(entity){
+    entity = entity || null;
+    if(this.viewingEntity===entity) return;
+    this.viewingEntity = entity;
+    const msg = { kind:'presence', id:this.selfId, uid:this.uid, name:Store.identity.name, entity };
+    if(this.meshOn) this._say('*', msg);
+    for(const [id,r] of this.rtc){ if(r?.dc?.readyState==='open') this._rtcSendRaw(r.dc, {...msg, from:this.selfId, to:id}); }
+  }
+  // peers (deduped by uid) currently viewing `entity`, excluding ourselves
+  viewersOf(entity){
+    const seen=new Map();
+    for(const p of this.peers.values()){
+      if(p.entity===entity && p.uid && p.uid!==this.uid && p.state==='connected') seen.set(p.uid, p.name||this.nameForUid(p.uid));
+    }
+    return [...seen].map(([uid,name])=>({uid,name}));
+  }
 
   // ---- permissions (keyed by stable uid — durable across reloads) ------
   _loadPerms(){ try{ return JSON.parse(localStorage.getItem(PERM_KEY))||{}; }catch{ return {}; } }
@@ -347,7 +372,7 @@ export const Sync = new (class extends Emitter{
       this._seePeer(peerId, peerName, 'webrtc', Store.entityNames());
       this._conn(`WebRTC channel open with ${peerName||peerId.slice(0,6)} (auto)`);
       this._rtcSendRaw(dc,{ kind:'hello', id:this.selfId, uid:this.uid, name:Store.identity.name,
-        to:'*', from:this.selfId, offers:Store.entityNames() });
+        to:'*', from:this.selfId, offers:Store.entityNames(), entity:this.viewingEntity });
     };
     if(dc.readyState==='open') wire(); else dc.addEventListener('open', wire);
     dc.addEventListener('message', (e)=>{ try{ const m=JSON.parse(e.data); this._route(m.from,m,'webrtc'); }catch{} });
@@ -394,7 +419,7 @@ export const Sync = new (class extends Emitter{
       const id=peerId||dc._peerId;
       this._conn(`WebRTC channel open with ${peerName||id?.slice(0,6)||'peer'}`);
       if(id){ this._seePeer(id, peerName, 'webrtc', Store.entityNames()); this.rtc.get(id)&&(this.rtc.get(id).dc=dc); }
-      this._rtcSendRaw(dc,{kind:'hello',id:this.selfId,uid:this.uid,name:Store.identity.name,to:'*',from:this.selfId,offers:Store.entityNames()});
+      this._rtcSendRaw(dc,{kind:'hello',id:this.selfId,uid:this.uid,name:Store.identity.name,to:'*',from:this.selfId,offers:Store.entityNames(),entity:this.viewingEntity});
     };
     dc.onmessage=(e)=>{ try{ const m=JSON.parse(e.data); this._route(m.from,m,'webrtc'); }catch{} };
     dc.onclose=()=>{ if(peerId){ const p=this.peers.get(peerId); if(p){p.state='offline';this.emit('peers');} } };

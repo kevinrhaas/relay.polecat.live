@@ -3,7 +3,7 @@
 // record editor that slides in from the right when a row is opened.
 import { Store } from '../store.js';
 import { Sync } from '../sync.js';
-import { el, escapeHtml, ago, shortId, toast, modal, confirmDialog } from '../ui.js';
+import { el, escapeHtml, ago, shortId, toast, modal, confirmDialog, avatarColor, initials } from '../ui.js';
 import { icon } from '../icons.js';
 
 const K_TREE_OPEN = 'relay.tree.open';
@@ -30,6 +30,7 @@ let treeWidth = clampTreeW(parseInt(localStorage.getItem(K_TREE_WIDTH)||String(T
 let expanded = loadExpanded();
 let filterText = '';
 let sortField = null, sortDir = 'asc';
+let _presOff = null; // unsub for the live "who's viewing this table" listener
 
 function loadExpanded(){
   try{ return new Set(JSON.parse(localStorage.getItem(K_TREE_EXPANDED)||'[]')); }catch{ return new Set(); }
@@ -44,6 +45,7 @@ export function renderTable(root, ctx, params={}){
   current = params.entity && names.includes(params.entity) ? params.entity
           : (current && names.includes(current) ? current : names[0]);
   if(current!==prevEntity){ filterText=''; sortField=null; sortDir='asc'; }
+  Sync.setViewing(current || null);   // tell peers what table (if any) we're looking at
 
   // preserve focus/cursor in the filter box across full re-renders (e.g. a
   // remote sync landing mid-keystroke) — only the row area normally rebuilds
@@ -53,7 +55,8 @@ export function renderTable(root, ctx, params={}){
   root.innerHTML='';
   const wrap = el('div',{class:'wrap'});
   const shell = el('div',{class:'table-shell'});
-  shell.append(buildTree(root, ctx, names));
+  const viewerEls = new Map(); // entity key -> its tree-row "who's viewing" badge
+  shell.append(buildTree(root, ctx, names, viewerEls));
 
   const mainCol = el('div',{class:'table-main'});
   const toolbar = el('div',{class:'tbl-toolbar'});
@@ -61,11 +64,15 @@ export function renderTable(root, ctx, params={}){
   if(!current){
     toolbar.append(el('div',{class:'muted', text:'No tables yet'}));
     mainCol.append(toolbar, el('div',{class:'empty', html:`${icon('db')}<div>No entities yet. Create one to start collaborating.</div>`}));
-    shell.append(mainCol); wrap.append(shell); root.append(wrap); return;
+    shell.append(mainCol); wrap.append(shell); root.append(wrap);
+    wirePresence(wrap, viewerEls, null);
+    return;
   }
 
   const e = Store.entity(current);
   const label = el('div',{class:'tbl-current', html:`${icon(e.icon||'table')}<b>${escapeHtml(e.label)}</b>`});
+  const viewersBadge = el('span',{class:'tbl-viewers'});
+  label.append(viewersBadge);
   const search = el('div',{class:'search tbl-search'});
   const searchInput = el('input',{class:'input tbl-search-input', type:'search', placeholder:'Filter rows…',
     value:filterText, 'aria-label':`Filter rows in ${e.label}`});
@@ -93,6 +100,7 @@ export function renderTable(root, ctx, params={}){
   shell.append(mainCol);
   wrap.append(shell);
   root.append(wrap);
+  wirePresence(wrap, viewerEls, viewersBadge);
 
   // rebuilds only the field header + rows + footer, so filtering/sorting
   // never disturbs the toolbar (and the search box keeps its focus)
@@ -145,6 +153,32 @@ export function renderTable(root, ctx, params={}){
   }
 }
 
+// ---- "who's viewing this table" — live, ephemeral, never touches Store ---
+// Paints once immediately, then keeps repainting in place (no full re-render,
+// so it never disturbs an in-progress filter/edit) whenever a peer's presence
+// changes, until this render's root is no longer in the document.
+function wirePresence(wrap, viewerEls, viewersBadge){
+  const paint = ()=>{
+    viewerEls.forEach((elm,k)=>paintViewers(elm,k));
+    if(viewersBadge && current) paintViewers(viewersBadge, current);
+  };
+  paint();
+  if(_presOff) _presOff();
+  _presOff = Sync.on('peers', ()=>{
+    if(!document.body.contains(wrap)){ _presOff&&_presOff(); _presOff=null; return; }
+    paint();
+  });
+}
+function paintViewers(elm, entityKey){
+  const viewers = Sync.viewersOf(entityKey);
+  if(!viewers.length){ elm.innerHTML=''; elm.title=''; elm.classList.remove('show'); return; }
+  elm.classList.add('show');
+  elm.title = `${viewers.map(v=>v.name).join(', ')} also viewing this table`;
+  const shown = viewers.slice(0,3);
+  elm.innerHTML = shown.map(v=>`<span class="viewer-dot" style="background:${avatarColor(v.uid)}">${escapeHtml(initials(v.name))}</span>`).join('')
+    + (viewers.length>shown.length ? `<span class="viewer-dot viewer-more">+${viewers.length-shown.length}</span>` : '');
+}
+
 // same filter + sort the toolbar applies, shared with CSV export so a
 // download always matches what's currently on screen
 function visibleRows(cols){
@@ -178,7 +212,7 @@ function cmpVals(a, b){
 }
 
 // ---- left tree: entities, expandable to their fields ---------------------
-function buildTree(root, ctx, names){
+function buildTree(root, ctx, names, viewerEls){
   const panel = el('div',{class:'tree-panel'+(treeOpen?' open':'')});
   if(treeOpen) panel.style.width = treeWidth+'px';
   const head = el('div',{class:'tree-head'});
@@ -203,8 +237,10 @@ function buildTree(root, ctx, names){
     const caret = el('button',{class:'tree-caret'+(isOpen?' open':''), title: isOpen?'Collapse fields':'Expand fields',
       'aria-label': isOpen?'Collapse fields':'Expand fields', html:icon('chevron'),
       onclick:(ev)=>{ ev.stopPropagation(); toggleExpanded(k); renderTable(root,ctx,{entity:current}); }});
+    const viewersEl = el('span',{class:'tree-viewers'});
+    viewerEls.set(k, viewersEl);
     row.append(caret, el('span',{class:'tree-ic', html:icon(e.icon||'table')}),
-      el('span',{class:'tree-label', text:e.label}), el('span',{class:'tree-count', text:String(Store.count(k))}));
+      el('span',{class:'tree-label', text:e.label}), el('span',{class:'tree-count', text:String(Store.count(k))}), viewersEl);
     node.append(row);
     if(isOpen){
       const cols = Store.columns(k);

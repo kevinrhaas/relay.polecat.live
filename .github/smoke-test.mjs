@@ -153,6 +153,39 @@ try {
     await closeModal();
     return persisted;
   });
+  await check('presence: a peer viewing the same table shows a live "who\'s viewing" badge, cleared when they leave', async () => {
+    // Two real browser tabs would collide on identity (same-origin localStorage
+    // means the same Store.identity.id), so simulate a distinct peer by feeding
+    // a synthetic mesh message straight into Sync's real routing — exercises
+    // the exact _route/_seePeer/viewersOf/paint path a real second peer would.
+    const key = await page.evaluate(async () => {
+      const { currentEntity } = await import('/js/views/table.js');
+      return currentEntity();
+    });
+    if (!key) return false;
+    await page.evaluate(async (k) => {
+      const { Sync } = await import('/js/sync.js');
+      Sync._onMesh({ kind: 'hello', from: 'smoke-peer-1', to: '*', uid: 'smoke-peer-uid-1', name: 'Static Peer', offers: [k], entity: null });
+      Sync._onMesh({ kind: 'presence', from: 'smoke-peer-1', to: '*', uid: 'smoke-peer-uid-1', name: 'Static Peer', entity: k });
+    }, key);
+    await page.waitForTimeout(200);
+    const shown = await page.evaluate(() => {
+      const badge = document.querySelector('.tbl-viewers');
+      const treeBadge = document.querySelector('.tree-row.active .tree-viewers');
+      return !!(badge && badge.classList.contains('show') && badge.title.includes('Static Peer')
+        && treeBadge && treeBadge.classList.contains('show'));
+    });
+    await page.evaluate(async () => {
+      const { Sync } = await import('/js/sync.js');
+      Sync._onMesh({ kind: 'bye', from: 'smoke-peer-1', to: '*' });
+    });
+    await page.waitForTimeout(200);
+    const cleared = await page.evaluate(() => {
+      const badge = document.querySelector('.tbl-viewers');
+      return !badge || !badge.classList.contains('show');
+    });
+    return shown && cleared;
+  });
   await check('icon-only buttons expose an accessible label', async () => {
     const delRow = await $('tbody tr .row-actions');
     const delOk = delRow && (await delRow.getAttribute('aria-label'));

@@ -284,6 +284,17 @@ body{
 .tbl-toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px}
 .tbl-current{display:flex;align-items:center;gap:9px;font-size:14.5px}
 .tbl-current svg{width:17px;height:17px;color:var(--brand-b);flex:0 0 auto}
+
+/* "who's viewing this table" — live presence, never persisted */
+.tree-viewers,.tbl-viewers{display:none;align-items:center;flex:0 0 auto}
+.tree-viewers.show,.tbl-viewers.show{display:flex}
+.tree-row.active .viewer-dot{border-color:var(--brand-b)}
+.viewer-dot{width:16px;height:16px;border-radius:50%;border:1.5px solid var(--surface);
+  margin-left:-5px;display:flex;align-items:center;justify-content:center;
+  font-size:8px;font-weight:700;color:#fff;flex:0 0 auto}
+.viewer-dot:first-child{margin-left:0}
+.viewer-more{background:var(--surface-3);color:var(--text-2)}
+.tbl-viewers .viewer-dot{width:20px;height:20px;font-size:9px;border-color:var(--bg)}
 .tbl-search{flex:0 1 220px;min-width:140px}
 .tbl-search .input{padding-top:6px;padding-bottom:6px;font-size:12.5px}
 
@@ -323,7 +334,8 @@ body{
 .tree-caret svg{width:11px;height:11px;transition:transform .15s}
 .tree-caret.open svg{transform:rotate(90deg)}
 .tree-panel:not(.open) .tree-label,.tree-panel:not(.open) .tree-count,
-.tree-panel:not(.open) .tree-caret,.tree-panel:not(.open) .tree-fields{display:none}
+.tree-panel:not(.open) .tree-caret,.tree-panel:not(.open) .tree-fields,
+.tree-panel:not(.open) .tree-viewers{display:none}
 .tree-panel:not(.open) .tree-row{justify-content:center}
 .tree-fields{display:flex;flex-direction:column;gap:1px;padding:2px 0 6px 29px;animation:expand .18s ease}
 .tree-field{background:none;border:0;text-align:left;padding:5px 8px;border-radius:6px;

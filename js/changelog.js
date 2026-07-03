@@ -10,6 +10,17 @@
 // .github/stamp-changelog.mjs regenerates every `date` from its `ts`.
 export const CHANGELOG = [
   {
+    v: 34,
+    title: 'See who else is viewing a table',
+    ts: '2026-07-03T16:37:56.809Z',
+    date: 'Jul 3, 2026, 11:37 AM CT',
+    items: [
+      'Tables now show a small live badge of peers currently looking at the same table — in the tree list and next to the table name.',
+      'Hover the badge to see who — updates instantly as people open, switch, or leave a table.',
+      'Purely a live signal between connected peers — nothing is stored or synced to your data.',
+    ],
+  },
+  {
     v: 33,
     title: 'CSV import suggests field types per column',
     ts: '2026-07-03T15:49:46.635Z',
