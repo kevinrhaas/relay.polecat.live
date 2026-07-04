@@ -52,6 +52,17 @@ when you finish something, move it to **Done** with the date; add discoveries to
 - Multiple workspaces / workspace switcher.
 
 ## Done
+- 2026-07-04 — Landing page refresh: the hero "what's new" pill and screenshot
+  still showcased Link fields, which had since been superseded by four more
+  shipped features (multi-link, reverse links, and — this same day — global
+  search). Re-captured the hero shot to show the Ctrl+K search palette
+  mid-query, finding "Ada" as both a Contacts record and the owner of a Tasks
+  record from a different table in one search — the clearest single-frame
+  demo of why cross-table search matters. Swapped the "what's new" pill to
+  the search callout, and touched up the "Dynamic JSON tables" feature card
+  plus meta/OG descriptions to mention Ctrl+K search and multi-record links.
+  Pure copy/asset change, no new behavior — verified all 76 existing smoke
+  checks still pass.
 - 2026-07-04 — Global search (Ctrl+K / Cmd+K): a command-palette style modal,
   opened by the keyboard shortcut or a new search icon in the top bar, that
   searches every table's records (any field value, case-insensitive

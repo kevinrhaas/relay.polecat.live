@@ -10,6 +10,16 @@
 // .github/stamp-changelog.mjs regenerates every `date` from its `ts`.
 export const CHANGELOG = [
   {
+    v: 58,
+    title: 'Landing page refresh: global search takes the spotlight',
+    ts: '2026-07-04T15:01:56.162Z',
+    date: 'Jul 4, 2026, 10:01 AM CT',
+    items: [
+      'The homepage hero now leads with Ctrl+K global search — the newest feature — with a fresh screenshot of the search palette finding the same person across two different tables.',
+      'Touched up the feature copy and meta description to mention instant search and multi-record links.',
+    ],
+  },
+  {
     v: 57,
     title: 'Global search — jump to any table or record',
     ts: '2026-07-04T13:38:42.425Z',
