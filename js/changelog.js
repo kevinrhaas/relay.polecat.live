@@ -10,6 +10,16 @@
 // .github/stamp-changelog.mjs regenerates every `date` from its `ts`.
 export const CHANGELOG = [
   {
+    v: 52,
+    title: 'CSV import can link a column to another table',
+    ts: '2026-07-04T09:52:06.813Z',
+    date: 'Jul 4, 2026, 4:52 AM CT',
+    items: [
+      'Importing a CSV now offers "Link to another table" as a column type, matching each cell\'s text against an existing table\'s rows by name.',
+      'A cell that doesn\'t match any row is left blank instead of guessing — you get a heads-up in the import toast if any didn\'t match.',
+    ],
+  },
+  {
     v: 51,
     title: 'Link fields — reference rows in another table',
     ts: '2026-07-04T09:05:15.157Z',

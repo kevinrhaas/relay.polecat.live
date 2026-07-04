@@ -27,13 +27,14 @@ when you finish something, move it to **Done** with the date; add discoveries to
   more often than Dropbox's refresh-token flow does. Falls back to a one-click
   Reconnect, but worth watching for complaints.
 - Optional "always-on peer" (headless) for 24/7 availability without a DB.
-- Link fields (just shipped) only store a single record id per field —
-  multi-link (e.g. "Tasks" linking to several "Contacts" as owners) would need
-  a richer array-valued cell/editor and is a natural v2 if it's wanted.
-- CSV import doesn't offer "Link to another table" as a column type (excluded
-  deliberately — matching raw CSV text to an existing record id needs a
-  by-label lookup this doesn't do yet). Worth revisiting if imports commonly
-  carry foreign-key-shaped columns.
+- Link fields only store a single record id per field — multi-link (e.g.
+  "Tasks" linking to several "Contacts" as owners) would need a richer
+  array-valued cell/editor and is a natural v2 if it's wanted.
+- CSV import's new "Link to another table" column type matches by exact
+  (case-insensitive) label text and silently leaves unmatched cells blank —
+  no fuzzy matching, and duplicate labels in the target table resolve to
+  whichever record happens to sort first. Fine for names/titles that are
+  usually unique; worth a closer look if that turns out not to hold.
 
 ## Later
 - End-to-end encryption of records at rest / in transit beyond DTLS.
@@ -41,6 +42,26 @@ when you finish something, move it to **Done** with the date; add discoveries to
 - Multiple workspaces / workspace switcher.
 
 ## Done
+- 2026-07-04 — CSV import "Link to another table" column type: the per-column
+  type picker in the import preview (`openImportPreview` in `js/views/table.js`)
+  now offers "link" alongside Auto/Text/Number/Yes-No/Date/Dropdown, the
+  natural follow-up to today's Link fields feature and the item this file
+  called out as deliberately excluded at the time ("no sane way to match a
+  cell's text to an existing record id"). Picking Link for a column reveals a
+  target-table picker (built lazily via the existing `buildLinkTargetSelect()`,
+  same "only one <select> per row" discipline the Add/Edit-field modal already
+  follows, so every other per-row `select` locator in the smoke suite keeps
+  resolving to exactly one element); confirming the import builds a
+  lowercased-label → record-id map of the target table once per column (new
+  `labelToIdMap()`) and resolves each raw cell against it — a match stores
+  the target row's id (readable everywhere `linkedRecordLabel()` already
+  renders one), a miss leaves that cell blank rather than guessing. The
+  import's success toast now names how many cells didn't match, if any. Only
+  existing tables are ever offered as a target, since the table being
+  imported into doesn't exist until the import actually runs. Added a smoke
+  check that imports a two-row CSV with an "owner" column against the seeded
+  Contacts table, matching one row by name and leaving the other's unmatched
+  value blank.
 - 2026-07-04 — Link fields: a new field type, "Link to another table", turns
   a column into a picker of another table's live records instead of free
   text — the natural next step after Text/Number/Yes-No/Date/Dropdown for a

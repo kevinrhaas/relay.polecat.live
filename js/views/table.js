@@ -23,11 +23,6 @@ const FIELD_TYPES = [
   ['select', 'Dropdown (choose from list)'],
   ['link', 'Link to another table'],
 ];
-// CSV import creates a brand-new table from raw strings — there's no sane way
-// to match a cell's text to an existing record id, so 'link' (which needs a
-// live record picker) is excluded from that one picker; every other type list
-// in this file uses FIELD_TYPES directly.
-const IMPORT_FIELD_TYPES = FIELD_TYPES.filter(([v])=>v!=='link');
 const TYPE_BADGE = { number:'num', boolean:'y/n', date:'date', select:'list', link:'link' };
 
 let current = null;
@@ -640,6 +635,17 @@ function linkedRecordLabel(targetEntity, id){
   const rec = targetEntity ? Store.records(targetEntity).find(x=>x.id===id) : null;
   return rec ? recordLabel(targetEntity, rec) : '(deleted)';
 }
+// lowercased-label -> record-id lookup for a link column's CSV import match,
+// so "Ada Lovelace" in a raw cell resolves to that contact's row
+function labelToIdMap(targetEntity){
+  const map=new Map();
+  if(!targetEntity) return map;
+  Store.records(targetEntity).forEach(rec=>{
+    const label=recordLabel(targetEntity, rec).trim().toLowerCase();
+    if(label && !map.has(label)) map.set(label, rec.id);
+  });
+  return map;
+}
 // populate a link field's <select> with every current record of the target
 // table; a `cur` value that no longer matches a live record (deleted row, or
 // the whole target table renamed/removed) is kept as a trailing "(missing)"
@@ -957,18 +963,35 @@ function openImportPreview(root, ctx, filename, headers, dataRows){
   });
   table.append(tbody);
 
+  // link targets can only be existing tables — the one being created here
+  // doesn't exist until Import is clicked, so it's never an option
+  const canLink = Store.entityNames().length>0;
+  const typeChoices = canLink ? FIELD_TYPES : FIELD_TYPES.filter(([v])=>v!=='link');
   const typeRows = headers.map((h,i)=>{
     const colValues = dataRows.map(row=>row[i]).filter(v=>v);
     const suggestion = suggestColumnType(colValues);
     const sel=el('select',{class:'input'});
-    IMPORT_FIELD_TYPES.forEach(([v,l])=>sel.append(el('option',{value:v, text:l})));
+    typeChoices.forEach(([v,l])=>sel.append(el('option',{value:v, text:l})));
     sel.value = suggestion.type;
     const optsInput=el('input',{class:'input', placeholder:'Comma-separated options', value:(suggestion.options||[]).join(', ')});
     const optsWrap=el('div',{class:'import-type-opts', style:suggestion.type==='select'?'':'display:none'}, optsInput);
-    sel.addEventListener('change',()=>{ optsWrap.style.display = sel.value==='select' ? '' : 'none'; });
+    // link-target picker is built lazily, only once a column is actually
+    // switched to 'link' — same reasoning as the Add/Edit-field modal's own
+    // link-target select: every row keeps exactly one <select> the rest of
+    // the time, so existing per-row `select` locators (smoke suite, above)
+    // never have to disambiguate between two.
+    const linkWrap = el('div',{class:'import-type-opts', style:'display:none'});
+    const linkRef = { sel:null };
+    sel.addEventListener('change',()=>{
+      optsWrap.style.display = sel.value==='select' ? '' : 'none';
+      if(sel.value==='link'){
+        if(!linkRef.sel){ linkRef.sel=buildLinkTargetSelect(); linkWrap.append(linkRef.sel); }
+        linkWrap.style.display = '';
+      }else linkWrap.style.display = 'none';
+    });
     const row=el('div',{class:'import-type-row'},[
-      el('span',{class:'import-type-name', title:h, text:h}), sel, optsWrap]);
-    return { header:h, sel, optsInput, row };
+      el('span',{class:'import-type-name', title:h, text:h}), sel, optsWrap, linkWrap]);
+    return { header:h, sel, optsInput, linkRef, row };
   });
 
   const progressFill=el('div',{class:'import-progress-fill'});
@@ -984,7 +1007,7 @@ function openImportPreview(root, ctx, filename, headers, dataRows){
     el('div',{class:'table-scroll', style:'max-height:240px'}, table),
     (()=>{ const f=el('div',{class:'field'}); f.append(
       el('label',{text:'Field types'}),
-      el('p',{class:'muted tiny', style:'margin:0 0 8px', text:'Auto keeps the original text/number/boolean guessing. Columns that look like a short repeated set of values are pre-set to Dropdown.'}),
+      el('p',{class:'muted tiny', style:'margin:0 0 8px', text:'Auto keeps the original text/number/boolean guessing. Columns that look like a short repeated set of values are pre-set to Dropdown. Link matches each cell’s text against an existing table’s rows by name.'}),
       el('div',{class:'import-types'}, typeRows.map(t=>t.row))); return f; })(),
     progressWrap);
 
@@ -999,11 +1022,25 @@ function openImportPreview(root, ctx, filename, headers, dataRows){
     try{ key=Store.createEntity(label, 'table'); }
     catch(e){ toast('Could not create table',{body:e.message,kind:'err'}); return; }
     const total=dataRows.length;
+    // for a 'link' column, pre-build a lowercased-label -> record-id map of
+    // the target table so every cell in that column is a single lookup
+    // instead of re-scanning the target table's records per row; duplicate
+    // labels resolve to whichever record Store.records() lists first
+    // (most-recently-updated), same "good enough, deterministic" tradeoff
+    // suggestColumnType already makes elsewhere in this modal.
+    const linkMaps = typeRows.map(t=>t.sel.value==='link' ? labelToIdMap(t.linkRef.sel.value) : null);
+    let unmatchedLinks = 0;
     cancelBtn.disabled=true; importBtn.disabled=true; progressWrap.style.display='';
     for(let i=0;i<total;i+=CHUNK){
       const batch=dataRows.slice(i,i+CHUNK).map(row=>{
         const fields={};
-        headers.forEach((h,ci)=>{ if(row[ci]) fields[h]=coerceImportValue(row[ci], typeRows[ci].sel.value); });
+        headers.forEach((h,ci)=>{
+          if(!row[ci]) return;
+          if(typeRows[ci].sel.value==='link'){
+            const id=linkMaps[ci].get(row[ci].trim().toLowerCase());
+            if(id) fields[h]=id; else unmatchedLinks++;
+          }else fields[h]=coerceImportValue(row[ci], typeRows[ci].sel.value);
+        });
         return fields;
       }).filter(fields=>Object.keys(fields).length);
       if(batch.length) Store.upsertMany(key, batch);
@@ -1012,12 +1049,16 @@ function openImportPreview(root, ctx, filename, headers, dataRows){
       progressLabel.textContent=`Importing ${done}/${total} rows…`;
       if(done<total) await new Promise(r=>setTimeout(r,0));
     }
-    typeRows.forEach(({header,sel,optsInput})=>{
+    typeRows.forEach(({header,sel,optsInput,linkRef})=>{
       if(sel.value==='auto') return;
+      if(sel.value==='link'){ Store.setFieldType(key, header, 'link', linkRef.sel.value); return; }
       const opts = sel.value==='select' ? optsInput.value.split(',').map(s=>s.trim()).filter(Boolean) : undefined;
       Store.setFieldType(key, header, sel.value, opts);
     });
-    hide(); renderTable(root, ctx, {entity:key}); toast(`Imported ${total} row${total!==1?'s':''}`,{kind:'ok'});
+    hide(); renderTable(root, ctx, {entity:key});
+    toast(`Imported ${total} row${total!==1?'s':''}`, unmatchedLinks
+      ? {kind:'ok', body:`${unmatchedLinks} link value${unmatchedLinks!==1?'s':''} didn’t match an existing row and ${unmatchedLinks!==1?'were':'was'} left blank`}
+      : {kind:'ok'});
   }});
 
   const { hide }=modal({ title:'Import CSV', icon:'upload', wide:true, body, foot:[cancelBtn, importBtn] });

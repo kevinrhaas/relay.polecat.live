@@ -517,6 +517,36 @@ try {
         && rows.some((r) => r.fields.id === n - 1 && r.fields.val === `row${n - 1}`);
     }, total);
   });
+  await check('CSV import "Link to another table" column type matches cell text to an existing row by name', async () => {
+    const [chooser] = await Promise.all([
+      page.waitForEvent('filechooser'),
+      page.click('button[title="Import CSV"]'),
+    ]);
+    await chooser.setFiles({ name: 'smoke-import-link.csv', mimeType: 'text/csv',
+      buffer: Buffer.from('title,owner\nShip P2P sync,Ada Lovelace\nDesign rail nav,Someone Unknown\n') });
+    await page.waitForTimeout(300);
+    const ownerRow = page.locator('.import-type-row', { hasText: 'owner' });
+    if (!(await ownerRow.count())) return false;
+    await ownerRow.locator('select').selectOption('link');
+    await page.waitForTimeout(150);
+    const linkSel = ownerRow.locator('select.link-target-select');
+    if (!(await linkSel.count())) return false;
+    await linkSel.selectOption({ label: 'Contacts' });
+    await page.fill('.modal input:visible', 'Smoke CSV Link Table');
+    await page.click('.modal button:has-text("Import 2 rows")');
+    await page.waitForTimeout(400);
+    return await page.evaluate(async () => {
+      const { Store } = await import('/js/store.js');
+      const k = Store.entityNames().find((n) => Store.entity(n).label === 'Smoke CSV Link Table');
+      if (!k) return false;
+      const ft = Store.fieldType(k, 'owner');
+      if (!ft || ft.type !== 'link' || ft.entity !== 'contacts') return false;
+      const rows = Store.records(k);
+      const matched = rows.find((r) => r.fields.title === 'Ship P2P sync');
+      const unmatched = rows.find((r) => r.fields.title === 'Design rail nav');
+      return matched?.fields.owner === 'seed-contact-ada' && !('owner' in (unmatched?.fields || {}));
+    });
+  });
   await check('delete a table (store + UI update)', async () => {
     await page.evaluate(async () => {
       const { Store } = await import('/js/store.js');
