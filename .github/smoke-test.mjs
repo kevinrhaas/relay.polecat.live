@@ -803,6 +803,35 @@ try {
     const csv = fs.readFileSync(await download.path(), 'utf8');
     return csv.includes('Ada Lovelace; Alan Turing') || csv.includes('Alan Turing; Ada Lovelace');
   });
+  await check('grid: Ctrl+Arrow forces cell-to-cell navigation out of select/date/link cells without disturbing their native bare-arrow behavior, and a plain arrow already moves out of the multi-link button', async () => {
+    const activeField = () => page.evaluate(() => document.activeElement?.closest('td')?.dataset?.field);
+    const dueInput = page.locator('tbody tr:first-child td[data-field="due"] input');
+    if (!(await dueInput.count())) return false;
+
+    // plain ArrowLeft on the date input nudges its segment — the cell stays put
+    await dueInput.click(); await page.waitForTimeout(150);
+    await page.keyboard.press('ArrowLeft'); await page.waitForTimeout(150);
+    if ((await activeField()) !== 'due') return false;
+
+    // Ctrl+ArrowLeft forces a move into the previous cell (score)
+    await page.keyboard.press('Control+ArrowLeft'); await page.waitForTimeout(150);
+    if ((await activeField()) !== 'score') return false;
+
+    // Ctrl+ArrowRight from due lands on assignee (a single-link <select>)
+    await dueInput.click(); await page.waitForTimeout(150);
+    await page.keyboard.press('Control+ArrowRight'); await page.waitForTimeout(150);
+    if ((await activeField()) !== 'assignee') return false;
+
+    // Ctrl+ArrowLeft out of the assignee link <select> lands back on due
+    await page.keyboard.press('Control+ArrowLeft'); await page.waitForTimeout(150);
+    if ((await activeField()) !== 'due') return false;
+
+    // the multi-link button has no native arrow meaning, so a bare arrow
+    // already moves out of it, same as the boolean toggle
+    await page.$eval('tbody tr:first-child td[data-field="reviewers"] button.link-multi-btn', (b) => b.focus());
+    await page.keyboard.press('ArrowLeft'); await page.waitForTimeout(150);
+    return (await activeField()) === 'assignee';
+  });
   await check('record panel: "Linked from" shows records in other tables whose Link field points here, and a chip navigates there', async () => {
     const contactsRow = page.locator('.tree-row', { hasText: 'Contacts' });
     if (!(await contactsRow.count())) return false;

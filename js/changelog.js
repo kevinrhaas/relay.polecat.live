@@ -10,6 +10,17 @@
 // .github/stamp-changelog.mjs regenerates every `date` from its `ts`.
 export const CHANGELOG = [
   {
+    v: 62,
+    title: 'Ctrl+Arrow to navigate out of dropdown, date, and link cells',
+    ts: '2026-07-04T18:23:04.712Z',
+    date: 'Jul 4, 2026, 1:23 PM CT',
+    items: [
+      'Grid keyboard navigation now reaches every cell type: hold Ctrl (Cmd on Mac) with an arrow key to jump to the next cell from a dropdown, date, or linked-record cell.',
+      'A plain arrow key still does what it always did in those cells — cycles a dropdown\'s value or nudges a date segment — so nothing native is lost.',
+      'The multi-link "+ Link" button now also joins the other cell types in a plain arrow key moving you straight to the next cell.',
+    ],
+  },
+  {
     v: 61,
     title: 'Keyboard navigation in the table grid',
     ts: '2026-07-04T17:40:25.643Z',

@@ -21,12 +21,6 @@ when you finish something, move it to **Done** with the date; add discoveries to
    loops/GIFs, feature highlights. It should always reflect what the app can do.
 
 ## Next
-- Grid keyboard navigation (below) deliberately leaves select/date/link cells
-  on their native arrow-key behavior (cycling a dropdown's value, nudging a
-  date segment) rather than hijacking them for cell-to-cell movement — Tab
-  still reaches every cell type, just not the arrow keys. Worth a second pass
-  if that gap is felt in practice (e.g. a modifier like Ctrl+Arrow to force
-  navigation out of one of those controls).
 - Global search (Ctrl+K) scans every entity's records with a plain substring
   match on every field, capped at 30 record hits — fine for the workspace
   sizes this app targets, but a very large multi-thousand-row workspace with
@@ -53,9 +47,6 @@ when you finish something, move it to **Done** with the date; add discoveries to
   blank — no fuzzy matching, and duplicate labels in the target table resolve
   to whichever record happens to sort first. Fine for names/titles that are
   usually unique; worth a closer look if that turns out not to hold.
-- Multi-link's grid-cell editor is a modal checklist (a compact cell has no
-  room for an inline list); worth revisiting as a lighter popover if it feels
-  heavy in practice.
 
 ## Later
 - End-to-end encryption of records at rest / in transit beyond DTLS.
@@ -63,6 +54,28 @@ when you finish something, move it to **Done** with the date; add discoveries to
 - Multiple workspaces / workspace switcher.
 
 ## Done
+- 2026-07-04 — Grid keyboard navigation, part 2: the one gap the first round
+  (below) deliberately left — select/date/link cells keeping their native bare
+  arrow-key behavior instead of moving between cells — now has a way out.
+  Holding Ctrl (Cmd on Mac) with an arrow key forces cell-to-cell movement out
+  of a dropdown `<select>`, a date input, or a single-link `<select>`, while a
+  bare arrow key still cycles the dropdown's value or nudges the date's
+  segment exactly as before. `wireGridNav()` in `js/views/table.js` gained a
+  `requireMod` flag that gates the whole handler behind `ev.ctrlKey ||
+  ev.metaKey` for those three cell types only; the contenteditable text cells
+  and boolean toggle are unaffected (never required a modifier). Also found
+  and fixed a real gap while auditing every cell type against this: the
+  multi-link "+ Link" button had no arrow-key wiring at all (not even the
+  "deliberate" native-behavior exclusion — it was simply missed), even though
+  a plain button has no native arrow meaning to preserve, exactly like the
+  boolean toggle. It's now wired the same way, no modifier required. Added a
+  smoke check against the existing "Smoke Types Table" fixture driving
+  Ctrl+Arrow both directions out of the date and link cells, confirming a
+  bare arrow leaves the date cell in place, and confirming a bare arrow moves
+  out of the multi-link button. Also removed a stale Next bullet describing
+  the multi-link editor as a "modal checklist" worth revisiting as a
+  popover — that popover conversion had already shipped in an earlier run
+  without this file being updated to match.
 - 2026-07-04 — Grid keyboard navigation: the table grid's plain-text/number
   cells (contenteditable) and the boolean toggle now support spreadsheet-style
   arrow-key movement — Left/Right jump to the neighboring column once the

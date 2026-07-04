@@ -530,11 +530,12 @@ function rowEl(r, cols, root, ctx, onSelectionChange){
 }
 
 // Spreadsheet-style arrow-key navigation between grid cells. Wired for the
-// contenteditable text/number cells and the boolean toggle, whose arrow keys
-// have no built-in meaning; select/date/link cells keep their native arrow
-// behavior (cycling a dropdown's value, nudging a date segment) so this
-// deliberately leaves those alone — Tab still reaches every cell type in the
-// normal focus order.
+// contenteditable text/number cells, the boolean toggle, and the multi-link
+// button, whose arrow keys have no built-in meaning, so a bare arrow key
+// moves between cells. Select/date/link(single) cells keep their native bare
+// arrow behavior (cycling a dropdown's value, nudging a date segment) —
+// holding Ctrl (Cmd on Mac) forces cell-to-cell movement out of those instead.
+// Tab still reaches every cell type in the normal focus order either way.
 function focusGridCell(td){
   if(!td) return false;
   const f = td.matches('[contenteditable]') ? td : td.querySelector('button,input,select');
@@ -558,10 +559,15 @@ function caretAtEdge(td, edge){
   if(!r.collapsed) return false;
   return edge==='start' ? r.startOffset===0 : r.endOffset===(r.endContainer.textContent||'').length;
 }
-function wireGridNav(elm, root, r, field, cols, isText){
+function wireGridNav(elm, root, r, field, cols, isText, requireMod){
   elm.addEventListener('keydown',ev=>{
     const key=ev.key;
     if(!['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(key)) return;
+    // select/date/link cells have their own native meaning for a bare arrow key
+    // (cycling a dropdown's value, nudging a date segment) — only hijack them
+    // for cell-to-cell movement when Ctrl/Cmd is held, so that native behavior
+    // stays reachable with a plain arrow key.
+    if(requireMod && !(ev.ctrlKey || ev.metaKey)) return;
     if(isText){
       if(key==='ArrowLeft' && !caretAtEdge(elm,'start')) return;
       if(key==='ArrowRight' && !caretAtEdge(elm,'end')) return;
@@ -621,6 +627,7 @@ function fieldCell(r, field, ft, root, cols){
     values.forEach(o=>sel.append(el('option',{value:o, text:o})));
     sel.value = cur;
     sel.addEventListener('change',()=>commitCellValue(r, field, sel.value, td));
+    wireGridNav(sel, root, r, field, cols, false, true);
     td.append(sel);
     return td;
   }
@@ -632,6 +639,7 @@ function fieldCell(r, field, ft, root, cols){
       title:`Edit linked ${field}`, 'aria-label':`${field}: ${labels.length} linked record${labels.length!==1?'s':''}`,
       text: labels.length ? labels.join(', ') : '+ Link'});
     btn.addEventListener('click',()=>openMultiLinkPicker(r, field, ft, btn, td));
+    wireGridNav(btn, root, r, field, cols, false);
     td.append(btn);
     return td;
   }
@@ -641,6 +649,7 @@ function fieldCell(r, field, ft, root, cols){
     const sel=el('select',{class:'cell-select', 'aria-label':`${field} value`});
     fillLinkOptions(sel, ft.entity, val);
     sel.addEventListener('change',()=>commitCellValue(r, field, sel.value, td));
+    wireGridNav(sel, root, r, field, cols, false, true);
     td.append(sel);
     return td;
   }
@@ -649,6 +658,7 @@ function fieldCell(r, field, ft, root, cols){
     td.dataset.field=field;
     const inp=el('input',{class:'cell-date', type:'date', value: val||'', 'aria-label':`${field} date`});
     inp.addEventListener('change',()=>commitCellValue(r, field, inp.value, td));
+    wireGridNav(inp, root, r, field, cols, false, true);
     td.append(inp);
     return td;
   }
