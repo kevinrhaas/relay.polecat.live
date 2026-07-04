@@ -27,14 +27,14 @@ when you finish something, move it to **Done** with the date; add discoveries to
   more often than Dropbox's refresh-token flow does. Falls back to a one-click
   Reconnect, but worth watching for complaints.
 - Optional "always-on peer" (headless) for 24/7 availability without a DB.
-- Link fields only store a single record id per field — multi-link (e.g.
-  "Tasks" linking to several "Contacts" as owners) would need a richer
-  array-valued cell/editor and is a natural v2 if it's wanted.
-- CSV import's new "Link to another table" column type matches by exact
-  (case-insensitive) label text and silently leaves unmatched cells blank —
-  no fuzzy matching, and duplicate labels in the target table resolve to
-  whichever record happens to sort first. Fine for names/titles that are
+- CSV import's "Link to another table" column type (single or multi) matches
+  by exact (case-insensitive) label text and silently leaves unmatched cells
+  blank — no fuzzy matching, and duplicate labels in the target table resolve
+  to whichever record happens to sort first. Fine for names/titles that are
   usually unique; worth a closer look if that turns out not to hold.
+- Multi-link's grid-cell editor is a modal checklist (a compact cell has no
+  room for an inline list); worth revisiting as a lighter popover if it feels
+  heavy in practice.
 
 ## Later
 - End-to-end encryption of records at rest / in transit beyond DTLS.
@@ -42,6 +42,30 @@ when you finish something, move it to **Done** with the date; add discoveries to
 - Multiple workspaces / workspace switcher.
 
 ## Done
+- 2026-07-04 — Multi-link fields: a "Link to another table" field can now be
+  switched on to hold several linked records instead of just one, via a new
+  "Allow linking multiple records" checkbox next to the link-target picker
+  (Add field, Edit field, and CSV import's per-column type row all gained it) —
+  the natural v2 this file called out after single-value Link fields shipped
+  earlier today ("Tasks" linking several "Contacts" as owners was the
+  motivating case). Value stored per record is now `Store.setFieldType`'s
+  existing `{entity, multi}` config on the link field type; a plain array of
+  ids for a multi field, same single id as before for a non-multi one. A
+  compact grid cell has no room for a full checklist, so the grid renders a
+  "Alice, Bob" chip button that opens a small modal with one checkbox per
+  target-table record (new `buildMultiLinkEditor()`, reused by the grid
+  picker, the record panel — which has room to show the checklist inline —
+  and bulk "Set field…"); a linked id that no longer resolves to a live
+  record is kept as a checked "(missing)" row so unchecking it still removes
+  it from the value instead of it silently vanishing, same discipline the
+  single-link "(missing)" option already followed. CSV export and every
+  other place a link field's value is displayed/sorted/searched
+  (`displayValue()`) join multiple resolved labels with "; "; CSV import's
+  Link column type gained the same "Allow multiple" option, splitting a raw
+  cell on ";" and matching each part independently. Added a smoke check that
+  switches a field to multi-link, checks two contacts via the grid modal,
+  and confirms the stored id array, the record panel's checklist, and the
+  CSV export's joined label all agree.
 - 2026-07-04 — Polish sweep: the Admin view's "No invites yet" and the Activity
   view's "No activity yet" were the last two empty states in the app still
   rendered as a plain line of muted text (`admin.js`, `activity.js`) — every

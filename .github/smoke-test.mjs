@@ -657,6 +657,44 @@ try {
     const csv = fs.readFileSync(await download.path(), 'utf8');
     return csv.includes('Ada Lovelace');
   });
+  await check('multi-link field: "Allow linking multiple records" stores an id array, the grid cell + record panel checklist reflect it, and CSV export joins the labels with "; "', async () => {
+    await page.click('button:has-text("Field")'); await page.waitForTimeout(300);
+    await page.fill('.modal input:visible', 'reviewers');
+    await page.selectOption('.modal select', 'link'); await page.waitForTimeout(150);
+    const linkSel = await $('.modal select.link-target-select'); if (!linkSel) return false;
+    await linkSel.selectOption({ label: 'Contacts' });
+    const multiChk = page.locator('.modal .perm-row input[type="checkbox"]');
+    if (!(await multiChk.count())) return false;
+    await multiChk.check();
+    await page.click('.modal button:has-text("Add field")'); await page.waitForTimeout(300);
+
+    const colLabels = await page.$$eval('.col-head .col-label', (ls) => ls.map((l) => l.textContent.trim()));
+    const idx = colLabels.indexOf('reviewers'); if (idx < 0) return false;
+    await page.click(`tbody tr:first-child td:nth-child(${4 + idx}) button.link-multi-btn`);
+    await page.waitForTimeout(300);
+    const adaRow = page.locator('.modal .link-multi-list label', { hasText: 'Ada Lovelace' });
+    const alanRow = page.locator('.modal .link-multi-list label', { hasText: 'Alan Turing' });
+    if (!(await adaRow.count()) || !(await alanRow.count())) return false;
+    await adaRow.locator('input[type="checkbox"]').check();
+    await alanRow.locator('input[type="checkbox"]').check();
+    await page.click('.modal button:has-text("Save")'); await page.waitForTimeout(300);
+
+    const ids = (await smokeTypesRecord())?.reviewers;
+    if (!Array.isArray(ids) || ids.length !== 2 || !ids.includes('seed-contact-ada') || !ids.includes('seed-contact-alan')) return false;
+
+    const openBtn = await $('tbody tr .row-open'); if (!openBtn) return false;
+    await openBtn.click(); await page.waitForTimeout(300);
+    const checkedCount = await page.locator('.record-sheet .record-field:has-text("reviewers") .link-multi-list input:checked').count();
+    await closeModal();
+    if (checkedCount !== 2) return false;
+
+    const [download] = await Promise.all([
+      page.waitForEvent('download'),
+      page.click('button:has-text("Export CSV")'),
+    ]);
+    const csv = fs.readFileSync(await download.path(), 'utf8');
+    return csv.includes('Ada Lovelace; Alan Turing') || csv.includes('Alan Turing; Ada Lovelace');
+  });
   await check('editField: switching a typed field back to Auto clears its type badge', async () => {
     const headers = await page.$$('.col-head');
     let btn = null;

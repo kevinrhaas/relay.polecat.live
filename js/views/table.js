@@ -251,12 +251,21 @@ function visibleRows(cols){
   return rows;
 }
 
-// a link field's stored value is a record id — resolve it to the linked
-// record's display label wherever a human reads/sorts/searches/exports the
-// column, so it never shows a raw uuid. Every other field type passes through.
+// a link field's stored value is a record id (or, for a multi-link field, an
+// array of them) — resolve it to the linked record's display label wherever
+// a human reads/sorts/searches/exports the column, so it never shows a raw
+// uuid. Every other field type passes through.
 function displayValue(field, v){
   const ft = Store.fieldType(current, field);
-  return ft?.type==='link' ? linkedRecordLabel(ft.entity, v) : v;
+  if(ft?.type!=='link') return v;
+  if(ft.multi) return linkIds(v).map(id=>linkedRecordLabel(ft.entity, id)).filter(Boolean).join('; ');
+  return linkedRecordLabel(ft.entity, v);
+}
+
+// a multi-link value is stored as an array; tolerate a bare id too (e.g. a
+// field switched from single- to multi-link without rewriting old rows).
+function linkIds(v){
+  return Array.isArray(v) ? v : (v ? [v] : []);
 }
 
 function rowMatches(r, cols, needle){
@@ -541,6 +550,16 @@ function fieldCell(r, field, ft){
     td.append(sel);
     return td;
   }
+  if(ft?.type==='link' && ft.multi){
+    const td=el('td',{class:'link-multi-cell'});
+    const labels = linkIds(val).map(id=>linkedRecordLabel(ft.entity, id)).filter(Boolean);
+    const btn=el('button',{class:'btn ghost sm link-multi-btn', type:'button',
+      title:`Edit linked ${field}`, 'aria-label':`${field}: ${labels.length} linked record${labels.length!==1?'s':''}`,
+      text: labels.length ? labels.join(', ') : '+ Link'});
+    btn.addEventListener('click',()=>openMultiLinkPicker(r, field, ft));
+    td.append(btn);
+    return td;
+  }
   if(ft?.type==='link'){
     const td=el('td',{class:'select-cell'});
     const sel=el('select',{class:'cell-select', 'aria-label':`${field} value`});
@@ -660,6 +679,46 @@ function fillLinkOptions(sel, targetEntity, cur){
   sel.value = cur;
 }
 
+// checklist editor for a multi-link field: one checkbox per current record of
+// the target table, plus a trailing entry for any linked id that no longer
+// resolves to a live record (deleted row, or the whole target table gone) so
+// unchecking it still removes it from the value instead of it silently
+// vanishing. Used by the grid-cell picker, the record panel, and bulk-set.
+function buildMultiLinkEditor(targetEntity, curIds){
+  const ids = new Set(linkIds(curIds).map(String));
+  const wrap = el('div',{class:'link-multi-list'});
+  const records = targetEntity ? Store.records(targetEntity) : [];
+  const checks = new Map();
+  const addRow=(id, label, muted)=>{
+    const cb = el('input',{type:'checkbox'});
+    cb.checked = ids.has(id);
+    checks.set(id, cb);
+    wrap.append(el('label',{class:'perm-row', style:'cursor:pointer'+(checks.size===1?';border-top:0':'')},
+      [cb, el('span',{class:muted?'en muted':'en', text:label})]));
+  };
+  records.forEach(rec=>addRow(rec.id, recordLabel(targetEntity, rec)));
+  [...ids].filter(id=>!records.some(rec=>rec.id===id)).forEach(id=>addRow(id, `(missing) ${shortId(id)}`, true));
+  if(!checks.size) wrap.append(el('div',{class:'muted tiny', text:'No records in the target table yet.'}));
+  return { el: wrap, getValue: ()=>[...checks.entries()].filter(([,cb])=>cb.checked).map(([id])=>id) };
+}
+
+// modal for editing a multi-link grid cell's value — the record panel and
+// bulk-set editors have room for the checklist inline, but a compact grid
+// cell doesn't, so it opens the same checklist in a small modal instead.
+function openMultiLinkPicker(r, field, ft){
+  const editor = buildMultiLinkEditor(ft.entity, r.fields[field]);
+  const targetLabel = Store.entity(ft.entity)?.label || ft.entity;
+  const { hide } = modal({ title:`Link ${field}`, icon:'link',
+    body: el('div',{class:'field'},[el('label',{text:`Linked ${targetLabel} records`}), editor.el]),
+    foot:[ el('button',{class:'btn', text:'Cancel', onclick:()=>hide()}),
+      el('button',{class:'btn primary', text:'Save', onclick:()=>{
+        const ids = editor.getValue();
+        hide();
+        const prev = r.fields[field];
+        if(JSON.stringify(ids)!==JSON.stringify(prev)) Store.upsert(current, {[field]:ids}, r.id);
+      }})]});
+}
+
 // coerce a value to a boolean for the toggle control — a plain `!!val` would
 // treat leftover strings like "false" (truthy in JS) as on, which bites
 // whenever a field already held free-form data before being retyped
@@ -719,6 +778,10 @@ function bulkSetField(root, ctx, ids){
       opts.forEach(o=>sel.append(el('option',{value:o, text:o})));
       valueWrap.append(label, sel);
       getValue=()=>sel.value;
+    }else if(ft?.type==='link' && ft.multi){
+      const editor=buildMultiLinkEditor(ft.entity, []);
+      valueWrap.append(label, editor.el);
+      getValue=()=>editor.getValue();
     }else if(ft?.type==='link'){
       const sel=el('select',{class:'input'});
       fillLinkOptions(sel, ft.entity, '');
@@ -817,6 +880,10 @@ function recordFieldRow(rec, field){
     values.forEach(o=>input.append(el('option',{value:o, text:o})));
     input.value = cur;
     input.addEventListener('change',()=>commitField(rec, field, input.value, input));
+  }else if(kind==='link' && ft.multi){
+    const editor = buildMultiLinkEditor(ft.entity, val);
+    input = editor.el;
+    input.addEventListener('change',()=>commitField(rec, field, editor.getValue(), input));
   }else if(kind==='link'){
     input = el('select',{class:'input'});
     fillLinkOptions(input, ft.entity, val);
@@ -848,11 +915,11 @@ function addColumn(root, ctx){
   const optsInput=el('input',{class:'input', placeholder:'Comma-separated options, e.g. Open, In progress, Done'});
   const optsField=el('div',{class:'field', style:'display:none'},[el('label',{text:'Options'}), optsInput]);
   const linkField=el('div',{class:'field', style:'display:none'},[el('label',{text:'Link to table'})]);
-  let linkSel=null;
+  let linkSel=null, multiToggle=null;
   typeSel.addEventListener('change',()=>{
     optsField.style.display = typeSel.value==='select' ? '' : 'none';
     if(typeSel.value==='link'){
-      if(!linkSel){ linkSel=buildLinkTargetSelect(); linkField.append(linkSel); }
+      if(!linkSel){ linkSel=buildLinkTargetSelect(); multiToggle=buildMultiToggle(false); linkField.append(linkSel, multiToggle.row); }
       linkField.style.display = '';
     }else linkField.style.display = 'none';
   });
@@ -865,12 +932,12 @@ function addColumn(root, ctx){
       el('button',{class:'btn primary', text:'Add field', onclick:()=>{
         const name=input.value.trim().replace(/\s+/g,'_'); if(!name) return;
         // materialise the column onto the first row (or a fresh row) so it shows
-        const defaultVal = typeSel.value==='boolean' ? false : '';
+        const defaultVal = typeSel.value==='boolean' ? false : (typeSel.value==='link' && multiToggle.input.checked ? [] : '');
         const rows=Store.records(current);
         if(rows.length) Store.upsert(current,{[name]:defaultVal},rows[0].id);
         else Store.upsert(current,{[name]:defaultVal});
         if(typeSel.value==='link'){
-          Store.setFieldType(current, name, 'link', linkSel.value);
+          Store.setFieldType(current, name, 'link', {entity:linkSel.value, multi:multiToggle.input.checked});
         }else if(typeSel.value!=='auto'){
           const opts=optsInput.value.split(',').map(s=>s.trim()).filter(Boolean);
           Store.setFieldType(current, name, typeSel.value, opts);
@@ -889,6 +956,17 @@ function buildLinkTargetSelect(initial){
   Store.entityNames().forEach(k=>sel.append(el('option',{value:k, text:Store.entity(k).label})));
   if(initial) sel.value=initial;
   return sel;
+}
+
+// "allow more than one linked record" checkbox shown alongside the link-target
+// select — same lazy-build discipline (only appears once a field's actually
+// switched to 'link'), so it never adds a second locatable input up front.
+function buildMultiToggle(initial, labelText='Allow linking multiple records'){
+  const input=el('input',{type:'checkbox'});
+  input.checked = !!initial;
+  const row=el('label',{class:'perm-row', style:'cursor:pointer;border-top:0;padding:4px 0 0'},
+    [input, el('span',{class:'en', text:labelText})]);
+  return { row, input };
 }
 
 function addRowRec(root, ctx){
@@ -981,11 +1059,15 @@ function openImportPreview(root, ctx, filename, headers, dataRows){
     // the time, so existing per-row `select` locators (smoke suite, above)
     // never have to disambiguate between two.
     const linkWrap = el('div',{class:'import-type-opts', style:'display:none'});
-    const linkRef = { sel:null };
+    const linkRef = { sel:null, multi:null };
     sel.addEventListener('change',()=>{
       optsWrap.style.display = sel.value==='select' ? '' : 'none';
       if(sel.value==='link'){
-        if(!linkRef.sel){ linkRef.sel=buildLinkTargetSelect(); linkWrap.append(linkRef.sel); }
+        if(!linkRef.sel){
+          linkRef.sel=buildLinkTargetSelect();
+          linkRef.multi=buildMultiToggle(false, 'Multiple, separated by ";"');
+          linkWrap.append(linkRef.sel, linkRef.multi.row);
+        }
         linkWrap.style.display = '';
       }else linkWrap.style.display = 'none';
     });
@@ -1007,7 +1089,7 @@ function openImportPreview(root, ctx, filename, headers, dataRows){
     el('div',{class:'table-scroll', style:'max-height:240px'}, table),
     (()=>{ const f=el('div',{class:'field'}); f.append(
       el('label',{text:'Field types'}),
-      el('p',{class:'muted tiny', style:'margin:0 0 8px', text:'Auto keeps the original text/number/boolean guessing. Columns that look like a short repeated set of values are pre-set to Dropdown. Link matches each cell’s text against an existing table’s rows by name.'}),
+      el('p',{class:'muted tiny', style:'margin:0 0 8px', text:'Auto keeps the original text/number/boolean guessing. Columns that look like a short repeated set of values are pre-set to Dropdown. Link matches each cell’s text against an existing table’s rows by name — check “Multiple” to match several names in one cell, separated by semicolons.'}),
       el('div',{class:'import-types'}, typeRows.map(t=>t.row))); return f; })(),
     progressWrap);
 
@@ -1037,8 +1119,15 @@ function openImportPreview(root, ctx, filename, headers, dataRows){
         headers.forEach((h,ci)=>{
           if(!row[ci]) return;
           if(typeRows[ci].sel.value==='link'){
-            const id=linkMaps[ci].get(row[ci].trim().toLowerCase());
-            if(id) fields[h]=id; else unmatchedLinks++;
+            if(typeRows[ci].linkRef.multi.input.checked){
+              const parts=row[ci].split(';').map(s=>s.trim()).filter(Boolean);
+              const ids=parts.map(p=>linkMaps[ci].get(p.toLowerCase())).filter(Boolean);
+              unmatchedLinks += parts.length-ids.length;
+              if(ids.length) fields[h]=ids;
+            }else{
+              const id=linkMaps[ci].get(row[ci].trim().toLowerCase());
+              if(id) fields[h]=id; else unmatchedLinks++;
+            }
           }else fields[h]=coerceImportValue(row[ci], typeRows[ci].sel.value);
         });
         return fields;
@@ -1051,7 +1140,7 @@ function openImportPreview(root, ctx, filename, headers, dataRows){
     }
     typeRows.forEach(({header,sel,optsInput,linkRef})=>{
       if(sel.value==='auto') return;
-      if(sel.value==='link'){ Store.setFieldType(key, header, 'link', linkRef.sel.value); return; }
+      if(sel.value==='link'){ Store.setFieldType(key, header, 'link', {entity:linkRef.sel.value, multi:linkRef.multi.input.checked}); return; }
       const opts = sel.value==='select' ? optsInput.value.split(',').map(s=>s.trim()).filter(Boolean) : undefined;
       Store.setFieldType(key, header, sel.value, opts);
     });
@@ -1145,11 +1234,12 @@ function editField(field, root, ctx){
   const optsField=el('div',{class:'field', style: typeSel.value==='select'?'':'display:none'},[el('label',{text:'Options'}), optsInput]);
   const linkField=el('div',{class:'field', style: typeSel.value==='link'?'':'display:none'},[el('label',{text:'Link to table'})]);
   let linkSel = ft?.type==='link' ? buildLinkTargetSelect(ft.entity) : null;
-  if(linkSel) linkField.append(linkSel);
+  let multiToggle = ft?.type==='link' ? buildMultiToggle(ft.multi) : null;
+  if(linkSel) linkField.append(linkSel, multiToggle.row);
   typeSel.addEventListener('change',()=>{
     optsField.style.display = typeSel.value==='select' ? '' : 'none';
     if(typeSel.value==='link'){
-      if(!linkSel){ linkSel=buildLinkTargetSelect(); linkField.append(linkSel); }
+      if(!linkSel){ linkSel=buildLinkTargetSelect(); multiToggle=buildMultiToggle(false); linkField.append(linkSel, multiToggle.row); }
       linkField.style.display = '';
     }else linkField.style.display = 'none';
   });
@@ -1176,7 +1266,7 @@ function editField(field, root, ctx){
     const finalField = (nn && nn!==field) ? nn : field;
     if(nn && nn!==field) Store.renameField(current, field, nn);
     if(typeSel.value==='link'){
-      Store.setFieldType(current, finalField, 'link', linkSel.value);
+      Store.setFieldType(current, finalField, 'link', {entity:linkSel.value, multi:multiToggle.input.checked});
     }else{
       const opts=optsInput.value.split(',').map(s=>s.trim()).filter(Boolean);
       Store.setFieldType(current, finalField, typeSel.value, opts);

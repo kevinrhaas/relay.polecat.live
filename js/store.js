@@ -248,15 +248,20 @@ export const Store = new (class extends Emitter{
     const e=this.entity(entity);
     return (e && e.fieldTypes && e.fieldTypes[field]) || null;
   }
-  // `config` is type-specific: an options array for 'select', or the target
-  // entity key (string) for 'link' — same overloaded third slot, since only
-  // one of them is ever meaningful for a given type.
+  // `config` is type-specific: an options array for 'select', or
+  // `{entity, multi}` for 'link' (target entity key + whether the field
+  // holds one linked record id or an array of them) — same overloaded third
+  // slot, since only one of them is ever meaningful for a given type.
   setFieldType(entity, field, type, config){
     const e=this.entity(entity); if(!e) return;
     e.fieldTypes||={};
     if(!type || type==='auto') delete e.fieldTypes[field];
     else if(type==='select') e.fieldTypes[field] = (config && config.length) ? {type, options:config} : {type};
-    else if(type==='link') e.fieldTypes[field] = config ? {type, entity:config} : {type};
+    else if(type==='link'){
+      const targetEntity = config && typeof config==='object' ? config.entity : config;
+      const multi = !!(config && typeof config==='object' && config.multi);
+      e.fieldTypes[field] = targetEntity ? (multi ? {type, entity:targetEntity, multi:true} : {type, entity:targetEntity}) : {type};
+    }
     else e.fieldTypes[field] = {type};
     e._meta=this._emeta();
     this._persist(); this.emit('entities'); this.emit('change',{type:'entity',key:entity,origin:'local'});

@@ -10,6 +10,17 @@
 // .github/stamp-changelog.mjs regenerates every `date` from its `ts`.
 export const CHANGELOG = [
   {
+    v: 54,
+    title: 'Link fields can now hold multiple records',
+    ts: '2026-07-04T11:35:07.507Z',
+    date: 'Jul 4, 2026, 6:35 AM CT',
+    items: [
+      'A "Link to another table" field can be set to "Allow linking multiple records" — the grid cell and record panel show a checklist instead of a single picker.',
+      'CSV import\'s Link column type gained the same option, splitting a cell into several matches by semicolon.',
+      'CSV export and the grid cell join multiple linked records\' names with "; ".',
+    ],
+  },
+  {
     v: 53,
     title: 'Polish sweep: empty states and fresher landing copy',
     ts: '2026-07-04T10:45:00.950Z',
