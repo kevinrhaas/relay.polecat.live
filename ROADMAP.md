@@ -27,8 +27,8 @@ when you finish something, move it to **Done** with the date; add discoveries to
   more often than Dropbox's refresh-token flow does. Falls back to a one-click
   Reconnect, but worth watching for complaints.
 - Optional "always-on peer" (headless) for 24/7 availability without a DB.
-- Reorder fields (drag columns in the tree/grid) — field order is currently
-  whatever `columns()` discovers first, with no way to control it.
+- Reorder tables themselves (drag rows in the tree's table list) — same
+  itch as the field reorder just shipped, but for the top-level table order.
 
 ## Later
 - End-to-end encryption of records at rest / in transit beyond DTLS.
@@ -36,6 +36,29 @@ when you finish something, move it to **Done** with the date; add discoveries to
 - Multiple workspaces / workspace switcher.
 
 ## Done
+- 2026-07-04 — Reorder fields: columns can finally be put in the order you
+  want instead of whatever `columns()` happened to discover them in. A drag
+  handle (grip icon) on every grid column header and every tree-panel field
+  row lets you drag a field to a new position — grip and drop don't move the
+  DOM live (the grid's header and body cells would need to move in lockstep),
+  they just track the nearest neighbor as you drag, highlight the drop point,
+  and apply the whole new order through `Store` on release, same house style
+  as the existing resize handles (pointer events, not native HTML5 drag-and-
+  drop, so it works with touch too). Each grip is also a real, focusable
+  `<button>` with a keyboard fallback — Left/Right in the grid, Up/Down in
+  the tree — swapping the field with its immediate neighbor, since a
+  drag-only interaction would have been a step backward for the app's
+  accessibility track record. New `Store.reorderFields(entity, orderedKeys)`
+  persists an entity-level `fieldOrder` array (mirrors `fieldTypes`'
+  precedent): unset means the old discovery-order behavior; set, it sorts
+  known fields by that order and appends any newly-discovered field at the
+  end. Wired into `entityDefs()`/`ensureEntity()` for peer sync,
+  `duplicateEntity()`/`restoreEntity()` so it survives table duplicate/
+  undo-delete, and `renameField()`/`deleteField()` so renaming or deleting a
+  field keeps the array consistent. Added two smoke checks: one dragging a
+  grid column header's grip past a neighbor and confirming the visual order
+  and persisted `fieldOrder` match, one pressing the arrow key on a tree
+  field's grip and confirming the same.
 - 2026-07-04 — Duplicate a row: every row's per-row action column (the trash
   button next to each row) gained a "Duplicate" button — the natural
   row-level counterpart to `duplicateEntity`'s table-level clone. New

@@ -636,6 +636,43 @@ try {
     return !afterDeleteBadges.includes('num') && afterDelete?.score === undefined
       && restored?.score === 42 && restoredBadges.includes('num');
   });
+  const smokeTypesFieldOrder = () => page.evaluate(() => {
+    const raw = JSON.parse(localStorage.getItem('relay.workspace.v1'));
+    const e = Object.values(raw.entities).find((x) => x.label === 'Smoke Types Table');
+    return e && e.fieldOrder;
+  });
+  await check('grid: dragging a column header by its grip reorders fields, and it persists', async () => {
+    const colLabels = () => page.$$eval('.col-head .col-label', (ls) => ls.map((l) => l.textContent.trim()));
+    const before = await colLabels();
+    const statusIdx = before.indexOf('status'), activeIdx = before.indexOf('active');
+    if (statusIdx < 0 || activeIdx < 0) return false;
+    const grip = (await page.$$('.col-grip'))[statusIdx]; if (!grip) return false;
+    const targetHeader = (await page.$$('.col-head'))[activeIdx]; if (!targetHeader) return false;
+    const gbox = await grip.boundingBox(); const tbox = await targetHeader.boundingBox();
+    if (!gbox || !tbox) return false;
+    await page.mouse.move(gbox.x + gbox.width / 2, gbox.y + gbox.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(tbox.x + 4, tbox.y + tbox.height / 2, { steps: 6 });
+    await page.mouse.up(); await page.waitForTimeout(200);
+    const after = await colLabels();
+    const persisted = await smokeTypesFieldOrder();
+    return after.indexOf('status') < after.indexOf('active') && JSON.stringify(persisted) === JSON.stringify(after);
+  });
+  await check('tree panel: arrow key on a field’s grip swaps it with its neighbor, and it persists', async () => {
+    const row = page.locator('.tree-row.active');
+    if (!(await row.count())) return false;
+    await row.locator('.tree-caret').click(); await page.waitForTimeout(250);
+    const labelsBefore = await page.$$eval('.tree-field', (f) => f.map((x) => x.textContent.trim()));
+    if (labelsBefore.length < 2) return false;
+    const lastIdx = labelsBefore.length - 1;
+    const grip = (await page.$$('.field-grip'))[lastIdx]; if (!grip) return false;
+    await grip.focus();
+    await page.keyboard.press('ArrowUp'); await page.waitForTimeout(200);
+    const labelsAfter = await page.$$eval('.tree-field', (f) => f.map((x) => x.textContent.trim()));
+    const persisted = await smokeTypesFieldOrder();
+    const swapped = labelsAfter[lastIdx] === labelsBefore[lastIdx - 1] && labelsAfter[lastIdx - 1] === labelsBefore[lastIdx];
+    return swapped && JSON.stringify(persisted) === JSON.stringify(labelsAfter);
+  });
   await check('deleting a table via Edit table shows an "Undo" toast that restores it with its rows', async () => {
     await page.click('button:has-text("Edit table")'); await page.waitForTimeout(300);
     await page.click('.modal button.danger:has-text("Delete table")'); await page.waitForTimeout(200);

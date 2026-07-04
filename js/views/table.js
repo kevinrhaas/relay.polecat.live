@@ -162,6 +162,7 @@ export function renderTable(root, ctx, params={}){
       hr.append(el('th',{class:'chk-head'},[selectAllCb]));
       hr.append(el('th',{class:'open-head', text:''}));
       hr.append(el('th',{text:'id'}));
+      const thMap = new Map();
       cols.forEach(c=>{
         const sorted = sortField===c;
         const ft = Store.fieldType(current, c);
@@ -171,13 +172,27 @@ export function renderTable(root, ctx, params={}){
           onclick:doSort,
           onkeydown:(ev)=>{ if(ev.target!==ev.currentTarget) return; if(ev.key!=='Enter'&&ev.key!==' ') return; ev.preventDefault(); doSort(); }});
         const inner = el('div',{class:'col-head-inner'});
+        if(cols.length>1) inner.append(el('button',{class:'col-grip', type:'button', 'data-field':c,
+          title:'Drag to reorder — or focus and press ←/→', 'aria-label':`Reorder field ${c}: drag, or press left/right arrow`,
+          html:icon('grip')}));
         inner.append(el('span',{class:'col-label', text:c}));
         if(ft) inner.append(el('span',{class:'col-type-badge', title:FIELD_TYPES.find(([v])=>v===ft.type)?.[1]||ft.type, text:TYPE_BADGE[ft.type]||ft.type}));
         if(sorted) inner.append(el('span',{class:'col-sort-ic'+(sortDir==='desc'?' desc':''), html:icon('chevron')}));
         inner.append(el('button',{class:'col-edit-btn', title:`Rename or delete field “${c}”`, 'aria-label':`Edit field ${c}`,
           html:icon('edit'), onclick:(ev)=>{ ev.stopPropagation(); editField(c, root, ctx); }}));
         th.append(inner);
+        thMap.set(c, th);
         hr.append(th);
+      });
+      if(cols.length>1) cols.forEach(c=>{
+        const th = thMap.get(c);
+        const grip = th.querySelector('.col-grip');
+        const siblings = ()=>cols.filter(x=>x!==c).map(x=>({field:x, el:thMap.get(x)}));
+        wireFieldDrag(grip, c, 'x', ()=>th, siblings, (order)=>{ Store.reorderFields(current, order); refreshRows(); });
+        wireFieldDragKeys(grip, c, 'ArrowLeft', 'ArrowRight', ()=>Store.columns(current), (order)=>{
+          Store.reorderFields(current, order); refreshRows();
+          const g=body.querySelector(`.col-grip[data-field="${CSS.escape(c)}"]`); g&&g.focus();
+        });
       });
       hr.append(el('th',{text:'updated'}), el('th',{text:''}));
       thead.append(hr); table.append(thead);
@@ -289,8 +304,30 @@ function buildTree(root, ctx, names, viewerEls){
       const cols = Store.columns(k);
       const fields = el('div',{class:'tree-fields'});
       if(!cols.length) fields.append(el('div',{class:'tree-field muted', text:'No fields yet'}));
-      else cols.forEach(c=>fields.append(el('button',{class:'tree-field', text:c, title:`Edit field “${c}”`,
-        onclick:(ev)=>{ ev.stopPropagation(); current=k; editField(c, root, ctx); }})));
+      else{
+        const rowMap = new Map();
+        cols.forEach(c=>{
+          const fieldRow = el('div',{class:'tree-field-row'});
+          if(cols.length>1) fieldRow.append(el('button',{class:'field-grip', type:'button', 'data-field':c,
+            title:'Drag to reorder — or focus and press ↑/↓', 'aria-label':`Reorder field ${c}: drag, or press up/down arrow`,
+            html:icon('grip')}));
+          fieldRow.append(el('button',{class:'tree-field', text:c, title:`Edit field “${c}”`,
+            onclick:(ev)=>{ ev.stopPropagation(); current=k; editField(c, root, ctx); }}));
+          rowMap.set(c, fieldRow);
+          fields.append(fieldRow);
+        });
+        if(cols.length>1) cols.forEach(c=>{
+          const grip = rowMap.get(c).querySelector('.field-grip');
+          const siblings = ()=>cols.filter(x=>x!==c).map(x=>({field:x, el:rowMap.get(x)}));
+          wireFieldDrag(grip, c, 'y', ()=>rowMap.get(c), siblings, (order)=>{
+            Store.reorderFields(k, order); renderTable(root, ctx, {entity:current});
+          });
+          wireFieldDragKeys(grip, c, 'ArrowUp', 'ArrowDown', ()=>Store.columns(k), (order)=>{
+            Store.reorderFields(k, order); renderTable(root, ctx, {entity:current});
+            setTimeout(()=>{ const g=root.querySelector(`.field-grip[data-field="${CSS.escape(c)}"]`); g&&g.focus(); },30);
+          });
+        });
+      }
       node.append(fields);
     }
     list.append(node);
@@ -336,6 +373,74 @@ function wireTreeResize(panel, handle){
     treeWidth = TREE_DEFAULTW;
     panel.style.width = treeWidth+'px';
     localStorage.setItem(K_TREE_WIDTH, treeWidth);
+  });
+}
+
+// drag-to-reorder a set of fields (grid column headers or tree field rows) —
+// pointer-based (mouse + touch) so it works the same on desktop and mobile,
+// mirroring the resize handles' event-wiring style rather than native HTML5
+// drag-and-drop. Doesn't move any DOM live: the grid's header cell and every
+// row's matching body cell would need to move in lockstep, so instead it
+// just tracks which neighbor the pointer is currently closest to, highlights
+// that drop point, and applies the whole new order through Store on release.
+// `axis` is 'x' for the horizontal grid header, 'y' for the vertical tree list.
+function wireFieldDrag(handle, field, axis, getDragEl, getSiblings, onReorder){
+  let active=false, targetField=null, after=false;
+  const clear=()=>getSiblings().forEach(({el})=>el.classList.remove('drag-over','drag-over-after'));
+  const onMove=(ev)=>{
+    if(!active) return;
+    ev.preventDefault();
+    const pos = axis==='x' ? (ev.touches?ev.touches[0].clientX:ev.clientX) : (ev.touches?ev.touches[0].clientY:ev.clientY);
+    const sibs = getSiblings();
+    clear();
+    targetField=null; after=false;
+    for(const s of sibs){
+      const r=s.el.getBoundingClientRect();
+      const mid = axis==='x' ? (r.left+r.right)/2 : (r.top+r.bottom)/2;
+      if(pos<mid){ targetField=s.field; s.el.classList.add('drag-over'); break; }
+    }
+    if(targetField===null && sibs.length){
+      const last=sibs[sibs.length-1]; targetField=last.field; after=true; last.el.classList.add('drag-over-after');
+    }
+  };
+  const onUp=()=>{
+    if(!active) return;
+    active=false; getDragEl().classList.remove('dragging'); clear();
+    document.removeEventListener('mousemove',onMove); document.removeEventListener('mouseup',onUp);
+    document.removeEventListener('touchmove',onMove); document.removeEventListener('touchend',onUp);
+    if(targetField!==null){
+      const order = getSiblings().map(s=>s.field);
+      let idx = order.indexOf(targetField);
+      if(after) idx += 1;
+      order.splice(idx, 0, field);
+      onReorder(order);
+    }
+    targetField=null; after=false;
+  };
+  const onDown=(ev)=>{
+    active=true; getDragEl().classList.add('dragging');
+    document.addEventListener('mousemove',onMove); document.addEventListener('mouseup',onUp);
+    document.addEventListener('touchmove',onMove,{passive:false}); document.addEventListener('touchend',onUp);
+    ev.preventDefault(); ev.stopPropagation();
+  };
+  handle.addEventListener('mousedown',onDown);
+  handle.addEventListener('touchstart',onDown,{passive:false});
+  handle.addEventListener('click',ev=>ev.stopPropagation());
+}
+
+// keyboard fallback for the same reorder: focus a field's grip and press
+// the arrow key matching its axis to swap it with its immediate neighbor.
+function wireFieldDragKeys(handle, field, keyPrev, keyNext, getOrder, onReorder){
+  handle.addEventListener('keydown',ev=>{
+    if(ev.key!==keyPrev && ev.key!==keyNext) return;
+    ev.preventDefault(); ev.stopPropagation();
+    const order = getOrder();
+    const i = order.indexOf(field);
+    const j = ev.key===keyPrev ? i-1 : i+1;
+    if(i<0 || j<0 || j>=order.length) return;
+    const next = order.slice();
+    [next[i],next[j]] = [next[j],next[i]];
+    onReorder(next, field);
   });
 }
 
@@ -861,7 +966,7 @@ function editEntity(root, ctx){
     el('p',{class:'muted tiny', text:'Renames and icon changes sync to your peers.'}));
   const del=el('button',{class:'btn danger', html:`${icon('trash')} Delete table`, onclick:async()=>{
     if(await confirmDialog('Delete table',`Delete “${e.label}” and all its rows for you and your peers?`,{danger:true,okLabel:'Delete table'})){
-      const key=current, snapshot={label:e.label, icon:e.icon, fieldTypes:e.fieldTypes, records:e.records, pinned:Store.isPinned(key)};
+      const key=current, snapshot={label:e.label, icon:e.icon, fieldTypes:e.fieldTypes, fieldOrder:e.fieldOrder, records:e.records, pinned:Store.isPinned(key)};
       hide(); Store.deleteEntity(key);
       current=Store.entityNames()[0]||null;
       renderTable(root,ctx,{entity:current});

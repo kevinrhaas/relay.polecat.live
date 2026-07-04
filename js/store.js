@@ -124,7 +124,8 @@ export const Store = new (class extends Emitter{
       const id=uuid();
       records[id] = { id, entity:newKey, fields:{...r.fields}, _meta:this._emeta() };
     }
-    this.data.entities[newKey] = { label, icon:e.icon, fieldTypes: e.fieldTypes?{...e.fieldTypes}:undefined, records, _meta:this._emeta() };
+    this.data.entities[newKey] = { label, icon:e.icon, fieldTypes: e.fieldTypes?{...e.fieldTypes}:undefined,
+      fieldOrder: e.fieldOrder?[...e.fieldOrder]:undefined, records, _meta:this._emeta() };
     delete (this.data.entityTombstones||{})[newKey];
     this._persist(); this.emit('entities'); this.emit('change',{type:'entity',key:newKey,origin:'local'});
     return newKey;
@@ -158,7 +159,7 @@ export const Store = new (class extends Emitter{
     if(!snapshot || this.data.entities[key]) return false;
     this.data.entities[key] = {
       label: snapshot.label, icon: snapshot.icon,
-      fieldTypes: snapshot.fieldTypes, records: snapshot.records,
+      fieldTypes: snapshot.fieldTypes, fieldOrder: snapshot.fieldOrder, records: snapshot.records,
       _meta: this._emeta(),
     };
     delete (this.data.entityTombstones||{})[key];
@@ -176,6 +177,7 @@ export const Store = new (class extends Emitter{
       r.fields=f; r._meta={ rev:(r._meta.rev||0)+1, updatedAt:Date.now(), updatedBy:this.identity.id, deleted:false };
     }
     if(e.fieldTypes && oldKey in e.fieldTypes){ e.fieldTypes[newKey]=e.fieldTypes[oldKey]; delete e.fieldTypes[oldKey]; }
+    if(e.fieldOrder){ const i=e.fieldOrder.indexOf(oldKey); if(i>=0) e.fieldOrder[i]=newKey; }
     this._persist(); this.emit('records', entity); this.emit('change',{type:'record',entity,origin:'local'});
   }
   deleteField(entity, key){
@@ -186,6 +188,7 @@ export const Store = new (class extends Emitter{
       r.fields=f; r._meta={ rev:(r._meta.rev||0)+1, updatedAt:Date.now(), updatedBy:this.identity.id, deleted:false };
     }
     if(e.fieldTypes) delete e.fieldTypes[key];
+    if(e.fieldOrder) e.fieldOrder = e.fieldOrder.filter(k=>k!==key);
     this._persist(); this.emit('records', entity); this.emit('change',{type:'record',entity,origin:'local'});
   }
 
@@ -229,11 +232,21 @@ export const Store = new (class extends Emitter{
     this._persist(); this.emit('entities'); this.emit('change',{type:'entity',key:entity,origin:'local'});
   }
 
+  // ---- field order (optional; unset = discovery order from columns()) --
+  // entity-level metadata like fieldTypes, so it syncs and survives rename/
+  // delete-field the same way.
+  reorderFields(entity, orderedKeys){
+    const e=this.entity(entity); if(!e) return;
+    e.fieldOrder = (orderedKeys||[]).slice();
+    e._meta=this._emeta();
+    this._persist(); this.emit('entities'); this.emit('change',{type:'entity',key:entity,origin:'local'});
+  }
+
   // ---- entity definitions + tombstones for sync ------------------------
   entityDefs(filter){
     return Object.entries(this.data.entities)
       .filter(([k])=>!filter || filter.includes(k))
-      .map(([key,e])=>({ key, label:e.label, icon:e.icon||'table', fieldTypes:e.fieldTypes||{}, _meta:e._meta||{updatedAt:0,updatedBy:'?'} }));
+      .map(([key,e])=>({ key, label:e.label, icon:e.icon||'table', fieldTypes:e.fieldTypes||{}, fieldOrder:e.fieldOrder||[], _meta:e._meta||{updatedAt:0,updatedBy:'?'} }));
   }
   tombstoneDefs(){ return Object.entries(this.data.entityTombstones||{}).map(([key,t])=>({key,...t})); }
 
@@ -245,13 +258,14 @@ export const Store = new (class extends Emitter{
     if(tomb && tomb.at >= incoming) return false;              // a newer delete wins
     const e=this.data.entities[def.key];
     if(!e){
-      this.data.entities[def.key] = { label:def.label||def.key, icon:def.icon||'table', fieldTypes:def.fieldTypes||{}, records:{}, _meta:def._meta||this._emeta() };
+      this.data.entities[def.key] = { label:def.label||def.key, icon:def.icon||'table', fieldTypes:def.fieldTypes||{}, fieldOrder:def.fieldOrder||[], records:{}, _meta:def._meta||this._emeta() };
       this._persist(); this.emit('entities'); this.emit('change',{type:'entity',key:def.key,origin:'remote'});
       return 'created';
     }
     const ftChanged = JSON.stringify(e.fieldTypes||{}) !== JSON.stringify(def.fieldTypes||{});
-    if(incoming > (e._meta?.updatedAt||0) && (e.label!==def.label || e.icon!==def.icon || ftChanged)){
-      e.label=def.label; e.icon=def.icon||e.icon; e.fieldTypes=def.fieldTypes||{}; e._meta=def._meta;
+    const foChanged = JSON.stringify(e.fieldOrder||[]) !== JSON.stringify(def.fieldOrder||[]);
+    if(incoming > (e._meta?.updatedAt||0) && (e.label!==def.label || e.icon!==def.icon || ftChanged || foChanged)){
+      e.label=def.label; e.icon=def.icon||e.icon; e.fieldTypes=def.fieldTypes||{}; e.fieldOrder=def.fieldOrder||[]; e._meta=def._meta;
       this._persist(); this.emit('entities'); this.emit('change',{type:'entity',key:def.key,origin:'remote'});
       return 'updated';
     }
@@ -280,11 +294,18 @@ export const Store = new (class extends Emitter{
   count(entity){ return this.records(entity).length; }
   totalRecords(){ return this.entityNames().reduce((n,e)=>n+this.count(e),0); }
 
-  // columns discovered dynamically from the union of record fields
+  // columns discovered dynamically from the union of record fields, in
+  // discovery order unless the entity has an explicit fieldOrder (set by
+  // dragging/reordering a column) — known fields sort by that order first,
+  // with any newly-discovered field appended at the end.
   columns(entity){
     const cols=new Set();
     for(const r of this.records(entity)) Object.keys(r.fields||{}).forEach(k=>cols.add(k));
-    return [...cols];
+    const order = this.entity(entity)?.fieldOrder;
+    if(!order || !order.length) return [...cols];
+    const ordered = order.filter(k=>cols.has(k));
+    for(const k of cols) if(!ordered.includes(k)) ordered.push(k);
+    return ordered;
   }
 
   upsert(entity, fields, id, {origin='local', meta}={}){
