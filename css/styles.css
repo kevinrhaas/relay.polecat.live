@@ -487,6 +487,9 @@ tr.row-selected:hover{background:color-mix(in srgb,var(--brand-b) 14%,transparen
 .perm-row{display:flex;align-items:center;gap:10px;padding:7px 0;
   border-top:1px solid var(--border);font-size:12.5px}
 .perm-row .en{flex:1}
+.perm-row:hover{background:var(--surface-2)}
+.perm-row input[type=checkbox]{width:15px;height:15px;accent-color:var(--brand-b);cursor:pointer;flex:0 0 auto}
+.perm-row input[type=checkbox]:focus-visible{outline:none;box-shadow:var(--ring);border-radius:3px}
 .toggle{position:relative;width:38px;height:22px;border-radius:999px;
   background:var(--surface-3);border:1px solid var(--border);cursor:pointer;
   transition:.15s;flex:0 0 auto}

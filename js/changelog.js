@@ -10,6 +10,16 @@
 // .github/stamp-changelog.mjs regenerates every `date` from its `ts`.
 export const CHANGELOG = [
   {
+    v: 56,
+    title: 'Polish: checklist rows now show hover/focus feedback',
+    ts: '2026-07-04T12:52:17.592Z',
+    date: 'Jul 4, 2026, 7:52 AM CT',
+    items: [
+      'The checkbox rows used by multi-link fields (and the sharing/invite checklists they share styling with) now highlight on hover and show the app\'s focus ring when tabbed to — previously they gave no visual feedback at all.',
+      'Checkboxes in those rows now use the app\'s branded accent color instead of the browser default.',
+    ],
+  },
+  {
     v: 55,
     title: '"Linked from" — see the other side of a Link field',
     ts: '2026-07-04T12:08:36.300Z',

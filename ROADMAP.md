@@ -47,6 +47,22 @@ when you finish something, move it to **Done** with the date; add discoveries to
 - Multiple workspaces / workspace switcher.
 
 ## Done
+- 2026-07-04 — Polish: `.perm-row` — the checkbox-row pattern shared by the new
+  multi-link editor (`buildMultiLinkEditor()` in `js/views/table.js`), the
+  invite modal's auto-connect checkbox (`admin.js`), and the Peers permission
+  grid — had no `:hover` and no `:focus-visible` at all, and its raw
+  `<input type=checkbox>` used the unstyled browser default instead of the
+  app's branded accent color, unlike every other clickable-row pattern already
+  polished (`.tree-row`, `input.row-check`). Barely noticeable at 1-2 rows in
+  the older sharing panels, but the new multi-link editor turns `.perm-row`
+  into a scrollable list of many rows (`.link-multi-list`, up to 220px tall)
+  that's the primary interactive surface of its own modal/section, so the
+  missing feedback is now much more visible — keyboard users tabbing through
+  a multi-link checklist got no indication of which row was focused. Added
+  `.perm-row:hover`, `.perm-row input[type=checkbox]` (branded `accent-color`),
+  and `.perm-row input[type=checkbox]:focus-visible` (the same `var(--ring)`
+  treatment used everywhere else) to `css/styles.css`. Pure CSS, no behavior
+  change — verified all existing smoke checks still pass.
 - 2026-07-04 — "Linked from" (reverse links): opening a record now shows a new
   "Linked from" section listing records in *other* tables whose Link field
   points at it — the natural complement to the forward Link field/picker
