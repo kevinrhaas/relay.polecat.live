@@ -709,6 +709,8 @@ a.link:hover{text-decoration:underline}
 .msg .meta b{font-size:12.5px}
 .msg .meta span{font-size:10.5px;color:var(--text-3);font-family:var(--mono)}
 .msg .text{font-size:13.5px;line-height:1.45;white-space:pre-wrap;word-break:break-word}
+.msg.flash .body{animation:msg-flash 1.6s ease}
+@keyframes msg-flash{0%,15%{background:color-mix(in srgb,var(--consensus) 35%,var(--surface-2));border-color:var(--consensus)}100%{background:var(--surface-2)}}
 .msg.mine{margin-left:auto;flex-direction:row-reverse}
 .msg.mine .body{border-radius:14px 4px 14px 14px;
   background:linear-gradient(135deg,color-mix(in srgb,var(--brand-b) 22%,var(--surface-2)),color-mix(in srgb,var(--consensus) 22%,var(--surface-2)));

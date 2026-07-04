@@ -8,8 +8,10 @@ import { icon } from '../icons.js';
 let _off = null;
 let thread = 'general';   // 'general' or a peer uid
 
-export function renderMessages(root, ctx){
+export function renderMessages(root, ctx, params={}){
   root.innerHTML='';
+  if(params.thread) thread = params.thread;             // deep-link from global search
+  const highlightId = params.highlightId; delete params.highlightId;   // one-shot
   Sync.markRead(thread);   // viewing this thread clears its unread badge
   const wrap=el('div',{class:'wrap chat-wrap'});
 
@@ -50,7 +52,7 @@ export function renderMessages(root, ctx){
   wrap.append(composer);
 
   root.append(wrap);
-  scrollBottom();
+  if(highlightId) scrollToMessage(highlightId); else scrollBottom();
 
   if(_off) _off();
   _off = Sync.on('chat', (m)=>{
@@ -90,7 +92,7 @@ export function renderMessages(root, ctx){
 
 function bubble(m){
   const mine = m.uid===Sync.uid;
-  const b=el('div',{class:'msg'+(mine?' mine':'')});
+  const b=el('div',{class:'msg'+(mine?' mine':''), id:`msg-${m.id}`});
   b.innerHTML=`
     <div class="av" style="background:${avatarColor(m.uid||m.from)}">${initials(m.name)}</div>
     <div class="body">
@@ -103,4 +105,14 @@ function bubble(m){
 function scrollBottom(){
   const f=document.getElementById('chatFeed');
   if(f) requestAnimationFrame(()=>{ f.scrollTop=f.scrollHeight; });
+}
+
+function scrollToMessage(id){
+  requestAnimationFrame(()=>{
+    const b=document.getElementById(`msg-${id}`);
+    if(!b){ scrollBottom(); return; }
+    b.scrollIntoView({block:'center'});
+    b.classList.add('flash');
+    setTimeout(()=>b.classList.remove('flash'), 1600);
+  });
 }

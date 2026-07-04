@@ -26,6 +26,11 @@ when you finish something, move it to **Done** with the date; add discoveries to
   sizes this app targets, but a very large multi-thousand-row workspace with
   many tables would feel the linear scan; worth a debounce-tuned index if that
   ever comes up in practice.
+- Global search's new "Messages" results can only ever surface what's still in
+  `Sync.chat` (capped at the most recent 200 messages, `js/sync.js`) — fine for
+  the light, ephemeral messaging this app targets, but an older message that's
+  aged out of that window won't show up in search even though it once existed.
+  Worth revisiting if chat history retention ever grows past 200.
 - Reverse links only show the raw record picked as the "linked from" chip label
   (whichever field happens to be first non-empty on that row) — fine since it
   matches the same `recordLabel()` heuristic used everywhere else a linked
@@ -52,6 +57,22 @@ when you finish something, move it to **Done** with the date; add discoveries to
 - Multiple workspaces / workspace switcher.
 
 ## Done
+- 2026-07-04 — Global search now includes chat messages: Ctrl+K search
+  (`js/views/search.js`) previously only covered table names and record field
+  values — the chat feed (`Sync.chat` in `js/sync.js`, both the General room
+  and every DM thread) was a whole category of workspace content the palette
+  couldn't reach. A new "Messages" result group matches any message's text
+  (case-insensitive substring, newest first, capped at 8 hits like the other
+  groups' caps), showing the sender/thread/timestamp as the row's meta line.
+  Picking one calls `ctx.go('messages', {thread, highlightId})`; `renderMessages`
+  in `js/views/messages.js` gained support for both params — `thread` deep-links
+  straight to the right thread (General or a specific DM) instead of leaving
+  whatever thread was last open, and `highlightId` scrolls the matched bubble
+  into view and gives it a brief `.flash` treatment (new `msg-flash` keyframe in
+  `css/styles.css`, same color language as the existing per-cell sync flash) so
+  it's obvious which message matched. Added a smoke check that sends a message,
+  searches for its text via Ctrl+K, confirms a "Messages" group appears, and
+  that clicking the result navigates to Messages with the bubble flashed.
 - 2026-07-04 — Landing page refresh: the hero "what's new" pill and screenshot
   still showcased Link fields, which had since been superseded by four more
   shipped features (multi-link, reverse links, and — this same day — global

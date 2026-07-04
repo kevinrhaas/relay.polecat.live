@@ -1,14 +1,15 @@
 // Global search (Ctrl+K / Cmd+K): a command-palette style modal that finds
-// tables by name and records by any field value across the whole workspace,
-// then jumps straight there — the only search before this was the Tables
-// toolbar's per-table filter box, which never left the currently open table.
+// tables by name, records by any field value, and chat messages by text
+// across the whole workspace, then jumps straight there.
 import { Store } from '../store.js';
-import { el, escapeHtml, shortId, modal } from '../ui.js';
+import { Sync } from '../sync.js';
+import { el, escapeHtml, shortId, modal, clock } from '../ui.js';
 import { icon } from '../icons.js';
 import { recordLabel } from './table.js';
 
 const MAX_TABLE_HITS = 6;
 const MAX_RECORD_HITS = 30;
+const MAX_MESSAGE_HITS = 8;
 const DEBOUNCE_MS = 120;
 
 function highlight(text, q){
@@ -22,7 +23,7 @@ function truncate(s, n){ s=String(s); return s.length>n ? s.slice(0,n-1)+'…' :
 export function openGlobalSearch(ctx){
   if(document.querySelector('.overlay.show')) return;   // don't stack over an existing dialog
 
-  const input = el('input',{class:'input', type:'search', placeholder:'Search tables and records…',
+  const input = el('input',{class:'input', type:'search', placeholder:'Search tables, records, and messages…',
     'aria-label':'Search everything', role:'combobox', 'aria-expanded':'true', 'aria-autocomplete':'list'});
   const inputWrap = el('div',{class:'search gsearch-input'});
   inputWrap.append(el('span',{html:icon('search')}), input);
@@ -39,7 +40,8 @@ export function openGlobalSearch(ctx){
     hide();
     setTimeout(()=>{
       if(item.type==='table') ctx.go('table', {entity:item.entity});
-      else ctx.go('table', {entity:item.entity, openRecord:item.id});
+      else if(item.type==='record') ctx.go('table', {entity:item.entity, openRecord:item.id});
+      else ctx.go('messages', {thread:item.thread, highlightId:item.id});
     }, 220);   // let the modal's own hide transition finish first
   }
 
@@ -69,7 +71,7 @@ export function openGlobalSearch(ctx){
   function render(){
     const q = input.value.trim().toLowerCase();
     list.innerHTML=''; items=[]; activeIdx=-1;
-    if(!q){ list.append(el('div',{class:'muted tiny gsearch-hint', text:'Type to search every table and record.'})); return; }
+    if(!q){ list.append(el('div',{class:'muted tiny gsearch-hint', text:'Type to search every table, record, and message.'})); return; }
 
     const names = Store.orderedEntityNames();
     const tableHits = names.filter(n=>(Store.entity(n)?.label||'').toLowerCase().includes(q)).slice(0,MAX_TABLE_HITS);
@@ -92,7 +94,13 @@ export function openGlobalSearch(ctx){
       }
     }
 
-    if(!tableHits.length && !recordHits.length){
+    const messageHits = [];
+    for(let i=Sync.chat.length-1; i>=0 && messageHits.length<MAX_MESSAGE_HITS; i--){
+      const m = Sync.chat[i];
+      if(m && m.text && m.text.toLowerCase().includes(q)) messageHits.push(m);
+    }
+
+    if(!tableHits.length && !recordHits.length && !messageHits.length){
       list.append(el('div',{class:'muted tiny gsearch-hint', text:`No matches for "${input.value.trim()}".`}));
       return;
     }
@@ -112,6 +120,15 @@ export function openGlobalSearch(ctx){
         const label = recordLabel(h.entity, rec) || shortId(h.id);
         addRow({type:'record', entity:h.entity, id:h.id}, icon(e.icon||'table'), highlight(label,q),
           `${e.label} · ${h.field}: ${truncate(h.value,60)}`);
+      });
+    }
+    if(messageHits.length){
+      list.append(el('div',{class:'gsearch-group', text:'Messages'}));
+      messageHits.forEach(m=>{
+        const thread = Sync.threadKey(m);
+        const threadName = thread==='general' ? 'General' : Sync.nameForUid(thread);
+        addRow({type:'message', thread, id:m.id}, icon(thread==='general'?'broadcast':'chat'), highlight(m.text,q),
+          `${threadName} · ${m.uid===Sync.uid?'You':(m.name||'Peer')} · ${clock(m.ts)}`);
       });
     }
     setActive(0);

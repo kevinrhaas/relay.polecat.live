@@ -10,6 +10,16 @@
 // .github/stamp-changelog.mjs regenerates every `date` from its `ts`.
 export const CHANGELOG = [
   {
+    v: 59,
+    title: 'Global search now includes chat messages',
+    ts: '2026-07-04T15:53:35.542Z',
+    date: 'Jul 4, 2026, 10:53 AM CT',
+    items: [
+      'Ctrl+K search now also matches the text of General and DM messages, not just tables and records.',
+      'Click a message result (or arrow-key + Enter) to jump straight to its thread — the matching message scrolls into view and briefly highlights.',
+    ],
+  },
+  {
     v: 58,
     title: 'Landing page refresh: global search takes the spotlight',
     ts: '2026-07-04T15:01:56.162Z',

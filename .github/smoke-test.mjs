@@ -940,6 +940,21 @@ try {
     return badgeAfter === null;
   });
 
+  console.log('Global search — messages');
+  await check('search matches a chat message by text and jumps to its thread, highlighting the message', async () => {
+    await (await $('.rail-item[data-sec="home"]')).click(); await page.waitForTimeout(200);
+    await page.keyboard.press('Control+k'); await page.waitForTimeout(250);
+    await page.keyboard.type('smoke hello'); await page.waitForTimeout(250);
+    const groups = await page.$$eval('.gsearch-group', (gs) => gs.map((g) => g.textContent));
+    if (!groups.includes('Messages')) return false;
+    const row = page.locator('.gsearch-row', { hasText: 'smoke hello' });
+    if (!(await row.count())) return false;
+    await row.click(); await page.waitForTimeout(600);
+    const activeSec = await page.$eval('.rail-item.active', (e) => e.getAttribute('data-sec')).catch(() => null);
+    const flashed = await page.$$eval('.msg.flash .text', (els) => els.some((x) => x.textContent.includes('smoke hello')));
+    return activeSec === 'messages' && flashed;
+  });
+
   console.log('Peers — progressive sharing controls');
   await check('seed a known offline peer', async () => {
     await page.evaluate(async () => {
