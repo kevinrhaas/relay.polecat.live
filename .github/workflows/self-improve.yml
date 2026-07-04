@@ -8,12 +8,17 @@ name: Hourly self-improvement
 # Note: a push to main by the built-in GITHUB_TOKEN does NOT trigger the normal
 # deploy workflow (GitHub blocks that to avoid loops), so this job deploys Pages
 # itself after committing.
+#
+# ⏸ PAUSED (to save tokens): the hourly `schedule` trigger below is commented
+# out, so the loop no longer runs automatically. It can still be run on demand
+# from the Actions tab (workflow_dispatch). To RESUME hourly runs, uncomment the
+# two `schedule:` lines.
 on:
-  schedule:
-    # Off-peak minutes: GitHub heavily delays/drops scheduled jobs at :00.
-    # Two runs/hour improves the odds of a roughly-hourly cadence; the
-    # concurrency lock keeps them from overlapping.
-    - cron: '23,53 * * * *'
+  # schedule:
+  #   # Off-peak minutes: GitHub heavily delays/drops scheduled jobs at :00.
+  #   # Two runs/hour improves the odds of a roughly-hourly cadence; the
+  #   # concurrency lock keeps them from overlapping.
+  #   - cron: '23,53 * * * *'
   workflow_dispatch: {}    # run manually from the Actions tab
 
 permissions:
