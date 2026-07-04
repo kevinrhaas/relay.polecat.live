@@ -10,6 +10,16 @@
 // .github/stamp-changelog.mjs regenerates every `date` from its `ts`.
 export const CHANGELOG = [
   {
+    v: 53,
+    title: 'Polish sweep: empty states and fresher landing copy',
+    ts: '2026-07-04T10:45:00.950Z',
+    date: 'Jul 4, 2026, 5:45 AM CT',
+    items: [
+      'The Admin and Activity views now show a proper icon + message empty state (matching Peers, Messages, and Tables) instead of a plain line of muted text.',
+      'The landing page\'s "what\'s new" pill and feature copy now call out Link fields and reordering instead of the older Undo callout.',
+    ],
+  },
+  {
     v: 52,
     title: 'CSV import can link a column to another table',
     ts: '2026-07-04T09:52:06.813Z',

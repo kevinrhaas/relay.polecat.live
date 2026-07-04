@@ -30,7 +30,7 @@ export function renderActivity(root){
 
 function renderLog(mon){
   mon.innerHTML='';
-  if(!Sync.log.length){ mon.append(el('div',{class:'muted', text:'No activity yet. Discovery and syncs will stream here.'})); return; }
+  if(!Sync.log.length){ mon.append(el('div',{class:'empty', html:`${icon('activity')}<div>No activity yet. Discovery and syncs will stream here.</div>`})); return; }
   Sync.log.forEach(l=>{
     mon.append(el('div',{class:`log-line ${l.kind}`,
       html:`<span class="ts">${l.ts}</span><span class="tag">${l.tag}</span><span>${escapeHtml(l.msg)}</span>`}));

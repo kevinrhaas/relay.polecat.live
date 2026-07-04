@@ -42,6 +42,20 @@ when you finish something, move it to **Done** with the date; add discoveries to
 - Multiple workspaces / workspace switcher.
 
 ## Done
+- 2026-07-04 — Polish sweep: the Admin view's "No invites yet" and the Activity
+  view's "No activity yet" were the last two empty states in the app still
+  rendered as a plain line of muted text (`admin.js`, `activity.js`) — every
+  other empty state (Peers, Messages, Tables) already used the shared
+  `.empty` pattern (icon + centered message, `css/styles.css:449`). Both now
+  use it too (`key` and `activity` icons respectively); added a
+  `.monitor .empty` override so the message doesn't inherit the Activity
+  log's monospace font. Also refreshed the landing page's "what's new" pill
+  and the "Dynamic JSON tables" feature card/meta description, which still
+  only referenced Undo even though Link fields, CSV-import linking, and
+  field/table reordering had since shipped — now calls out Link fields as
+  the headline and mentions reordering. Pure copy/markup, no new smoke
+  check (the `.empty` pattern itself has no existing smoke coverage to
+  extend, and the landing copy isn't asserted on by name).
 - 2026-07-04 — CSV import "Link to another table" column type: the per-column
   type picker in the import preview (`openImportPreview` in `js/views/table.js`)
   now offers "link" alongside Auto/Text/Number/Yes-No/Date/Dropdown, the

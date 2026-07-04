@@ -81,7 +81,7 @@ export function renderAdmin(root, ctx){
   const list=Access.minted();
   wrap.append(el('div',{class:'section-title', html:`<h2>Invites you've created (${list.length})</h2>`}));
   if(!list.length){
-    wrap.append(el('div',{class:'card muted', text:'No invites yet. Create one above to share.'}));
+    wrap.append(el('div',{class:'empty', html:`${icon('key')}<div>No invites yet. Create one above to share.</div>`}));
   }else{
     const g=el('div',{class:'grid', style:'gap:10px'});
     list.forEach(inv=>g.append(inviteRow(inv, root, ctx)));
