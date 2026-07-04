@@ -10,6 +10,17 @@
 // .github/stamp-changelog.mjs regenerates every `date` from its `ts`.
 export const CHANGELOG = [
   {
+    v: 47,
+    title: 'Duplicate a row',
+    ts: '2026-07-04T02:19:43.101Z',
+    date: 'Jul 3, 2026, 9:19 PM CT',
+    items: [
+      'Every row now has a "Duplicate" action next to its delete button — clones its fields into a brand-new row with a fresh ID.',
+      'The record panel (opened from a row) got the same "Duplicate" button, and reopens straight onto the new copy.',
+      'Copies sync to peers like any other new row — nothing stays linked to the original.',
+    ],
+  },
+  {
     v: 46,
     title: 'Landing page refresh',
     ts: '2026-07-04T00:26:08.767Z',

@@ -29,8 +29,6 @@ when you finish something, move it to **Done** with the date; add discoveries to
 - Optional "always-on peer" (headless) for 24/7 availability without a DB.
 - Reorder fields (drag columns in the tree/grid) — field order is currently
   whatever `columns()` discovers first, with no way to control it.
-- "Duplicate row" alongside the existing per-row delete/export actions — same
-  one-off-copy convenience `duplicateEntity` now gives tables.
 
 ## Later
 - End-to-end encryption of records at rest / in transit beyond DTLS.
@@ -38,6 +36,17 @@ when you finish something, move it to **Done** with the date; add discoveries to
 - Multiple workspaces / workspace switcher.
 
 ## Done
+- 2026-07-04 — Duplicate a row: every row's per-row action column (the trash
+  button next to each row) gained a "Duplicate" button — the natural
+  row-level counterpart to `duplicateEntity`'s table-level clone. New
+  `Store.duplicateRecord(entity, id)` clones a single record's fields into a
+  brand-new row (fresh id/`_meta`), so the copy syncs to peers like any other
+  new row — nothing stays linked to the original. The open-record side panel
+  got the same "Duplicate" button next to "Delete row"; clicking it closes
+  the current panel and reopens on the new copy so the clone's fields are
+  immediately editable. Added two smoke checks: one duplicating a row via
+  its grid-row action and confirming the field value doubles, one duplicating
+  from the record panel and confirming it reopens on the copy.
 - 2026-07-04 — Landing page refresh: the hero screenshot and "what's new" pill
   hadn't kept pace with the last several shipped features (undo, bulk row
   actions, duplicate table). Re-captured the hero shot via a seeded demo table

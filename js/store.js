@@ -326,6 +326,20 @@ export const Store = new (class extends Emitter{
     return created;
   }
 
+  // clone a single record's fields into a brand-new row with a fresh id/meta —
+  // same one-off-copy convenience duplicateEntity gives whole tables, for a
+  // single row via the grid/record-panel's "Duplicate row" action.
+  duplicateRecord(entity, id){
+    const e=this.entity(entity); const src=e?.records[id]; if(!src || src._meta.deleted) return null;
+    const newId=uuid();
+    const rec={ id:newId, entity, fields:{...src.fields}, _meta:this._emeta() };
+    e.records[newId]=rec;
+    this._touch(entity); this._persist();
+    this.emit('records', entity);
+    this.emit('change',{type:'record', entity, id:newId, origin:'local'});
+    return rec;
+  }
+
   // merge a record received from a peer using LWW; returns true if applied
   merge(rec){
     const e=this.entity(rec.entity);

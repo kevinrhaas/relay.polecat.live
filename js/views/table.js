@@ -370,9 +370,11 @@ function rowEl(r, cols, root, ctx, onSelectionChange){
   cols.forEach(c=>tr.append(fieldCell(r, c, Store.fieldType(current, c))));
   tr.append(el('td',{class:'meta-cell', text:ago(r._meta.updatedAt), title:`rev ${r._meta.rev} · by ${shortId(r._meta.updatedBy)}`}));
   const act=el('td');
-  const del=el('button',{class:'btn ghost icon sm row-actions', html:icon('trash'), title:'Delete row', 'aria-label':'Delete row',
+  const dup=el('button',{class:'btn ghost icon sm row-actions row-dup-btn', html:icon('copy'), title:'Duplicate row', 'aria-label':'Duplicate row',
+    onclick:()=>{ Store.duplicateRecord(current,r.id); renderTable(root,ctx,{entity:current}); toast('Row duplicated',{kind:'ok'}); }});
+  const del=el('button',{class:'btn ghost icon sm row-actions row-del-btn', html:icon('trash'), title:'Delete row', 'aria-label':'Delete row',
     onclick:async()=>{ if(await confirmDialog('Delete row','This tombstone will propagate to your peers.',{danger:true,okLabel:'Delete'})){ Store.remove(current,r.id); renderTable(root,ctx,{entity:current}); deletedToast(current,[r.id],root,ctx); } }});
-  act.append(del); tr.append(act);
+  act.append(dup, del); tr.append(act);
   return tr;
 }
 
@@ -576,6 +578,10 @@ function openRecordPanel(rec, cols, root, ctx){
   if(!allCols.length) bodyFrag.append(el('div',{class:'empty muted', text:'No fields yet — add one from the table toolbar.'}));
   allCols.forEach(c=>bodyFrag.append(recordFieldRow(rec, c)));
 
+  const dup = el('button',{class:'btn', html:`${icon('copy')} Duplicate`, onclick:()=>{
+    const copy=Store.duplicateRecord(current, rec.id); s.hide(); toast('Row duplicated',{kind:'ok'});
+    if(copy) setTimeout(()=>openRecordPanel(copy, cols, root, ctx), 260);
+  }});
   const del = el('button',{class:'btn danger', html:`${icon('trash')} Delete row`, onclick:async()=>{
     if(await confirmDialog('Delete row','This tombstone will propagate to your peers.',{danger:true,okLabel:'Delete'})){
       Store.remove(current, rec.id); deletedToast(current,[rec.id],root,ctx); s.hide();
@@ -586,7 +592,7 @@ function openRecordPanel(rec, cols, root, ctx){
     className:'record-sheet', ariaLabel:'Record editor', bodyClass:'record-fields',
     head:`<div><h3>${escapeHtml(e.label)} record</h3>
       <div class="muted tiny">${shortId(rec.id)} · updated ${ago(rec._meta.updatedAt)}</div></div>`,
-    body:bodyFrag, foot:del,
+    body:bodyFrag, foot:[dup, del],
     onHide:()=>renderTable(root,ctx,{entity:current}),
   });
   setTimeout(()=>{ const first=s.body.querySelector('input,textarea'); first&&first.focus(); },60);

@@ -153,6 +153,25 @@ try {
     await closeModal();
     return persisted;
   });
+  await check('record panel "Duplicate" clones the row and reopens on the copy', async () => {
+    const before = await count('tbody tr');
+    const openBtn = await $('tbody tr .row-open'); if (!openBtn) return false;
+    await openBtn.click(); await page.waitForTimeout(300);
+    const dupBtn = await $('.record-sheet button:has-text("Duplicate")'); if (!dupBtn) return false;
+    await dupBtn.click(); await page.waitForTimeout(500);
+    const grew = (await count('tbody tr')) === before + 1;
+    const names = await page.$$eval('tbody tr td[contenteditable]', (tds) => tds.map((t) => t.textContent.trim()));
+    const reopened = !!(await $('.record-sheet'));
+    const cloned = names.filter((n) => n === 'panel-edit').length === 2;
+    // delete the clone the panel reopened on — later checks assume this
+    // table's exact row count, so leave it back at `before`
+    const delBtn = await $('.record-sheet button.danger:has-text("Delete row")');
+    if (delBtn) {
+      await delBtn.click(); await page.waitForTimeout(200);
+      await page.click('.modal button.danger:has-text("Delete")'); await page.waitForTimeout(300);
+    }
+    return grew && reopened && cloned && (await count('tbody tr')) === before;
+  });
   await check('presence: a peer viewing the same table shows a live "who\'s viewing" badge, cleared when they leave', async () => {
     // Two real browser tabs would collide on identity (same-origin localStorage
     // means the same Store.identity.id), so simulate a distinct peer by feeding
@@ -187,7 +206,7 @@ try {
     return shown && cleared;
   });
   await check('icon-only buttons expose an accessible label', async () => {
-    const delRow = await $('tbody tr .row-actions');
+    const delRow = await $('tbody tr .row-del-btn');
     const delOk = delRow && (await delRow.getAttribute('aria-label'));
     await (await $('.rail-item[data-sec="home"]')).click(); await page.waitForTimeout(200);
     const pin = await $('.pin-btn'); const pinOk = pin && (await pin.getAttribute('aria-label'));
@@ -386,13 +405,28 @@ try {
   await check('deleting a row shows an "Undo" toast that restores it', async () => {
     await page.waitForTimeout(400);   // let the previous check's re-render settle before grabbing a row handle
     const before = await count('tbody tr');
-    const del = await $('.row-actions'); if (!del) return false;
+    const del = await $('.row-del-btn'); if (!del) return false;
     await del.click(); await page.waitForTimeout(200);
     await page.click('.modal button.danger:has-text("Delete")'); await page.waitForTimeout(300);
     if ((await count('tbody tr')) !== before - 1) return false;
     const undoBtn = await $('.toast-action'); if (!undoBtn) return false;
     await undoBtn.click(); await page.waitForTimeout(300);
     return (await count('tbody tr')) === before;
+  });
+  await check('"Duplicate row" (per-row action) clones a row\'s fields into a new row', async () => {
+    const before = await count('tbody tr');
+    const rows = await page.$$('tbody tr');
+    let target = null;
+    for (const r of rows) {
+      const text = await r.$eval('td[contenteditable]', (td) => td.textContent.trim()).catch(() => '');
+      if (text === 'zebra') { target = r; break; }
+    }
+    if (!target) return false;
+    await target.$eval('.row-dup-btn', (b) => b.click());
+    await page.waitForTimeout(300);
+    if ((await count('tbody tr')) !== before + 1) return false;
+    const names = await page.$$eval('tbody tr td[contenteditable]', (tds) => tds.map((t) => t.textContent.trim()));
+    return names.filter((n) => n === 'zebra').length === 2;
   });
   await check('import CSV creates a new table with typed rows', async () => {
     const [chooser] = await Promise.all([
