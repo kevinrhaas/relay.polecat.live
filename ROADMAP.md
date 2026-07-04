@@ -21,6 +21,12 @@ when you finish something, move it to **Done** with the date; add discoveries to
    loops/GIFs, feature highlights. It should always reflect what the app can do.
 
 ## Next
+- Grid keyboard navigation (below) deliberately leaves select/date/link cells
+  on their native arrow-key behavior (cycling a dropdown's value, nudging a
+  date segment) rather than hijacking them for cell-to-cell movement — Tab
+  still reaches every cell type, just not the arrow keys. Worth a second pass
+  if that gap is felt in practice (e.g. a modifier like Ctrl+Arrow to force
+  navigation out of one of those controls).
 - Global search (Ctrl+K) scans every entity's records with a plain substring
   match on every field, capped at 30 record hits — fine for the workspace
   sizes this app targets, but a very large multi-thousand-row workspace with
@@ -57,6 +63,28 @@ when you finish something, move it to **Done** with the date; add discoveries to
 - Multiple workspaces / workspace switcher.
 
 ## Done
+- 2026-07-04 — Grid keyboard navigation: the table grid's plain-text/number
+  cells (contenteditable) and the boolean toggle now support spreadsheet-style
+  arrow-key movement — Left/Right jump to the neighboring column once the
+  caret is at the start/end of the cell's text (so mid-text cursor movement
+  is untouched), Up/Down jump a row in the same column from anywhere in the
+  cell, and Enter commits the edit and drops focus to the same column one row
+  down (Escape now also cancels an in-progress edit, restoring the prior
+  value, instead of only Enter/blur committing). Every cell type gained a
+  `data-field` attribute (`fieldCell()` in `js/views/table.js`) so a
+  neighboring cell can be located regardless of type; select/date/link cells
+  deliberately keep their native arrow-key behavior (see Next) rather than
+  having it overridden. The tricky part: committing a cell's value re-renders
+  the whole table (`Store.upsert` → `change` event → `app.js` `render()`),
+  and the *default, unsorted* view lists rows most-recently-updated first —
+  so editing a cell can reorder the very row being edited out from under an
+  Up/Down keypress. Fixed by resolving the target row's *id* from the
+  still-unchanged DOM before committing (not by re-querying sibling position
+  afterward, which could silently land on the wrong row or nowhere).  Added a
+  smoke check driving a 2-row/2-column table through the full sequence —
+  ArrowRight/Left across columns, Enter down a row, ArrowUp back, Escape
+  cancel — asserting focus and committed values by row id throughout (not
+  array position, since `Store.records()` reorders on every commit).
 - 2026-07-04 — Polish: Settings → Advanced's disclosure toggle (`.adv summary`
   in `css/styles.css`, the "Advanced · connection & auto-discovery" row that
   reveals STUN/TURN/rendezvous/sync-location settings) had `cursor:pointer`

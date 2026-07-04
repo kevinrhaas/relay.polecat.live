@@ -10,6 +10,17 @@
 // .github/stamp-changelog.mjs regenerates every `date` from its `ts`.
 export const CHANGELOG = [
   {
+    v: 61,
+    title: 'Keyboard navigation in the table grid',
+    ts: '2026-07-04T17:40:25.643Z',
+    date: 'Jul 4, 2026, 12:40 PM CT',
+    items: [
+      'Arrow keys now move between grid cells like a spreadsheet — Left/Right at the start or end of a cell\'s text, Up/Down from anywhere in it.',
+      'Enter commits your edit and drops down to the same column in the row below.',
+      'Escape cancels an in-progress edit and restores the cell\'s previous value.',
+    ],
+  },
+  {
     v: 60,
     title: 'Polish: Advanced settings toggle now shows hover/focus feedback',
     ts: '2026-07-04T16:30:22.885Z',

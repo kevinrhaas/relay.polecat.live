@@ -518,7 +518,7 @@ function rowEl(r, cols, root, ctx, onSelectionChange){
     html:icon('chevron'), onclick:()=>openRecordPanel(r, cols, root, ctx)}));
   tr.append(openTd);
   tr.append(el('td',{class:'rowid', text:shortId(r.id), title:r.id}));
-  cols.forEach(c=>tr.append(fieldCell(r, c, Store.fieldType(current, c))));
+  cols.forEach(c=>tr.append(fieldCell(r, c, Store.fieldType(current, c), root, cols)));
   tr.append(el('td',{class:'meta-cell', text:ago(r._meta.updatedAt), title:`rev ${r._meta.rev} · by ${shortId(r._meta.updatedBy)}`}));
   const act=el('td');
   const dup=el('button',{class:'btn ghost icon sm row-actions row-dup-btn', html:icon('copy'), title:'Duplicate row', 'aria-label':'Duplicate row',
@@ -529,13 +529,75 @@ function rowEl(r, cols, root, ctx, onSelectionChange){
   return tr;
 }
 
+// Spreadsheet-style arrow-key navigation between grid cells. Wired for the
+// contenteditable text/number cells and the boolean toggle, whose arrow keys
+// have no built-in meaning; select/date/link cells keep their native arrow
+// behavior (cycling a dropdown's value, nudging a date segment) so this
+// deliberately leaves those alone — Tab still reaches every cell type in the
+// normal focus order.
+function focusGridCell(td){
+  if(!td) return false;
+  const f = td.matches('[contenteditable]') ? td : td.querySelector('button,input,select');
+  if(!f) return false;
+  f.focus();
+  if(f.isContentEditable){
+    const range=document.createRange(), sel=window.getSelection();
+    range.selectNodeContents(f); range.collapse(false);
+    sel.removeAllRanges(); sel.addRange(range);
+  }
+  return true;
+}
+function gridCellAt(root, rowId, field){
+  const tr = root.querySelector(`tbody tr[data-id="${CSS.escape(rowId)}"]`);
+  return tr && tr.querySelector(`td[data-field="${CSS.escape(field)}"]`);
+}
+function caretAtEdge(td, edge){
+  const sel=window.getSelection();
+  if(!sel.rangeCount) return true;
+  const r=sel.getRangeAt(0);
+  if(!r.collapsed) return false;
+  return edge==='start' ? r.startOffset===0 : r.endOffset===(r.endContainer.textContent||'').length;
+}
+function wireGridNav(elm, root, r, field, cols, isText){
+  elm.addEventListener('keydown',ev=>{
+    const key=ev.key;
+    if(!['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(key)) return;
+    if(isText){
+      if(key==='ArrowLeft' && !caretAtEdge(elm,'start')) return;
+      if(key==='ArrowRight' && !caretAtEdge(elm,'end')) return;
+    }
+    let targetField=field, targetRowId=r.id;
+    if(key==='ArrowUp' || key==='ArrowDown'){
+      // the row above/below the row BEING EDITED must be captured now, from the
+      // still-unchanged DOM — committing this edit can itself reorder rows (the
+      // default, unsorted view lists most-recently-updated first), so looking
+      // the neighbor up again *after* the commit could silently resolve to the
+      // wrong row, or to no row at all if this one jumped to an edge.
+      const targetTr = key==='ArrowUp' ? elm.closest('tr').previousElementSibling : elm.closest('tr').nextElementSibling;
+      if(!targetTr) return;
+      targetRowId = targetTr.dataset.id;
+    }else{
+      const i=cols.indexOf(field);
+      const j = key==='ArrowLeft' ? i-1 : i+1;
+      if(j<0 || j>=cols.length) return;
+      targetField=cols[j];
+    }
+    ev.preventDefault();
+    if(isText) elm.blur(); // commit first — the grid may fully re-render on a real change
+    focusGridCell(gridCellAt(root, targetRowId, targetField));
+  });
+}
+
 // a typed field renders a dedicated control (toggle / dropdown / date
 // picker); an untyped ("auto") field keeps the original plain-text
-// contenteditable cell, whose value is inferred on commit.
-function fieldCell(r, field, ft){
+// contenteditable cell, whose value is inferred on commit. Every cell gets
+// `data-field` so arrow-key grid navigation (above) can locate it regardless
+// of type.
+function fieldCell(r, field, ft, root, cols){
   const val = r.fields[field];
   if(ft?.type==='boolean'){
     const td=el('td',{class:'bool-cell'});
+    td.dataset.field=field;
     const isOn = toBool(val);
     const btn=el('button',{class:'toggle'+(isOn?' on':''), type:'button', role:'switch',
       'aria-checked':String(isOn), 'aria-label':`${field}: ${isOn?'on':'off'}`});
@@ -544,11 +606,13 @@ function fieldCell(r, field, ft){
       btn.classList.toggle('on',nv); btn.setAttribute('aria-checked',String(nv));
       commitCellValue(r, field, nv, td);
     });
+    wireGridNav(btn, root, r, field, cols, false);
     td.append(btn);
     return td;
   }
   if(ft?.type==='select'){
     const td=el('td',{class:'select-cell'});
+    td.dataset.field=field;
     const opts = ft.options||[];
     const cur = val==null ? '' : String(val);
     const values = cur && !opts.includes(cur) ? [cur, ...opts] : opts;
@@ -562,6 +626,7 @@ function fieldCell(r, field, ft){
   }
   if(ft?.type==='link' && ft.multi){
     const td=el('td',{class:'link-multi-cell'});
+    td.dataset.field=field;
     const labels = linkIds(val).map(id=>linkedRecordLabel(ft.entity, id)).filter(Boolean);
     const btn=el('button',{class:'btn ghost sm link-multi-btn', type:'button',
       title:`Edit linked ${field}`, 'aria-label':`${field}: ${labels.length} linked record${labels.length!==1?'s':''}`,
@@ -572,6 +637,7 @@ function fieldCell(r, field, ft){
   }
   if(ft?.type==='link'){
     const td=el('td',{class:'select-cell'});
+    td.dataset.field=field;
     const sel=el('select',{class:'cell-select', 'aria-label':`${field} value`});
     fillLinkOptions(sel, ft.entity, val);
     sel.addEventListener('change',()=>commitCellValue(r, field, sel.value, td));
@@ -580,6 +646,7 @@ function fieldCell(r, field, ft){
   }
   if(ft?.type==='date'){
     const td=el('td',{class:'date-cell'});
+    td.dataset.field=field;
     const inp=el('input',{class:'cell-date', type:'date', value: val||'', 'aria-label':`${field} date`});
     inp.addEventListener('change',()=>commitCellValue(r, field, inp.value, td));
     td.append(inp);
@@ -588,7 +655,25 @@ function fieldCell(r, field, ft){
   const td=el('td',{contenteditable:'true', text: cellText(val)});
   td.dataset.field=field;
   td.addEventListener('blur',()=>commitCell(r, field, td, ft));
-  td.addEventListener('keydown',ev=>{ if(ev.key==='Enter'){ev.preventDefault();td.blur();} });
+  td.addEventListener('keydown',ev=>{
+    if(ev.key==='Enter'){
+      ev.preventDefault();
+      // resolve the row below (if any) before committing — same reordering
+      // hazard wireGridNav's Up/Down handles: this row may move once its
+      // edit lands, if the view is unsorted (most-recently-updated first).
+      const targetTr = td.closest('tr').nextElementSibling;
+      const targetRowId = targetTr && targetTr.dataset.id;
+      td.blur();
+      if(targetRowId) focusGridCell(gridCellAt(root, targetRowId, field));
+      return;
+    }
+    if(ev.key==='Escape'){
+      ev.preventDefault();
+      td.textContent=cellText(r.fields[field]);
+      td.blur();
+    }
+  });
+  wireGridNav(td, root, r, field, cols, true);
   td.addEventListener('paste',ev=>{
     // force plain text — pasting from Sheets/Excel/Word otherwise drops
     // fonts/colors/spans into the cell that persist until the next full

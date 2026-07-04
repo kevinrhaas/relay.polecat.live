@@ -594,6 +594,67 @@ try {
     return !(await page.$$eval('.tree-row .tree-label', (t) => t.some((x) => /smoke table/i.test(x.textContent))));
   });
 
+  console.log('Tables — grid keyboard navigation');
+  // looked up by row id, not array position — Store.records() sorts
+  // most-recently-updated first, and this check's whole point is committing
+  // edits via keyboard nav, so position shuffles as the check runs.
+  const smokeNavRecord = async (id) => page.evaluate(async (rid) => {
+    const { Store } = await import('/js/store.js');
+    const k = Store.entityNames().find((n) => Store.entity(n).label === 'Smoke Nav Table');
+    return k ? Store.records(k).find((rec) => rec.id === rid)?.fields : null;
+  }, id);
+  await check('grid: arrow keys navigate between cells (committing on the way), Enter drops to the row below, Escape cancels', async () => {
+    // isolated table so this doesn't disturb the fixed row/column shape other checks assume
+    await (await $('.topbar .btn.primary')).click(); await page.waitForTimeout(300);
+    await page.fill('.modal input', 'Smoke Nav Table');
+    await page.click('.modal button:has-text("Create")'); await page.waitForTimeout(500);
+    await page.click('button:has-text("Row")'); await page.waitForTimeout(200); // seeds the default "name" field
+    await page.click('button:has-text("Field")'); await page.waitForTimeout(300);
+    await page.fill('.modal input:visible', 'note');
+    await page.click('.modal button:has-text("Add field")'); await page.waitForTimeout(300);
+    await page.click('button:has-text("Row")'); await page.waitForTimeout(200);
+    if ((await count('tbody tr')) !== 2) return false;
+
+    // by row id, not DOM position — the default (unsorted) view lists
+    // most-recently-updated first, so committing an edit can itself move
+    // the very row being edited to a new position.
+    const cellById = (id, field) => $(`tbody tr[data-id="${id}"] td[data-field="${field}"]`);
+    const activeField = () => page.evaluate(() => document.activeElement?.dataset?.field);
+    const activeRowId = () => page.evaluate(() => document.activeElement?.closest('tr')?.dataset?.id);
+    const rowId = (row) => page.$eval(`tbody tr:nth-child(${row})`, (tr) => tr.dataset.id);
+    const row1Id = await rowId(1), row2Id = await rowId(2);
+
+    // ArrowRight at the end of row 1's "name" cell commits it and moves into "note"
+    let c = await cellById(row1Id, 'name'); if (!c) return false;
+    await c.click(); await page.keyboard.type('left');
+    await page.keyboard.press('ArrowRight'); await page.waitForTimeout(200);
+    if ((await activeField()) !== 'note' || (await activeRowId()) !== row1Id) return false;
+    // ArrowLeft at the start of "note" (after Home) commits it and moves back to "name"
+    await page.keyboard.type('right');
+    await page.keyboard.press('Home'); await page.keyboard.press('ArrowLeft'); await page.waitForTimeout(200);
+    if ((await activeField()) !== 'name' || (await activeRowId()) !== row1Id) return false;
+    const r1 = await smokeNavRecord(row1Id);
+    if (r1?.name !== 'left' || r1?.note !== 'right') return false;
+
+    // Enter commits and drops focus to the same column, row below
+    await page.keyboard.press('Enter'); await page.waitForTimeout(200);
+    if ((await activeField()) !== 'name' || (await activeRowId()) !== row2Id) return false;
+    await page.keyboard.type('bottom');
+    // ArrowUp (from anywhere in the text, no boundary needed) commits and moves up a row
+    await page.keyboard.press('ArrowUp'); await page.waitForTimeout(200);
+    if ((await activeField()) !== 'name' || (await activeRowId()) !== row1Id) return false;
+    const r2 = await smokeNavRecord(row2Id);
+    if (r2?.name !== 'bottom') return false;
+
+    // Escape reverts an in-progress edit instead of committing it
+    c = await cellById(row1Id, 'name'); if (!c) return false;
+    await c.click({ clickCount: 3 }); await page.keyboard.type('CHANGED');
+    await page.keyboard.press('Escape'); await page.waitForTimeout(200);
+    const reverted = await c.evaluate((td) => td.textContent.trim());
+    const r1After = await smokeNavRecord(row1Id);
+    return reverted === 'left' && r1After?.name === 'left';
+  });
+
   console.log('Tables — column types (nicer editors)');
   const smokeTypesRecord = async () => page.evaluate(async () => {
     const { Store } = await import('/js/store.js');
