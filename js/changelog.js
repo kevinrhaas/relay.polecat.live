@@ -10,6 +10,17 @@
 // .github/stamp-changelog.mjs regenerates every `date` from its `ts`.
 export const CHANGELOG = [
   {
+    v: 51,
+    title: 'Link fields — reference rows in another table',
+    ts: '2026-07-04T09:05:15.157Z',
+    date: 'Jul 4, 2026, 4:05 AM CT',
+    items: [
+      'A new field type, "Link to another table", turns a column into a picker of another table\'s rows instead of free text — pick a contact, a task, whatever fits your schema.',
+      'The grid, the record panel, and bulk "Set field…" all get the same live record picker.',
+      'Sorting, searching, and CSV export show the linked row\'s own label (its first filled-in field), not a raw internal id.',
+    ],
+  },
+  {
     v: 50,
     title: 'Focus-ring fix on primary buttons',
     ts: '2026-07-04T08:02:12.939Z',

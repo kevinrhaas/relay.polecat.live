@@ -27,6 +27,13 @@ when you finish something, move it to **Done** with the date; add discoveries to
   more often than Dropbox's refresh-token flow does. Falls back to a one-click
   Reconnect, but worth watching for complaints.
 - Optional "always-on peer" (headless) for 24/7 availability without a DB.
+- Link fields (just shipped) only store a single record id per field —
+  multi-link (e.g. "Tasks" linking to several "Contacts" as owners) would need
+  a richer array-valued cell/editor and is a natural v2 if it's wanted.
+- CSV import doesn't offer "Link to another table" as a column type (excluded
+  deliberately — matching raw CSV text to an existing record id needs a
+  by-label lookup this doesn't do yet). Worth revisiting if imports commonly
+  carry foreign-key-shaped columns.
 
 ## Later
 - End-to-end encryption of records at rest / in transit beyond DTLS.
@@ -34,6 +41,32 @@ when you finish something, move it to **Done** with the date; add discoveries to
 - Multiple workspaces / workspace switcher.
 
 ## Done
+- 2026-07-04 — Link fields: a new field type, "Link to another table", turns
+  a column into a picker of another table's live records instead of free
+  text — the natural next step after Text/Number/Yes-No/Date/Dropdown for a
+  "dynamic tables" app, since until now the only way to relate two tables was
+  to duplicate data by hand. Value stored per record is the linked row's id
+  (`Store.setFieldType(entity, field, 'link', targetEntityKey)`, mirroring how
+  Dropdown already overloads that slot for its options array); a new
+  `linkedRecordLabel()`/`recordLabel()` in `js/views/table.js` resolves that id
+  to the target row's first non-empty field (falling back to a short id, or
+  "(deleted)" if the row — or its whole table — is gone) everywhere a human
+  reads it: the grid cell, the record panel, bulk "Set field…", CSV export,
+  and now also table sort/search (both silently sorted/matched on the raw
+  uuid before this). The grid/record-panel/bulk editors are all a `<select>`
+  populated from `Store.records(targetEntity)` via a shared `fillLinkOptions()`
+  helper; a value pointing at a since-deleted row is kept as a trailing
+  "(missing)" option rather than silently blanked. Self-links are allowed
+  (e.g. a "reports to" hierarchy within the same table). Excluded deliberately
+  from CSV import's per-column type picker (see Next) since there's no
+  raw-string-to-record-id matching yet. The Add/Edit-field modals only ever
+  render a second `<select>` (the link-target picker) once a field is actually
+  switched to "link" — built lazily on that change event — so every other
+  existing type-picking smoke check, which relies on exactly one `<select>`
+  being present in those modals, keeps working untouched. Added a smoke check
+  that links a field to the seeded Contacts table, picks a contact in the grid,
+  and confirms both the record panel and a CSV export resolve it to that
+  contact's name instead of its id.
 - 2026-07-04 — Polish sweep: `.btn.primary` (the filled purple button used for
   Save/Create/Send/etc.) unconditionally set its own `box-shadow` for the drop
   shadow, which — at equal CSS specificity and later source order — silently

@@ -21,8 +21,14 @@ const FIELD_TYPES = [
   ['boolean', 'Yes / No'],
   ['date', 'Date'],
   ['select', 'Dropdown (choose from list)'],
+  ['link', 'Link to another table'],
 ];
-const TYPE_BADGE = { number:'num', boolean:'y/n', date:'date', select:'list' };
+// CSV import creates a brand-new table from raw strings — there's no sane way
+// to match a cell's text to an existing record id, so 'link' (which needs a
+// live record picker) is excluded from that one picker; every other type list
+// in this file uses FIELD_TYPES directly.
+const IMPORT_FIELD_TYPES = FIELD_TYPES.filter(([v])=>v!=='link');
+const TYPE_BADGE = { number:'num', boolean:'y/n', date:'date', select:'list', link:'link' };
 
 let current = null;
 let treeOpen = localStorage.getItem(K_TREE_OPEN)!=='0';
@@ -244,16 +250,24 @@ function visibleRows(cols){
   const needle = filterText.trim().toLowerCase();
   if(needle) rows = rows.filter(r=>rowMatches(r, cols, needle));
   if(sortField) rows = rows.slice().sort((a,b)=>{
-    const d = cmpVals(a.fields[sortField], b.fields[sortField]);
+    const d = cmpVals(displayValue(sortField, a.fields[sortField]), displayValue(sortField, b.fields[sortField]));
     return sortDir==='asc' ? d : -d;
   });
   return rows;
 }
 
+// a link field's stored value is a record id — resolve it to the linked
+// record's display label wherever a human reads/sorts/searches/exports the
+// column, so it never shows a raw uuid. Every other field type passes through.
+function displayValue(field, v){
+  const ft = Store.fieldType(current, field);
+  return ft?.type==='link' ? linkedRecordLabel(ft.entity, v) : v;
+}
+
 function rowMatches(r, cols, needle){
   if(String(r.id).toLowerCase().includes(needle)) return true;
   return cols.some(c=>{
-    const v = r.fields[c];
+    const v = displayValue(c, r.fields[c]);
     if(v==null) return false;
     const s = typeof v==='object' ? JSON.stringify(v) : String(v);
     return s.toLowerCase().includes(needle);
@@ -532,6 +546,14 @@ function fieldCell(r, field, ft){
     td.append(sel);
     return td;
   }
+  if(ft?.type==='link'){
+    const td=el('td',{class:'select-cell'});
+    const sel=el('select',{class:'cell-select', 'aria-label':`${field} value`});
+    fillLinkOptions(sel, ft.entity, val);
+    sel.addEventListener('change',()=>commitCellValue(r, field, sel.value, td));
+    td.append(sel);
+    return td;
+  }
   if(ft?.type==='date'){
     const td=el('td',{class:'date-cell'});
     const inp=el('input',{class:'cell-date', type:'date', value: val||'', 'aria-label':`${field} date`});
@@ -600,6 +622,38 @@ function cellText(val){
   return val==null ? '' : (typeof val==='object' ? JSON.stringify(val) : String(val));
 }
 
+// best-effort human label for a linked record: its first non-empty column
+// value, falling back to a shortened id for an all-empty row.
+function recordLabel(entity, rec){
+  if(!rec) return '';
+  for(const c of Store.columns(entity)){
+    const v = rec.fields[c];
+    if(v!=null && v!=='') return typeof v==='object' ? JSON.stringify(v) : String(v);
+  }
+  return shortId(rec.id);
+}
+// resolve a link field's stored record-id value to that record's label —
+// '(deleted)' if the target row (or its whole table) is gone, since the
+// tombstone/entity-delete never rewrites values pointing at it.
+function linkedRecordLabel(targetEntity, id){
+  if(!id) return '';
+  const rec = targetEntity ? Store.records(targetEntity).find(x=>x.id===id) : null;
+  return rec ? recordLabel(targetEntity, rec) : '(deleted)';
+}
+// populate a link field's <select> with every current record of the target
+// table; a `cur` value that no longer matches a live record (deleted row, or
+// the whole target table renamed/removed) is kept as a trailing "(missing)"
+// option instead of silently vanishing, so the stored id is never blanked
+// out just by opening the editor.
+function fillLinkOptions(sel, targetEntity, cur){
+  cur = cur==null ? '' : String(cur);
+  sel.append(el('option',{value:'', text:'—'}));
+  const records = targetEntity ? Store.records(targetEntity) : [];
+  records.forEach(rec=>sel.append(el('option',{value:rec.id, text:recordLabel(targetEntity, rec)})));
+  if(cur && !records.some(rec=>rec.id===cur)) sel.append(el('option',{value:cur, text:`(missing) ${shortId(cur)}`}));
+  sel.value = cur;
+}
+
 // coerce a value to a boolean for the toggle control — a plain `!!val` would
 // treat leftover strings like "false" (truthy in JS) as on, which bites
 // whenever a field already held free-form data before being retyped
@@ -617,7 +671,7 @@ function exportCsv(rowsOverride){
   if(!rows.length){ toast('No rows to export',{kind:'err'}); return; }
   const e = Store.entity(current);
   const lines = [cols.map(csvField).join(',')];
-  rows.forEach(r=>lines.push(cols.map(c=>csvField(cellText(r.fields[c]))).join(',')));
+  rows.forEach(r=>lines.push(cols.map(c=>csvField(cellText(displayValue(c, r.fields[c])))).join(',')));
   const blob = new Blob([lines.join('\r\n')], {type:'text/csv;charset=utf-8'});
   const url = URL.createObjectURL(blob);
   const base = (e.label||'table').trim().replace(/[^\w-]+/g,'_')||'table';
@@ -657,6 +711,11 @@ function bulkSetField(root, ctx, ids){
       const sel=el('select',{class:'input'});
       sel.append(el('option',{value:'', text:'—'}));
       opts.forEach(o=>sel.append(el('option',{value:o, text:o})));
+      valueWrap.append(label, sel);
+      getValue=()=>sel.value;
+    }else if(ft?.type==='link'){
+      const sel=el('select',{class:'input'});
+      fillLinkOptions(sel, ft.entity, '');
       valueWrap.append(label, sel);
       getValue=()=>sel.value;
     }else if(ft?.type==='date'){
@@ -752,6 +811,10 @@ function recordFieldRow(rec, field){
     values.forEach(o=>input.append(el('option',{value:o, text:o})));
     input.value = cur;
     input.addEventListener('change',()=>commitField(rec, field, input.value, input));
+  }else if(kind==='link'){
+    input = el('select',{class:'input'});
+    fillLinkOptions(input, ft.entity, val);
+    input.addEventListener('change',()=>commitField(rec, field, input.value, input));
   }else if(kind==='json'){
     input = el('textarea',{class:'input', rows:'3', text: JSON.stringify(val,null,2)});
     input.addEventListener('blur',()=>{ let nv; try{ nv=JSON.parse(input.value); }catch{ nv=input.value; } commitField(rec, field, nv, input); });
@@ -778,12 +841,20 @@ function addColumn(root, ctx){
   FIELD_TYPES.forEach(([v,l])=>typeSel.append(el('option',{value:v, text:l})));
   const optsInput=el('input',{class:'input', placeholder:'Comma-separated options, e.g. Open, In progress, Done'});
   const optsField=el('div',{class:'field', style:'display:none'},[el('label',{text:'Options'}), optsInput]);
-  typeSel.addEventListener('change',()=>{ optsField.style.display = typeSel.value==='select' ? '' : 'none'; });
+  const linkField=el('div',{class:'field', style:'display:none'},[el('label',{text:'Link to table'})]);
+  let linkSel=null;
+  typeSel.addEventListener('change',()=>{
+    optsField.style.display = typeSel.value==='select' ? '' : 'none';
+    if(typeSel.value==='link'){
+      if(!linkSel){ linkSel=buildLinkTargetSelect(); linkField.append(linkSel); }
+      linkField.style.display = '';
+    }else linkField.style.display = 'none';
+  });
   const {hide}=modal({ title:'Add field', icon:'plus',
     body: el('div',{},[
       el('div',{class:'field'},[el('label',{text:'Field name'}), input]),
       el('div',{class:'field'},[el('label',{text:'Type'}), typeSel]),
-      optsField]),
+      optsField, linkField]),
     foot:[ el('button',{class:'btn', text:'Cancel', onclick:()=>hide()}),
       el('button',{class:'btn primary', text:'Add field', onclick:()=>{
         const name=input.value.trim().replace(/\s+/g,'_'); if(!name) return;
@@ -792,13 +863,26 @@ function addColumn(root, ctx){
         const rows=Store.records(current);
         if(rows.length) Store.upsert(current,{[name]:defaultVal},rows[0].id);
         else Store.upsert(current,{[name]:defaultVal});
-        if(typeSel.value!=='auto'){
+        if(typeSel.value==='link'){
+          Store.setFieldType(current, name, 'link', linkSel.value);
+        }else if(typeSel.value!=='auto'){
           const opts=optsInput.value.split(',').map(s=>s.trim()).filter(Boolean);
           Store.setFieldType(current, name, typeSel.value, opts);
         }
         hide(); renderTable(root,ctx,{entity:current}); toast('Field added',{kind:'ok'});
       }})]});
   setTimeout(()=>input.focus(),50);
+}
+
+// every table (including the current one, for self-referential hierarchies
+// like "reports to") as a link target — lazily built only once a field is
+// actually switched to 'link', so the Add/Edit-field modal has exactly one
+// <select> the rest of the time.
+function buildLinkTargetSelect(initial){
+  const sel=el('select',{class:'input link-target-select'});
+  Store.entityNames().forEach(k=>sel.append(el('option',{value:k, text:Store.entity(k).label})));
+  if(initial) sel.value=initial;
+  return sel;
 }
 
 function addRowRec(root, ctx){
@@ -877,7 +961,7 @@ function openImportPreview(root, ctx, filename, headers, dataRows){
     const colValues = dataRows.map(row=>row[i]).filter(v=>v);
     const suggestion = suggestColumnType(colValues);
     const sel=el('select',{class:'input'});
-    FIELD_TYPES.forEach(([v,l])=>sel.append(el('option',{value:v, text:l})));
+    IMPORT_FIELD_TYPES.forEach(([v,l])=>sel.append(el('option',{value:v, text:l})));
     sel.value = suggestion.type;
     const optsInput=el('input',{class:'input', placeholder:'Comma-separated options', value:(suggestion.options||[]).join(', ')});
     const optsWrap=el('div',{class:'import-type-opts', style:suggestion.type==='select'?'':'display:none'}, optsInput);
@@ -1018,12 +1102,21 @@ function editField(field, root, ctx){
   typeSel.value = ft?.type || 'auto';
   const optsInput=el('input',{class:'input', placeholder:'Comma-separated options, e.g. Open, In progress, Done', value:(ft?.options||[]).join(', ')});
   const optsField=el('div',{class:'field', style: typeSel.value==='select'?'':'display:none'},[el('label',{text:'Options'}), optsInput]);
-  typeSel.addEventListener('change',()=>{ optsField.style.display = typeSel.value==='select' ? '' : 'none'; });
+  const linkField=el('div',{class:'field', style: typeSel.value==='link'?'':'display:none'},[el('label',{text:'Link to table'})]);
+  let linkSel = ft?.type==='link' ? buildLinkTargetSelect(ft.entity) : null;
+  if(linkSel) linkField.append(linkSel);
+  typeSel.addEventListener('change',()=>{
+    optsField.style.display = typeSel.value==='select' ? '' : 'none';
+    if(typeSel.value==='link'){
+      if(!linkSel){ linkSel=buildLinkTargetSelect(); linkField.append(linkSel); }
+      linkField.style.display = '';
+    }else linkField.style.display = 'none';
+  });
   const body=el('div');
   body.append(
     (()=>{ const f=el('div',{class:'field'}); f.append(el('label',{text:'Field name'}), input); return f; })(),
     (()=>{ const f=el('div',{class:'field'}); f.append(el('label',{text:'Type'}), typeSel); return f; })(),
-    optsField,
+    optsField, linkField,
     el('p',{class:'muted tiny', text:'Applies across every row and syncs to your peers.'}));
   const del=el('button',{class:'btn danger', html:`${icon('trash')} Delete field`, onclick:async()=>{
     if(await confirmDialog('Delete field',`Remove “${field}” from every row in this table (for you and your peers)?`,{danger:true,okLabel:'Delete field'})){
@@ -1041,8 +1134,12 @@ function editField(field, root, ctx){
     const nn=input.value.trim().replace(/\s+/g,'_');
     const finalField = (nn && nn!==field) ? nn : field;
     if(nn && nn!==field) Store.renameField(current, field, nn);
-    const opts=optsInput.value.split(',').map(s=>s.trim()).filter(Boolean);
-    Store.setFieldType(current, finalField, typeSel.value, opts);
+    if(typeSel.value==='link'){
+      Store.setFieldType(current, finalField, 'link', linkSel.value);
+    }else{
+      const opts=optsInput.value.split(',').map(s=>s.trim()).filter(Boolean);
+      Store.setFieldType(current, finalField, typeSel.value, opts);
+    }
     hide(); renderTable(root,ctx,{entity:current}); toast('Field updated',{kind:'ok'});
   }});
   const { hide }=modal({ title:`Field: ${field}`, icon:'edit', body, foot:[del, el('div',{style:'flex:1'}),

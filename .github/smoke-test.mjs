@@ -596,6 +596,37 @@ try {
     await closeModal();
     return hasToggle && hasSelect;
   });
+  await check('link field: Add field modal links to another table; the grid picker stores the linked record\'s id, and the record panel + CSV export resolve it to that record\'s label', async () => {
+    await page.click('button:has-text("Field")'); await page.waitForTimeout(300);
+    await page.fill('.modal input:visible', 'assignee');
+    await page.selectOption('.modal select', 'link'); await page.waitForTimeout(150);
+    const linkSel = await $('.modal select.link-target-select'); if (!linkSel) return false;
+    await linkSel.selectOption({ label: 'Contacts' });
+    await page.click('.modal button:has-text("Add field")'); await page.waitForTimeout(300);
+    const badges = await page.$$eval('.col-type-badge', (bs) => bs.map((b) => b.textContent.trim()));
+    if (!badges.includes('link')) return false;
+
+    const colLabels = await page.$$eval('.col-head .col-label', (ls) => ls.map((l) => l.textContent.trim()));
+    const idx = colLabels.indexOf('assignee'); if (idx < 0) return false;
+    // 3 leading non-field cells (checkbox, open, row-id) come before the field columns
+    await page.selectOption(`tbody tr:first-child td:nth-child(${4 + idx}) select`, { label: 'Ada Lovelace' });
+    await page.waitForTimeout(300);
+    if ((await smokeTypesRecord())?.assignee !== 'seed-contact-ada') return false;
+
+    const openBtn = await $('tbody tr .row-open'); if (!openBtn) return false;
+    await openBtn.click(); await page.waitForTimeout(300);
+    const panelLabel = await page.$eval('.record-sheet .record-field:has-text("assignee") select',
+      (s) => s.selectedOptions[0]?.textContent.trim()).catch(() => null);
+    await closeModal();
+    if (panelLabel !== 'Ada Lovelace') return false;
+
+    const [download] = await Promise.all([
+      page.waitForEvent('download'),
+      page.click('button:has-text("Export CSV")'),
+    ]);
+    const csv = fs.readFileSync(await download.path(), 'utf8');
+    return csv.includes('Ada Lovelace');
+  });
   await check('editField: switching a typed field back to Auto clears its type badge', async () => {
     const headers = await page.$$('.col-head');
     let btn = null;
