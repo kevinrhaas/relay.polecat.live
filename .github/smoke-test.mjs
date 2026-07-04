@@ -702,6 +702,51 @@ try {
     return dup.fields?.score === before?.score && dup.fields?.due === before?.due && dup.fields?.active === before?.active
       && badges.includes('num') && badges.includes('date');
   });
+  const treeLabels = () => page.$$eval('.tree-row .tree-label', (ls) => ls.map((l) => l.textContent.trim()));
+  const persistedEntityOrder = () => page.evaluate(() => {
+    const raw = JSON.parse(localStorage.getItem('relay.workspace.v1'));
+    const out = {};
+    for (const e of Object.values(raw.entities)) out[e.label] = e.order;
+    return out;
+  });
+  await check('tree: dragging a table by its grip reorders the table list, and it persists', async () => {
+    const before = await treeLabels();
+    const srcIdx = before.indexOf('Smoke Types Table copy');
+    const dstIdx = before.indexOf('Smoke Types Table');
+    if (srcIdx < 0 || dstIdx < 0 || srcIdx === dstIdx) return false;
+    const grip = (await page.$$('.entity-grip'))[srcIdx]; if (!grip) return false;
+    const targetRow = (await page.$$('.tree-row'))[dstIdx]; if (!targetRow) return false;
+    await grip.scrollIntoViewIfNeeded(); await targetRow.scrollIntoViewIfNeeded();
+    const gbox = await grip.boundingBox(); const tbox = await targetRow.boundingBox();
+    if (!gbox || !tbox) return false;
+    await page.mouse.move(gbox.x + gbox.width / 2, gbox.y + gbox.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(tbox.x + tbox.width / 2, tbox.y + 4, { steps: 6 });
+    await page.mouse.up(); await page.waitForTimeout(200);
+    const after = await treeLabels();
+    const orders = await persistedEntityOrder();
+    return after.indexOf('Smoke Types Table copy') < after.indexOf('Smoke Types Table')
+      && typeof orders['Smoke Types Table copy'] === 'number' && typeof orders['Smoke Types Table'] === 'number'
+      && orders['Smoke Types Table copy'] < orders['Smoke Types Table'];
+  });
+  await check('tree: arrow key on a table’s grip swaps it with its neighbor, and it persists', async () => {
+    const copyKey = await page.evaluate(async () => {
+      const { Store } = await import('/js/store.js');
+      return Store.entityNames().find((n) => Store.entity(n).label === 'Smoke Types Table copy');
+    });
+    if (!copyKey) return false;
+    const before = await treeLabels();
+    const copyIdx = before.indexOf('Smoke Types Table copy');
+    if (copyIdx < 1) return false; // needs a row above it to swap with
+    const aboveLabel = before[copyIdx - 1];
+    const grip = await page.$(`.entity-grip[data-entity="${copyKey}"]`); if (!grip) return false;
+    await grip.focus();
+    await page.keyboard.press('ArrowUp'); await page.waitForTimeout(200);
+    const after = await treeLabels();
+    const orders = await persistedEntityOrder();
+    const swapped = after[copyIdx - 1] === 'Smoke Types Table copy' && after[copyIdx] === aboveLabel;
+    return swapped && orders['Smoke Types Table copy'] < orders[aboveLabel];
+  });
 
   console.log('Messaging');
   await (await $('.rail-item[data-sec="messages"]')).click(); await page.waitForTimeout(300);

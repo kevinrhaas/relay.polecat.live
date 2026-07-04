@@ -41,7 +41,7 @@ function toggleExpanded(key){ expanded.has(key)?expanded.delete(key):expanded.ad
 function clampTreeW(w){ return Math.max(TREE_MINW, Math.min(TREE_MAXW, w||TREE_DEFAULTW)); }
 
 export function renderTable(root, ctx, params={}){
-  const names = Store.entityNames();
+  const names = Store.orderedEntityNames();
   const prevEntity = current;
   current = params.entity && names.includes(params.entity) ? params.entity
           : (current && names.includes(current) ? current : names[0]);
@@ -284,6 +284,7 @@ function buildTree(root, ctx, names, viewerEls){
 
   const list = el('div',{class:'tree-list'});
   if(!names.length) list.append(el('div',{class:'muted tiny', style:'padding:6px 8px', text:'No tables yet.'}));
+  const entityRowMap = new Map(); // entity key -> its .tree-row element (for drag-to-reorder)
   names.forEach(k=>{
     const e = Store.entity(k);
     const isOpen = expanded.has(k);
@@ -292,6 +293,9 @@ function buildTree(root, ctx, names, viewerEls){
       title:e.label,
       onclick:()=>{ current=k; renderTable(root,ctx,{entity:k}); },
       onkeydown:(ev)=>{ if(ev.target!==ev.currentTarget) return; if(ev.key==='Enter'||ev.key===' '){ ev.preventDefault(); current=k; renderTable(root,ctx,{entity:k}); } }});
+    if(names.length>1) row.append(el('button',{class:'entity-grip', type:'button', 'data-entity':k,
+      title:'Drag to reorder — or focus and press ↑/↓', 'aria-label':`Reorder table ${e.label}: drag, or press up/down arrow`,
+      html:icon('grip')}));
     const caret = el('button',{class:'tree-caret'+(isOpen?' open':''), title: isOpen?'Collapse fields':'Expand fields',
       'aria-label': isOpen?'Collapse fields':'Expand fields', html:icon('chevron'),
       onclick:(ev)=>{ ev.stopPropagation(); toggleExpanded(k); renderTable(root,ctx,{entity:current}); }});
@@ -300,6 +304,7 @@ function buildTree(root, ctx, names, viewerEls){
     row.append(caret, el('span',{class:'tree-ic', html:icon(e.icon||'table')}),
       el('span',{class:'tree-label', text:e.label}), el('span',{class:'tree-count', text:String(Store.count(k))}), viewersEl);
     node.append(row);
+    entityRowMap.set(k, row);
     if(isOpen){
       const cols = Store.columns(k);
       const fields = el('div',{class:'tree-fields'});
@@ -331,6 +336,17 @@ function buildTree(root, ctx, names, viewerEls){
       node.append(fields);
     }
     list.append(node);
+  });
+  if(names.length>1) names.forEach(k=>{
+    const grip = entityRowMap.get(k).querySelector('.entity-grip');
+    const siblings = ()=>names.filter(x=>x!==k).map(x=>({field:x, el:entityRowMap.get(x)}));
+    wireFieldDrag(grip, k, 'y', ()=>entityRowMap.get(k), siblings, (order)=>{
+      Store.reorderEntities(order); renderTable(root, ctx, {entity:current});
+    });
+    wireFieldDragKeys(grip, k, 'ArrowUp', 'ArrowDown', ()=>Store.orderedEntityNames(), (order)=>{
+      Store.reorderEntities(order); renderTable(root, ctx, {entity:current});
+      setTimeout(()=>{ const g=root.querySelector(`.entity-grip[data-entity="${CSS.escape(k)}"]`); g&&g.focus(); },30);
+    });
   });
   panel.append(list);
   if(treeOpen){
@@ -376,8 +392,10 @@ function wireTreeResize(panel, handle){
   });
 }
 
-// drag-to-reorder a set of fields (grid column headers or tree field rows) —
-// pointer-based (mouse + touch) so it works the same on desktop and mobile,
+// drag-to-reorder a set of keyed items — fields (grid column headers, tree
+// field rows) or, further below, whole tables (tree rows) — generic over
+// what's being dragged, keyed by whatever string `field` identifies it.
+// Pointer-based (mouse + touch) so it works the same on desktop and mobile,
 // mirroring the resize handles' event-wiring style rather than native HTML5
 // drag-and-drop. Doesn't move any DOM live: the grid's header cell and every
 // row's matching body cell would need to move in lockstep, so instead it
@@ -966,9 +984,9 @@ function editEntity(root, ctx){
     el('p',{class:'muted tiny', text:'Renames and icon changes sync to your peers.'}));
   const del=el('button',{class:'btn danger', html:`${icon('trash')} Delete table`, onclick:async()=>{
     if(await confirmDialog('Delete table',`Delete “${e.label}” and all its rows for you and your peers?`,{danger:true,okLabel:'Delete table'})){
-      const key=current, snapshot={label:e.label, icon:e.icon, fieldTypes:e.fieldTypes, fieldOrder:e.fieldOrder, records:e.records, pinned:Store.isPinned(key)};
+      const key=current, snapshot={label:e.label, icon:e.icon, fieldTypes:e.fieldTypes, fieldOrder:e.fieldOrder, order:e.order, records:e.records, pinned:Store.isPinned(key)};
       hide(); Store.deleteEntity(key);
-      current=Store.entityNames()[0]||null;
+      current=Store.orderedEntityNames()[0]||null;
       renderTable(root,ctx,{entity:current});
       toast('Table deleted',{kind:'ok', action:{label:'Undo', onClick:()=>{
         Store.restoreEntity(key, snapshot);

@@ -10,6 +10,17 @@
 // .github/stamp-changelog.mjs regenerates every `date` from its `ts`.
 export const CHANGELOG = [
   {
+    v: 49,
+    title: 'Reorder tables',
+    ts: '2026-07-04T06:47:40.965Z',
+    date: 'Jul 4, 2026, 1:47 AM CT',
+    items: [
+      'Drag a table\'s grip handle in the Tables tree to put your tables in the order you want, the same way you can already reorder a table\'s fields.',
+      'Works with a keyboard too — focus a grip and press the up/down arrow keys to swap it with its neighbor.',
+      'The order syncs to your peers and survives table duplicate/undo like any other table setting.',
+    ],
+  },
+  {
     v: 48,
     title: 'Reorder fields',
     ts: '2026-07-04T05:22:56.524Z',

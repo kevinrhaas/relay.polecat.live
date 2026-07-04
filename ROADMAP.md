@@ -27,8 +27,6 @@ when you finish something, move it to **Done** with the date; add discoveries to
   more often than Dropbox's refresh-token flow does. Falls back to a one-click
   Reconnect, but worth watching for complaints.
 - Optional "always-on peer" (headless) for 24/7 availability without a DB.
-- Reorder tables themselves (drag rows in the tree's table list) — same
-  itch as the field reorder just shipped, but for the top-level table order.
 
 ## Later
 - End-to-end encryption of records at rest / in transit beyond DTLS.
@@ -36,6 +34,32 @@ when you finish something, move it to **Done** with the date; add discoveries to
 - Multiple workspaces / workspace switcher.
 
 ## Done
+- 2026-07-04 — Reorder tables: the Tables tree's list of tables can now be put
+  in whatever order you like, the same itch as "Reorder fields" (shipped
+  earlier today) but for the top-level table list instead of a table's
+  columns. Every `.tree-row` gained a drag handle (grip icon) that reveals on
+  hover/focus, reusing the exact pointer-drag engine and keyboard Up/Down
+  fallback the field-reorder feature introduced (`wireFieldDrag`/
+  `wireFieldDragKeys` in `js/views/table.js` were already generic over what's
+  being dragged — this is their third caller, unchanged). The harder call was
+  how a *workspace-wide* order should sync, since there was no existing
+  workspace-level synced array to model it on (`pinned` is the closest shape
+  but is explicitly local-only). Landed on giving each entity its own `order`
+  number — new `Store.reorderEntities(orderedKeys)` stamps `order:index` (plus
+  a fresh `_meta`) on every entity in the given order — so a reorder rides the
+  exact same per-entity LWW sync `entityDefs()`/`ensureEntity()` already do for
+  label/icon/fieldTypes/fieldOrder, no new sync path needed. New
+  `Store.orderedEntityNames()` sorts by that optional `order` (entities that
+  have never been touched, or were created since the last reorder, keep
+  discovery order and sort after any that do — same shape as `columns()`'s
+  `fieldOrder` fallback) and is now what the tree renders from and what a
+  table-delete falls back to for picking the next table to show.
+  `duplicateEntity()` leaves the copy's `order` unset (it lands at the end
+  until dragged); `restoreEntity()` restores the deleted table's original
+  `order` so undo puts it back exactly where it was. Added two smoke checks:
+  one dragging a table's grip past a sibling and confirming the tree's visual
+  order and each entity's persisted `order` match, one pressing the arrow key
+  on a table's grip and confirming the same.
 - 2026-07-04 — Reorder fields: columns can finally be put in the order you
   want instead of whatever `columns()` happened to discover them in. A drag
   handle (grip icon) on every grid column header and every tree-panel field

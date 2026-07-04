@@ -326,6 +326,17 @@ body{
 .tree-row.active{background:linear-gradient(135deg,var(--brand-b),var(--consensus));color:#fff}
 .tree-row.active .tree-count{background:rgba(255,255,255,.22)}
 .tree-row:focus-visible{outline:none;box-shadow:var(--ring)}
+.tree-row.dragging{opacity:.5}
+.tree-row.drag-over{box-shadow:inset 0 2px 0 var(--brand-b)}
+.tree-row.drag-over-after{box-shadow:inset 0 -2px 0 var(--brand-b)}
+.entity-grip{flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;
+  background:none;border:0;color:inherit;cursor:grab;padding:2px;border-radius:6px;
+  opacity:0;transition:opacity .12s;touch-action:none}
+.entity-grip svg{width:11px;height:11px}
+.entity-grip:hover{background:rgba(127,127,127,.18)}
+.tree-row:hover .entity-grip,.entity-grip:focus-visible{opacity:.6}
+.entity-grip:focus-visible{outline:none;box-shadow:var(--ring)}
+.entity-grip:active{cursor:grabbing}
 .tree-ic{display:inline-flex;flex:0 0 auto}
 .tree-ic svg{width:15px;height:15px}
 .tree-label{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -339,7 +350,7 @@ body{
 .tree-caret.open svg{transform:rotate(90deg)}
 .tree-panel:not(.open) .tree-label,.tree-panel:not(.open) .tree-count,
 .tree-panel:not(.open) .tree-caret,.tree-panel:not(.open) .tree-fields,
-.tree-panel:not(.open) .tree-viewers{display:none}
+.tree-panel:not(.open) .tree-viewers,.tree-panel:not(.open) .entity-grip{display:none}
 .tree-panel:not(.open) .tree-row{justify-content:center}
 .tree-fields{display:flex;flex-direction:column;gap:1px;padding:2px 0 6px 29px;animation:expand .18s ease}
 .tree-field-row{display:flex;align-items:center;gap:1px}

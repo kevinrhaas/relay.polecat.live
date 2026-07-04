@@ -99,6 +99,18 @@ export const Store = new (class extends Emitter{
   entities(){ return this.data.entities; }
   entity(name){ return this.data.entities[name]; }
   entityNames(){ return Object.keys(this.data.entities); }
+  // display order for the tree: names sorted by the optional per-entity
+  // `order` set by dragging a table (reorderEntities); entities that have
+  // never been reordered (or were created since the last reorder) keep
+  // discovery order and sort after any that do — same shape as columns()'s
+  // fieldOrder precedent, just workspace-wide instead of per-entity.
+  orderedEntityNames(){
+    const names = this.entityNames();
+    const withOrder = names.filter(k=>Number.isInteger(this.entity(k).order))
+      .sort((a,b)=>this.entity(a).order-this.entity(b).order);
+    const withoutOrder = names.filter(k=>!Number.isInteger(this.entity(k).order));
+    return [...withOrder, ...withoutOrder];
+  }
   _emeta(){ return { updatedAt: Date.now(), updatedBy: this.identity.id }; }
   _slugify(label){
     return label.toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'') || 'entity_'+uuid().slice(0,4);
@@ -140,6 +152,19 @@ export const Store = new (class extends Emitter{
     e.icon=icon; e._meta=this._emeta();
     this._persist(); this.emit('entities'); this.emit('change',{type:'entity',key,origin:'local'});
   }
+  // table (tree) order: each entity carries its own `order` number rather
+  // than one workspace-level array, so a reorder rides the same per-entity
+  // LWW sync entityDefs()/ensureEntity() already do for label/icon/
+  // fieldTypes — no new sync path needed. orderedKeys is every current
+  // entity key in its new order (same contract as reorderFields).
+  reorderEntities(orderedKeys){
+    const updatedAt = Date.now();
+    (orderedKeys||[]).forEach((key,i)=>{
+      const e=this.entity(key); if(!e) return;
+      e.order = i; e._meta = { updatedAt, updatedBy:this.identity.id };
+    });
+    this._persist(); this.emit('entities'); this.emit('change',{type:'entity',origin:'local'});
+  }
   deleteEntity(key){
     if(!this.data.entities[key]) return;
     delete this.data.entities[key];
@@ -159,7 +184,7 @@ export const Store = new (class extends Emitter{
     if(!snapshot || this.data.entities[key]) return false;
     this.data.entities[key] = {
       label: snapshot.label, icon: snapshot.icon,
-      fieldTypes: snapshot.fieldTypes, fieldOrder: snapshot.fieldOrder, records: snapshot.records,
+      fieldTypes: snapshot.fieldTypes, fieldOrder: snapshot.fieldOrder, order: snapshot.order, records: snapshot.records,
       _meta: this._emeta(),
     };
     delete (this.data.entityTombstones||{})[key];
@@ -246,11 +271,11 @@ export const Store = new (class extends Emitter{
   entityDefs(filter){
     return Object.entries(this.data.entities)
       .filter(([k])=>!filter || filter.includes(k))
-      .map(([key,e])=>({ key, label:e.label, icon:e.icon||'table', fieldTypes:e.fieldTypes||{}, fieldOrder:e.fieldOrder||[], _meta:e._meta||{updatedAt:0,updatedBy:'?'} }));
+      .map(([key,e])=>({ key, label:e.label, icon:e.icon||'table', fieldTypes:e.fieldTypes||{}, fieldOrder:e.fieldOrder||[], order:Number.isInteger(e.order)?e.order:null, _meta:e._meta||{updatedAt:0,updatedBy:'?'} }));
   }
   tombstoneDefs(){ return Object.entries(this.data.entityTombstones||{}).map(([key,t])=>({key,...t})); }
 
-  // create-or-update an entity from a peer's definition (LWW on label/icon/fieldTypes)
+  // create-or-update an entity from a peer's definition (LWW on label/icon/fieldTypes/order)
   ensureEntity(def){
     if(!def || !def.key) return false;
     const tomb=(this.data.entityTombstones||{})[def.key];
@@ -258,14 +283,17 @@ export const Store = new (class extends Emitter{
     if(tomb && tomb.at >= incoming) return false;              // a newer delete wins
     const e=this.data.entities[def.key];
     if(!e){
-      this.data.entities[def.key] = { label:def.label||def.key, icon:def.icon||'table', fieldTypes:def.fieldTypes||{}, fieldOrder:def.fieldOrder||[], records:{}, _meta:def._meta||this._emeta() };
+      this.data.entities[def.key] = { label:def.label||def.key, icon:def.icon||'table', fieldTypes:def.fieldTypes||{}, fieldOrder:def.fieldOrder||[], order:Number.isInteger(def.order)?def.order:undefined, records:{}, _meta:def._meta||this._emeta() };
       this._persist(); this.emit('entities'); this.emit('change',{type:'entity',key:def.key,origin:'remote'});
       return 'created';
     }
     const ftChanged = JSON.stringify(e.fieldTypes||{}) !== JSON.stringify(def.fieldTypes||{});
     const foChanged = JSON.stringify(e.fieldOrder||[]) !== JSON.stringify(def.fieldOrder||[]);
-    if(incoming > (e._meta?.updatedAt||0) && (e.label!==def.label || e.icon!==def.icon || ftChanged || foChanged)){
-      e.label=def.label; e.icon=def.icon||e.icon; e.fieldTypes=def.fieldTypes||{}; e.fieldOrder=def.fieldOrder||[]; e._meta=def._meta;
+    const oChanged = (Number.isInteger(e.order)?e.order:null) !== (def.order??null);
+    if(incoming > (e._meta?.updatedAt||0) && (e.label!==def.label || e.icon!==def.icon || ftChanged || foChanged || oChanged)){
+      e.label=def.label; e.icon=def.icon||e.icon; e.fieldTypes=def.fieldTypes||{}; e.fieldOrder=def.fieldOrder||[];
+      if(Number.isInteger(def.order)) e.order=def.order; else delete e.order;
+      e._meta=def._meta;
       this._persist(); this.emit('entities'); this.emit('change',{type:'entity',key:def.key,origin:'remote'});
       return 'updated';
     }
