@@ -3,7 +3,7 @@
 // record editor that slides in from the right when a row is opened.
 import { Store } from '../store.js';
 import { Sync } from '../sync.js';
-import { el, escapeHtml, ago, shortId, toast, modal, sheet, confirmDialog, avatarColor, initials } from '../ui.js';
+import { el, escapeHtml, ago, shortId, toast, modal, sheet, popover, confirmDialog, avatarColor, initials } from '../ui.js';
 import { icon } from '../icons.js';
 
 const K_TREE_OPEN = 'relay.tree.open';
@@ -566,7 +566,7 @@ function fieldCell(r, field, ft){
     const btn=el('button',{class:'btn ghost sm link-multi-btn', type:'button',
       title:`Edit linked ${field}`, 'aria-label':`${field}: ${labels.length} linked record${labels.length!==1?'s':''}`,
       text: labels.length ? labels.join(', ') : '+ Link'});
-    btn.addEventListener('click',()=>openMultiLinkPicker(r, field, ft));
+    btn.addEventListener('click',()=>openMultiLinkPicker(r, field, ft, btn, td));
     td.append(btn);
     return td;
   }
@@ -712,21 +712,23 @@ function buildMultiLinkEditor(targetEntity, curIds){
   return { el: wrap, getValue: ()=>[...checks.entries()].filter(([,cb])=>cb.checked).map(([id])=>id) };
 }
 
-// modal for editing a multi-link grid cell's value — the record panel and
+// popover for editing a multi-link grid cell's value — the record panel and
 // bulk-set editors have room for the checklist inline, but a compact grid
-// cell doesn't, so it opens the same checklist in a small modal instead.
-function openMultiLinkPicker(r, field, ft){
+// cell doesn't. Docks a small floater right off the cell's button instead of
+// a heavy centered modal; each checkbox commits immediately (same as the
+// single-link `<select>`'s onchange) so there's no separate Save step —
+// just tick boxes and click away or press Escape to dismiss.
+function openMultiLinkPicker(r, field, ft, anchorEl, td){
   const editor = buildMultiLinkEditor(ft.entity, r.fields[field]);
   const targetLabel = Store.entity(ft.entity)?.label || ft.entity;
-  const { hide } = modal({ title:`Link ${field}`, icon:'link',
-    body: el('div',{class:'field'},[el('label',{text:`Linked ${targetLabel} records`}), editor.el]),
-    foot:[ el('button',{class:'btn', text:'Cancel', onclick:()=>hide()}),
-      el('button',{class:'btn primary', text:'Save', onclick:()=>{
-        const ids = editor.getValue();
-        hide();
-        const prev = r.fields[field];
-        if(JSON.stringify(ids)!==JSON.stringify(prev)) Store.upsert(current, {[field]:ids}, r.id);
-      }})]});
+  editor.el.addEventListener('change',()=>{
+    const ids = editor.getValue();
+    commitCellValue(r, field, ids, td);
+    const labels = ids.map(id=>linkedRecordLabel(ft.entity, id)).filter(Boolean);
+    anchorEl.textContent = labels.length ? labels.join(', ') : '+ Link';
+    anchorEl.setAttribute('aria-label', `${field}: ${labels.length} linked record${labels.length!==1?'s':''}`);
+  });
+  popover({ anchor: anchorEl, title:`Linked ${targetLabel} records`, body: editor.el, className:'link-multi-pop' });
 }
 
 // coerce a value to a boolean for the toggle control — a plain `!!val` would

@@ -694,7 +694,7 @@ try {
     const csv = fs.readFileSync(await download.path(), 'utf8');
     return csv.includes('Ada Lovelace');
   });
-  await check('multi-link field: "Allow linking multiple records" stores an id array, the grid cell + record panel checklist reflect it, and CSV export joins the labels with "; "', async () => {
+  await check('multi-link field: "Allow linking multiple records" stores an id array, the grid cell\'s popover picker commits live and updates the button label, the record panel checklist reflects it, and CSV export joins the labels with "; "', async () => {
     await page.click('button:has-text("Field")'); await page.waitForTimeout(300);
     await page.fill('.modal input:visible', 'reviewers');
     await page.selectOption('.modal select', 'link'); await page.waitForTimeout(150);
@@ -707,14 +707,24 @@ try {
 
     const colLabels = await page.$$eval('.col-head .col-label', (ls) => ls.map((l) => l.textContent.trim()));
     const idx = colLabels.indexOf('reviewers'); if (idx < 0) return false;
-    await page.click(`tbody tr:first-child td:nth-child(${4 + idx}) button.link-multi-btn`);
-    await page.waitForTimeout(300);
-    const adaRow = page.locator('.modal .link-multi-list label', { hasText: 'Ada Lovelace' });
-    const alanRow = page.locator('.modal .link-multi-list label', { hasText: 'Alan Turing' });
+    const cellBtn = page.locator(`tbody tr:first-child td:nth-child(${4 + idx}) button.link-multi-btn`);
+    await cellBtn.click(); await page.waitForTimeout(300);
+    // a lightweight anchored popover, not a modal — no Save/Cancel, ticking a
+    // box commits straight to the store like the single-link <select> does
+    if (await count('.modal')) return false;
+    const pop = page.locator('.popover.link-multi-pop');
+    if (!(await pop.count())) return false;
+    const adaRow = pop.locator('.link-multi-list label', { hasText: 'Ada Lovelace' });
+    const alanRow = pop.locator('.link-multi-list label', { hasText: 'Alan Turing' });
     if (!(await adaRow.count()) || !(await alanRow.count())) return false;
-    await adaRow.locator('input[type="checkbox"]').check();
-    await alanRow.locator('input[type="checkbox"]').check();
-    await page.click('.modal button:has-text("Save")'); await page.waitForTimeout(300);
+    await adaRow.locator('input[type="checkbox"]').check(); await page.waitForTimeout(150);
+    await alanRow.locator('input[type="checkbox"]').check(); await page.waitForTimeout(150);
+
+    const btnLabel = (await cellBtn.textContent())?.trim();
+    if (!/Ada Lovelace/.test(btnLabel) || !/Alan Turing/.test(btnLabel)) return false;
+
+    await page.keyboard.press('Escape');
+    await page.waitForFunction(() => !document.querySelector('.popover'), null, { timeout: 4000 }).catch(() => {});
 
     const ids = (await smokeTypesRecord())?.reviewers;
     if (!Array.isArray(ids) || ids.length !== 2 || !ids.includes('seed-contact-ada') || !ids.includes('seed-contact-alan')) return false;

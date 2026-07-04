@@ -158,6 +158,51 @@ export function sheet({head, extra, body, bodyClass='', foot, className='', aria
   return {overlay, body:bodyEl, hide};
 }
 
+// ---- popover (small anchored floater, e.g. the multi-link cell picker) --
+// Lighter than modal()/sheet(): no dimmed backdrop, no explicit close
+// button — it docks next to whatever triggered it and dismisses on Escape
+// or an outside click. A scroll of some ancestor (the grid, the page) just
+// repositions it to stay docked to the anchor rather than dismissing it —
+// closing on scroll turned out to fire immediately on open, since clicking
+// a cell in a wide table can itself trigger a scroll-into-view.
+export function popover({anchor, title='', body, foot, className=''}={}){
+  const p = el('div',{class:'popover'+(className?' '+className:''), role:'dialog', 'aria-modal':'true', tabindex:'-1'});
+  if(title) p.append(el('div',{class:'popover-title', text:title}));
+  const bodyEl = el('div',{class:'popover-body'});
+  if(typeof body==='string') bodyEl.innerHTML=body; else if(body) bodyEl.append(body);
+  p.append(bodyEl);
+  if(foot){ const f=el('div',{class:'popover-foot'}); (Array.isArray(foot)?foot:[foot]).forEach(b=>f.append(b)); p.append(f); }
+  document.body.append(p);
+  function place(){
+    const r = anchor.getBoundingClientRect(), margin = 8;
+    const pw = p.offsetWidth, ph = p.offsetHeight;
+    const left = Math.min(Math.max(margin, r.left), window.innerWidth - pw - margin);
+    let top = r.bottom + 6;
+    if(top + ph > window.innerHeight - margin) top = Math.max(margin, r.top - ph - 6);
+    p.style.left = `${left}px`; p.style.top = `${top}px`;
+  }
+  place();
+  requestAnimationFrame(()=>p.classList.add('show'));
+  const reflow = ()=>place();
+  window.addEventListener('resize', reflow);
+  function onOutside(e){ if(!p.contains(e.target) && e.target!==anchor && !anchor.contains?.(e.target)) hide(); }
+  function onScroll(e){ if(!p.contains(e.target)) place(); }
+  document.addEventListener('mousedown', onOutside, true);
+  document.addEventListener('scroll', onScroll, true);
+  const focusGuard = trapDialog(p, ()=>hide());
+  let hidden = false;
+  function hide(){
+    if(hidden) return; hidden = true;
+    p.classList.remove('show');
+    window.removeEventListener('resize', reflow);
+    document.removeEventListener('mousedown', onOutside, true);
+    document.removeEventListener('scroll', onScroll, true);
+    focusGuard.release();
+    setTimeout(()=>p.remove(),160);
+  }
+  return {el:p, body:bodyEl, hide};
+}
+
 export function confirmDialog(title, message, {danger=false, okLabel='Confirm'}={}){
   return new Promise(res=>{
     const ok = el('button',{class:'btn '+(danger?'danger':'primary'), text:okLabel});

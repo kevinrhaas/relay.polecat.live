@@ -555,6 +555,16 @@ textarea{resize:vertical;font-family:var(--mono);font-size:12px}
 .modal-body{padding:4px 22px 8px}
 .modal-foot{display:flex;justify-content:flex-end;gap:10px;padding:16px 22px 20px}
 
+/* ---- popover (anchored floater, e.g. multi-link cell picker) ----------- */
+.popover{position:fixed;z-index:1200;width:min(280px,92vw);max-height:min(360px,70vh);
+  overflow:auto;background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--radius);box-shadow:var(--shadow);padding:12px;
+  opacity:0;transform:translateY(4px) scale(.98);transition:.16s}
+.popover.show{opacity:1;transform:none}
+.popover-title{font-size:11px;font-weight:650;letter-spacing:.03em;text-transform:uppercase;
+  color:var(--text-3);margin:0 0 8px}
+.popover-foot{display:flex;justify-content:flex-end;gap:8px;margin-top:10px}
+
 /* ---- global search (Ctrl+K) --------------------------------------------- */
 .gsearch{display:flex;flex-direction:column;gap:10px}
 .gsearch-input .input{font-size:14px;padding-top:11px;padding-bottom:11px}
