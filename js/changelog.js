@@ -10,6 +10,16 @@
 // .github/stamp-changelog.mjs regenerates every `date` from its `ts`.
 export const CHANGELOG = [
   {
+    v: 55,
+    title: '"Linked from" — see the other side of a Link field',
+    ts: '2026-07-04T12:08:36.300Z',
+    date: 'Jul 4, 2026, 7:08 AM CT',
+    items: [
+      'Opening a record now shows a "Linked from" section listing any records in OTHER tables whose Link field points at it — the reverse of the existing forward Link picker.',
+      'Click a linked record\'s chip to jump straight to it in its own table.',
+    ],
+  },
+  {
     v: 54,
     title: 'Link fields can now hold multiple records',
     ts: '2026-07-04T11:35:07.507Z',

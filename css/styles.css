@@ -602,6 +602,12 @@ a.link:hover{text-decoration:underline}
 .record-sheet{width:min(480px,100%)}
 .record-fields{padding-top:14px}
 .record-field .toggle{margin-top:2px}
+.record-backlinks{margin-top:4px;padding-top:16px;border-top:1px solid var(--border)}
+.backlink-group{margin-bottom:10px}
+.backlink-group:last-child{margin-bottom:0}
+.backlink-src{font-size:11px;color:var(--text-3);margin-bottom:6px}
+.backlink-chips{display:flex;flex-wrap:wrap;gap:6px}
+.backlink-chip{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .wn-entry{padding:16px 0;border-bottom:1px solid var(--border)}
 .wn-entry:last-child{border-bottom:0}
 .wn-top{display:flex;align-items:center;gap:10px}

@@ -695,6 +695,27 @@ try {
     const csv = fs.readFileSync(await download.path(), 'utf8');
     return csv.includes('Ada Lovelace; Alan Turing') || csv.includes('Alan Turing; Ada Lovelace');
   });
+  await check('record panel: "Linked from" shows records in other tables whose Link field points here, and a chip navigates there', async () => {
+    const contactsRow = page.locator('.tree-row', { hasText: 'Contacts' });
+    if (!(await contactsRow.count())) return false;
+    await contactsRow.click(); await page.waitForTimeout(300);
+    const adaRow = page.locator('tbody tr', { hasText: 'Ada Lovelace' });
+    if (!(await adaRow.count())) return false;
+    await adaRow.locator('.row-open').click(); await page.waitForTimeout(300);
+    const groups = await page.$$eval('.record-backlinks .backlink-src', (els) => els.map((e) => e.textContent));
+    if (!groups.some((g) => g.includes('Smoke Types Table') && g.includes('assignee'))) return false;
+    if (!groups.some((g) => g.includes('Smoke Types Table') && g.includes('reviewers'))) return false;
+    // an earlier CSV-import check also links Ada from a third table ("Smoke
+    // CSV Link Table"), so scope the click to the assignee group specifically
+    // rather than assuming it's the first chip on the page.
+    const assigneeGroup = page.locator('.backlink-group', { has: page.locator('.backlink-src', { hasText: 'assignee' }) });
+    if (!(await assigneeGroup.count())) return false;
+    await assigneeGroup.locator('.backlink-chip').first().click(); await page.waitForTimeout(600);
+    const activeLabel = await page.$eval('.tree-row.active .tree-label', (e) => e.textContent.trim()).catch(() => null);
+    const reopened = !!(await $('.record-sheet'));
+    await closeModal();
+    return activeLabel === 'Smoke Types Table' && reopened;
+  });
   await check('editField: switching a typed field back to Auto clears its type badge', async () => {
     const headers = await page.$$('.col-head');
     let btn = null;

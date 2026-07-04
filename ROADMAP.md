@@ -21,6 +21,11 @@ when you finish something, move it to **Done** with the date; add discoveries to
    loops/GIFs, feature highlights. It should always reflect what the app can do.
 
 ## Next
+- Reverse links only show the raw record picked as the "linked from" chip label
+  (whichever field happens to be first non-empty on that row) — fine since it
+  matches the same `recordLabel()` heuristic used everywhere else a linked
+  record is displayed, but worth a dedicated "primary field" concept someday if
+  that heuristic ever picks a confusing column.
 - Google Drive sync's silent token renewal (`prompt:''`) depends on an active
   Google session + third-party-cookie access to accounts.google.com — Safari
   ITP or strict Firefox cookie blocking will force a "needs permission" state
@@ -42,6 +47,24 @@ when you finish something, move it to **Done** with the date; add discoveries to
 - Multiple workspaces / workspace switcher.
 
 ## Done
+- 2026-07-04 — "Linked from" (reverse links): opening a record now shows a new
+  "Linked from" section listing records in *other* tables whose Link field
+  points at it — the natural complement to the forward Link field/picker
+  shipped earlier today, since until now a link only showed on the side that
+  picked it (e.g. a Task's "assignee" pointed at a Contact, but the Contact's
+  record had no way to show which Tasks pointed back). Nothing new is stored:
+  a new `backLinks(entity, id)` in `js/views/table.js` scans every entity's
+  field types for a `link` field pointing at the target entity, then that
+  entity's records for a value (single or multi) containing the id, so it can
+  never drift out of sync with the forward links themselves. Grouped by
+  source table + field as a row of chips (one per linked record, reusing the
+  existing `recordLabel()` heuristic); clicking a chip closes the current
+  panel and navigates to that record in its own table (`renderTable` gained
+  an `openRecord` param so `ctx.go('table', {entity, openRecord})` can jump
+  straight to a specific row's panel, not just the table). Added a smoke
+  check that opens a seeded contact linked from two fields on another table,
+  confirms both "Linked from" groups appear, and follows a chip back to
+  confirm it opens the right record.
 - 2026-07-04 — Multi-link fields: a "Link to another table" field can now be
   switched on to hold several linked records instead of just one, via a new
   "Allow linking multiple records" checkbox next to the link-target picker

@@ -104,6 +104,16 @@ export function renderTable(root, ctx, params={}){
   root.append(wrap);
   wirePresence(wrap, viewerEls, viewersBadge);
 
+  if(params.openRecord){
+    // one-shot: renderTable is re-invoked with this same `params` object on
+    // every later Store event (see app.js's render()), so leaving it set
+    // would silently reopen this record's panel forever — clear it once used.
+    const id = params.openRecord;
+    delete params.openRecord;
+    const rec = Store.records(current).find(r=>r.id===id);
+    if(rec) openRecordPanel(rec, Store.columns(current), root, ctx);
+  }
+
   // action bar shown above the grid whenever one or more rows are checked
   function bulkBar(){
     const ids = [...selected];
@@ -820,14 +830,52 @@ function bulkSetField(root, ctx, ids){
   setTimeout(()=>fieldSel.focus(),50);
 }
 
+// records in *other* tables whose Link field points back at this one — the
+// natural complement to a forward Link field. Computed on the fly (nothing
+// stored, nothing to keep in sync) by scanning every entity's field types for
+// a link pointing at `targetEntity`, then that entity's records for a value
+// containing `id`. Grouped by source entity + field since more than one field
+// (or table) can link to the same target.
+function backLinks(targetEntity, id){
+  const groups = [];
+  Store.orderedEntityNames().forEach(entKey=>{
+    Store.columns(entKey).forEach(field=>{
+      const ft = Store.fieldType(entKey, field);
+      if(ft?.type!=='link' || ft.entity!==targetEntity) return;
+      const records = Store.records(entKey).filter(r=>linkIds(r.fields[field]).map(String).includes(String(id)));
+      if(records.length) groups.push({entity:entKey, field, records});
+    });
+  });
+  return groups;
+}
+
 // ---- right-hand record editor: field-by-field, typed inputs ---------------
 function openRecordPanel(rec, cols, root, ctx){
   const e = Store.entity(current);
+  const entity = current;
 
   const bodyFrag = document.createDocumentFragment();
   const allCols = cols.length ? cols : Object.keys(rec.fields||{});
   if(!allCols.length) bodyFrag.append(el('div',{class:'empty muted', text:'No fields yet — add one from the table toolbar.'}));
   allCols.forEach(c=>bodyFrag.append(recordFieldRow(rec, c)));
+
+  const back = backLinks(entity, rec.id);
+  if(back.length){
+    const backSec = el('div',{class:'field record-backlinks'});
+    backSec.append(el('label',{text:'Linked from'}));
+    back.forEach(g=>{
+      const srcLabel = Store.entity(g.entity)?.label || g.entity;
+      const group = el('div',{class:'backlink-group'});
+      group.append(el('div',{class:'backlink-src', text:`${srcLabel} · ${g.field}`}));
+      const chips = el('div',{class:'backlink-chips'});
+      g.records.forEach(src=>chips.append(el('button',{class:'btn ghost sm backlink-chip', type:'button',
+        text:recordLabel(g.entity, src), title:`Open in ${srcLabel}`,
+        onclick:()=>{ s.hide(); setTimeout(()=>ctx.go('table',{entity:g.entity, openRecord:src.id}), 260); }})));
+      group.append(chips);
+      backSec.append(group);
+    });
+    bodyFrag.append(backSec);
+  }
 
   const dup = el('button',{class:'btn', html:`${icon('copy')} Duplicate`, onclick:()=>{
     const copy=Store.duplicateRecord(current, rec.id); s.hide(); toast('Row duplicated',{kind:'ok'});
