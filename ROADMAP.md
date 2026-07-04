@@ -34,6 +34,20 @@ when you finish something, move it to **Done** with the date; add discoveries to
 - Multiple workspaces / workspace switcher.
 
 ## Done
+- 2026-07-04 — Polish sweep: `.btn.primary` (the filled purple button used for
+  Save/Create/Send/etc.) unconditionally set its own `box-shadow` for the drop
+  shadow, which — at equal CSS specificity and later source order — silently
+  beat the shared `.btn:focus-visible` ring, so keyboard focus was invisible
+  on every primary button in the app even though every other button variant
+  showed it fine. Added a `.btn.primary:focus-visible` rule that layers the
+  ring alongside the existing drop shadow (same two-shadow pattern
+  `.rail-toggle:focus-visible` already used). Also swept `css/styles.css` for
+  selectors with no matching class in any `js/*.js`/`app/index.html` markup
+  and removed four confirmed-dead rules left over from earlier refactors:
+  `.rail-foot`, `.topbar .crumb`, and the two `.topbar-sync` responsive rules
+  (an `.entity-tab` rule that only existed inside one of those media queries
+  went with it). Pure CSS, no behavior change — verified all 68 existing
+  smoke checks still pass.
 - 2026-07-04 — Reorder tables: the Tables tree's list of tables can now be put
   in whatever order you like, the same itch as "Reorder fields" (shipped
   earlier today) but for the top-level table list instead of a table's

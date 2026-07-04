@@ -10,6 +10,15 @@
 // .github/stamp-changelog.mjs regenerates every `date` from its `ts`.
 export const CHANGELOG = [
   {
+    v: 50,
+    title: 'Focus-ring fix on primary buttons',
+    ts: '2026-07-04T08:02:12.939Z',
+    date: 'Jul 4, 2026, 3:02 AM CT',
+    items: [
+      'Tabbing to a filled purple "primary" button (Save, Create, Send, and the like) now shows the same keyboard focus ring every other control in the app already has — its own drop shadow was silently hiding it.',
+    ],
+  },
+  {
     v: 49,
     title: 'Reorder tables',
     ts: '2026-07-04T06:47:40.965Z',
