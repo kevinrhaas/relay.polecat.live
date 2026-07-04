@@ -38,6 +38,17 @@ when you finish something, move it to **Done** with the date; add discoveries to
 - Multiple workspaces / workspace switcher.
 
 ## Done
+- 2026-07-04 — Landing page refresh: the hero screenshot and "what's new" pill
+  hadn't kept pace with the last several shipped features (undo, bulk row
+  actions, duplicate table). Re-captured the hero shot via a seeded demo table
+  to show the Tables tree expanded with typed columns (dropdown/date/boolean
+  badges) and two rows checked, with the bulk action bar ("Set field…",
+  "Export selected", "Delete selected") front and center. Swapped the
+  hero "what's new" pill from the now-old live-presence callout to Undo
+  ("bring back a deleted row, table, or field in one click"), and touched up
+  the "Dynamic JSON tables" feature card plus meta/OG descriptions to mention
+  bulk row actions and undo alongside the existing typed-field/sort/filter
+  copy.
 - 2026-07-03 — Duplicate a table: the Edit table modal (rename/icon/delete)
   gained a "Duplicate" button that clones the table's fields, field types and
   current (non-deleted) rows into a brand-new entity named "<name> copy" (then

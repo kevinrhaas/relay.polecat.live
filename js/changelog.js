@@ -10,6 +10,16 @@
 // .github/stamp-changelog.mjs regenerates every `date` from its `ts`.
 export const CHANGELOG = [
   {
+    v: 46,
+    title: 'Landing page refresh',
+    ts: '2026-07-04T00:26:08.767Z',
+    date: 'Jul 3, 2026, 7:26 PM CT',
+    items: [
+      'Updated the hero screenshot to show the tree panel expanded with typed columns, plus two rows selected and the bulk set-field / export / delete action bar.',
+      'Refreshed the "what\'s new" pill and copy to call out Undo (bring back a deleted row, table, or field) and bulk row actions.',
+    ],
+  },
+  {
     v: 45,
     title: 'Duplicate a table',
     ts: '2026-07-03T23:54:42.341Z',
