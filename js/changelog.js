@@ -10,6 +10,17 @@
 // .github/stamp-changelog.mjs regenerates every `date` from its `ts`.
 export const CHANGELOG = [
   {
+    v: 57,
+    title: 'Global search — jump to any table or record',
+    ts: '2026-07-04T13:38:42.425Z',
+    date: 'Jul 4, 2026, 8:38 AM CT',
+    items: [
+      'Press Ctrl+K (or Cmd+K), or tap the new search icon in the top bar, to search every table and record at once — not just the current table.',
+      'Matching tables and records show up grouped, with the matched text highlighted; click one (or arrow-key + Enter) to jump straight there.',
+      'Opening a matching record takes you right into its record panel, ready to edit.',
+    ],
+  },
+  {
     v: 56,
     title: 'Polish: checklist rows now show hover/focus feedback',
     ts: '2026-07-04T12:52:17.592Z',

@@ -100,6 +100,43 @@ try {
     });
   }
 
+  console.log('Global search (Ctrl+K)');
+  await (await $('.rail-item[data-sec="home"]')).click(); await page.waitForTimeout(300);
+  await check('Ctrl+K opens the search palette, focused and ready to type', async () => {
+    await page.keyboard.press('Control+k'); await page.waitForTimeout(250);
+    const open = (await count('.overlay.show')) === 1;
+    const focused = await page.evaluate(() => document.activeElement?.classList?.contains('input'));
+    return open && focused;
+  });
+  await check('search matches a record by field value and jumps to it, opening its record panel', async () => {
+    await page.keyboard.type('ada'); await page.waitForTimeout(250);
+    const groups = await page.$$eval('.gsearch-group', (gs) => gs.map((g) => g.textContent));
+    if (!groups.includes('Records')) return false;
+    const row = page.locator('.gsearch-row', { hasText: 'Ada Lovelace' });
+    if (!(await row.count())) return false;
+    await row.click(); await page.waitForTimeout(600);
+    const activeSec = await page.$eval('.rail-item.active', (e) => e.getAttribute('data-sec')).catch(() => null);
+    const activeTable = await page.$eval('.tree-row.active .tree-label', (e) => e.textContent.trim()).catch(() => null);
+    const hasSheet = !!(await $('.record-sheet'));
+    await closeModal();
+    return activeSec === 'table' && activeTable === 'Contacts' && hasSheet;
+  });
+  await check('search matches a table by name (from the topbar button) and jumps there without opening a record', async () => {
+    await page.click('button[title="Search everything (Ctrl+K)"]'); await page.waitForTimeout(250);
+    await page.keyboard.type('assets'); await page.waitForTimeout(250);
+    const groups = await page.$$eval('.gsearch-group', (gs) => gs.map((g) => g.textContent));
+    if (!groups.includes('Tables')) return false;
+    await page.keyboard.press('ArrowDown'); await page.keyboard.press('Enter'); await page.waitForTimeout(600);
+    const activeTable = await page.$eval('.tree-row.active .tree-label', (e) => e.textContent.trim()).catch(() => null);
+    return activeTable === 'Assets' && !(await $('.record-sheet'));
+  });
+  await check('search palette closes on Escape without navigating', async () => {
+    await page.click('button[title="Search everything (Ctrl+K)"]'); await page.waitForTimeout(250);
+    await page.keyboard.type('grace'); await page.waitForTimeout(250);
+    await closeModal();
+    return (await count('.overlay.show')) === 0;
+  });
+
   console.log('Tables — create / row / edit / field / delete');
   await (await $('.rail-item[data-sec="table"]')).click(); await page.waitForTimeout(300);
   await check('create a new table', async () => {

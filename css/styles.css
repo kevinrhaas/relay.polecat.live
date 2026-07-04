@@ -555,6 +555,24 @@ textarea{resize:vertical;font-family:var(--mono);font-size:12px}
 .modal-body{padding:4px 22px 8px}
 .modal-foot{display:flex;justify-content:flex-end;gap:10px;padding:16px 22px 20px}
 
+/* ---- global search (Ctrl+K) --------------------------------------------- */
+.gsearch{display:flex;flex-direction:column;gap:10px}
+.gsearch-input .input{font-size:14px;padding-top:11px;padding-bottom:11px}
+.gsearch-list{max-height:min(50vh,420px);overflow:auto;margin:0 -6px}
+.gsearch-group{padding:10px 6px 4px;font-size:11px;font-weight:650;letter-spacing:.04em;
+  text-transform:uppercase;color:var(--text-3)}
+.gsearch-row{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:var(--radius-sm);
+  cursor:pointer;color:var(--text-2)}
+.gsearch-row:hover,.gsearch-row.active{background:var(--surface-2);color:var(--text)}
+.gsearch-row .gs-ic{flex:0 0 auto;width:17px;height:17px;color:var(--text-3);display:flex}
+.gsearch-row.active .gs-ic{color:var(--brand-b)}
+.gsearch-row .gs-ic svg{width:17px;height:17px}
+.gsearch-row .gs-text{flex:1;min-width:0}
+.gsearch-row .gs-title{font-size:13.5px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gsearch-row .gs-meta{font-size:11.5px;color:var(--text-3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gsearch-row mark{background:color-mix(in srgb, var(--brand-b) 40%, transparent);color:inherit;border-radius:3px;padding:0 1px}
+.gsearch-hint{padding:18px 6px;text-align:center}
+
 /* ---- toast ------------------------------------------------------------- */
 #toasts{position:fixed;bottom:20px;right:20px;z-index:1400;display:flex;
   flex-direction:column;gap:10px;pointer-events:none}

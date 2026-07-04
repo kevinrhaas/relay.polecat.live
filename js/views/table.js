@@ -648,7 +648,7 @@ function cellText(val){
 
 // best-effort human label for a linked record: its first non-empty column
 // value, falling back to a shortened id for an all-empty row.
-function recordLabel(entity, rec){
+export function recordLabel(entity, rec){
   if(!rec) return '';
   for(const c of Store.columns(entity)){
     const v = rec.fields[c];

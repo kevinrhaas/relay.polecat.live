@@ -21,6 +21,11 @@ when you finish something, move it to **Done** with the date; add discoveries to
    loops/GIFs, feature highlights. It should always reflect what the app can do.
 
 ## Next
+- Global search (Ctrl+K) scans every entity's records with a plain substring
+  match on every field, capped at 30 record hits — fine for the workspace
+  sizes this app targets, but a very large multi-thousand-row workspace with
+  many tables would feel the linear scan; worth a debounce-tuned index if that
+  ever comes up in practice.
 - Reverse links only show the raw record picked as the "linked from" chip label
   (whichever field happens to be first non-empty on that row) — fine since it
   matches the same `recordLabel()` heuristic used everywhere else a linked
@@ -47,6 +52,22 @@ when you finish something, move it to **Done** with the date; add discoveries to
 - Multiple workspaces / workspace switcher.
 
 ## Done
+- 2026-07-04 — Global search (Ctrl+K / Cmd+K): a command-palette style modal,
+  opened by the keyboard shortcut or a new search icon in the top bar, that
+  searches every table's records (any field value, case-insensitive
+  substring) and every table's name in one place — the only search before
+  this was the Tables toolbar's filter box, which only ever looked at the
+  currently open table. Results are grouped into "Tables" (jump straight to
+  a table) and "Records" (jump to that record's table and open its record
+  panel), with the matched substring highlighted; arrow keys + Enter or a
+  click both work. Reuses the existing `openRecord` deep-link mechanism
+  `renderTable` already had for the "Linked from" backlink chips, so no new
+  navigation plumbing was needed — new `js/views/search.js` just needed
+  `recordLabel()` exported from `js/views/table.js`. Capped at 30 record
+  hits / 6 table hits for now (see Next). Added four smoke checks: opening
+  via the keyboard shortcut with focus landing in the input, a record match
+  navigating to and opening the right record, a table-name match jumping
+  there without opening a record, and Escape closing the palette cleanly.
 - 2026-07-04 — Polish: `.perm-row` — the checkbox-row pattern shared by the new
   multi-link editor (`buildMultiLinkEditor()` in `js/views/table.js`), the
   invite modal's auto-connect checkbox (`admin.js`), and the Peers permission
