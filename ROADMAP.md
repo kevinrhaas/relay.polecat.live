@@ -57,6 +57,15 @@ when you finish something, move it to **Done** with the date; add discoveries to
 - Multiple workspaces / workspace switcher.
 
 ## Done
+- 2026-07-04 — Polish: Settings → Advanced's disclosure toggle (`.adv summary`
+  in `css/styles.css`, the "Advanced · connection & auto-discovery" row that
+  reveals STUN/TURN/rendezvous/sync-location settings) had `cursor:pointer`
+  but no `:hover` or `:focus-visible` styling at all — the one clickable,
+  keyboard-focusable control left over from the earlier rounds of hover/focus
+  sweeps (`.perm-row`, primary buttons, nav rail, toggles, etc. — see below).
+  Hovering or tabbing to it now tints the title/chevron the brand color and
+  shows the same `var(--ring)` focus ring used everywhere else. Pure CSS, no
+  behavior change — verified all 76 existing smoke checks still pass.
 - 2026-07-04 — Global search now includes chat messages: Ctrl+K search
   (`js/views/search.js`) previously only covered table names and record field
   values — the chat feed (`Sync.chat` in `js/sync.js`, both the General room

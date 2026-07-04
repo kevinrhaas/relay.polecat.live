@@ -10,6 +10,16 @@
 // .github/stamp-changelog.mjs regenerates every `date` from its `ts`.
 export const CHANGELOG = [
   {
+    v: 60,
+    title: 'Polish: Advanced settings toggle now shows hover/focus feedback',
+    ts: '2026-07-04T16:30:22.885Z',
+    date: 'Jul 4, 2026, 11:30 AM CT',
+    items: [
+      'The "Advanced · connection & auto-discovery" disclosure in Settings gave no visual feedback at all when hovered or tabbed to — every other clickable control in the app already does.',
+      'It now highlights in the brand color on hover and shows the same keyboard focus ring as the rest of the app.',
+    ],
+  },
+  {
     v: 59,
     title: 'Global search now includes chat messages',
     ts: '2026-07-04T15:53:35.542Z',

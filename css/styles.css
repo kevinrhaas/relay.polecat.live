@@ -687,9 +687,13 @@ a.link:hover{text-decoration:underline}
 .invite-actions{display:flex;gap:8px;flex-wrap:wrap}
 
 /* advanced disclosure (settings) */
-.adv summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:12px}
+.adv summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:12px;
+  border-radius:8px;transition:color .12s}
 .adv summary::-webkit-details-marker{display:none}
 .adv summary::marker{content:''}
+.adv summary:hover{color:var(--brand-b)}
+.adv summary:hover .adv-chevron{color:var(--brand-b)}
+.adv summary:focus-visible{outline:none;box-shadow:var(--ring)}
 .adv .adv-title{display:flex;align-items:center;gap:10px;flex:1;font-weight:600;font-size:14px}
 .adv .adv-ic{display:inline-flex}
 .adv .adv-ic svg{width:18px;height:18px;color:var(--brand-b)}
