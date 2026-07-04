@@ -583,6 +583,16 @@ textarea{resize:vertical;font-family:var(--mono);font-size:12px}
 .gsearch-row mark{background:color-mix(in srgb, var(--brand-b) 40%, transparent);color:inherit;border-radius:3px;padding:0 1px}
 .gsearch-hint{padding:18px 6px;text-align:center}
 
+/* ---- keyboard shortcuts modal ------------------------------------------- */
+.shortcuts{display:flex;flex-direction:column;gap:2px}
+.shortcuts-group{padding:14px 2px 6px;font-size:11px;font-weight:650;letter-spacing:.04em;
+  text-transform:uppercase;color:var(--text-3)}
+.shortcuts-group:first-child{padding-top:2px}
+.shortcut-row{display:flex;align-items:center;gap:14px;padding:7px 2px}
+.shortcut-keys{flex:0 0 auto;display:flex;align-items:center;gap:5px;min-width:96px}
+.shortcut-plus{font-size:11px;color:var(--text-3)}
+.shortcut-desc{font-size:13px;color:var(--text-2)}
+
 /* ---- toast ------------------------------------------------------------- */
 #toasts{position:fixed;bottom:20px;right:20px;z-index:1400;display:flex;
   flex-direction:column;gap:10px;pointer-events:none}
@@ -766,6 +776,10 @@ a.link:hover{text-decoration:underline}
   .msg{max-width:92%}
   .composer{gap:8px}
   .composer .btn{padding:9px 12px}
+
+  /* shortcuts modal: stack keys above description on narrow screens */
+  .shortcut-row{flex-wrap:wrap; gap:4px 14px}
+  .shortcut-keys{min-width:0}
 
   /* tables stay usable via horizontal scroll; keep headers tight */
   table.data th,table.data td{padding:9px 11px}

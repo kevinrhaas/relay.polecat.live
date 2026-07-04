@@ -54,6 +54,26 @@ when you finish something, move it to **Done** with the date; add discoveries to
 - Multiple workspaces / workspace switcher.
 
 ## Done
+- 2026-07-04 — Keyboard shortcuts help panel: the app had quietly accumulated a
+  lot of real keyboard functionality (Ctrl+K search, spreadsheet-style grid
+  navigation with its Ctrl+Arrow escape hatch, drag-handle arrow-key
+  reordering, Enter/Shift+Enter in the composer) with no single place to
+  discover any of it — each one only became known by stumbling onto it or
+  reading this file. Pressing "?" anywhere in the app (or clicking a new
+  keyboard-icon button in the topbar, next to search) now opens a modal
+  listing every shortcut grouped by area (Everywhere / Table grid / Dragging
+  to reorder / Messages), reusing the existing `.kbd` pill style already used
+  elsewhere for inline key references. New `js/views/shortcuts.js` is pure
+  presentation — a static list, no state, no sync — plus a new `keyboard`
+  icon in `js/icons.js`. The "?" handler in `js/app.js` checks the event
+  target isn't an input/textarea/select/contenteditable first, so typing a
+  literal "?" into search, a message, or any field types the character
+  instead of popping the modal open; Escape closes it via the same
+  `trapDialog` every other modal already gets for free. Added three smoke
+  checks: opening via the topbar button and asserting the grouped content
+  renders, opening via the bare "?" key and closing on Escape, and typing
+  "who?" into the search input to confirm the guard against editable targets
+  holds.
 - 2026-07-04 — Grid keyboard navigation, part 2: the one gap the first round
   (below) deliberately left — select/date/link cells keeping their native bare
   arrow-key behavior instead of moving between cells — now has a way out.

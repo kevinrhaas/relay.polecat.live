@@ -17,6 +17,7 @@ import { renderMessages } from './views/messages.js';
 import { renderAdmin } from './views/admin.js';
 import { openWhatsNew, hasUnread } from './views/whatsnew.js';
 import { openGlobalSearch } from './views/search.js';
+import { openShortcuts } from './views/shortcuts.js';
 
 const TITLES = { home:'Home', table:'Tables', messages:'Messages', peers:'Peers', activity:'Activity', admin:'Admin', settings:'Settings' };
 const RENDERERS = { home:renderHome, table:renderTable, messages:renderMessages, peers:renderPeers, activity:renderActivity, admin:renderAdmin, settings:renderSettings };
@@ -70,6 +71,8 @@ function buildTopbar(){
   presence=el('div',{class:'presence', title:'Changes sync automatically with connected peers', html:`<span class="dot"></span><span class="txt">offline</span>`});
   const searchBtn=el('button',{class:'btn icon ghost', title:'Search everything (Ctrl+K)', 'aria-label':'Search everything',
     html:icon('search'), onclick:()=>openGlobalSearch(ctx)});
+  const shortcutsBtn=el('button',{class:'btn icon ghost', title:'Keyboard shortcuts (?)', 'aria-label':'Keyboard shortcuts',
+    html:icon('keyboard'), onclick:()=>openShortcuts()});
   const themeBtn=el('button',{class:'btn icon ghost', title:'Toggle theme',
     html:icon(getThemePref()==='light'?'moon':'sun'),
     onclick:()=>{ const next=document.documentElement.getAttribute('data-theme')==='light'?'dark':'light';
@@ -78,7 +81,7 @@ function buildTopbar(){
     html:icon('sparkle'), onclick:()=>{ openWhatsNew(); whatsNewBtn.classList.remove('has-unread'); }});
   if(hasUnread()) whatsNewBtn.classList.add('has-unread');
   const newBtn=el('button',{class:'btn sm primary', html:`${icon('plus')} New`, onclick:()=>newEntity()});
-  bar.append(avatars, presence, searchBtn, whatsNewBtn, themeBtn, newBtn);
+  bar.append(avatars, presence, searchBtn, shortcutsBtn, whatsNewBtn, themeBtn, newBtn);
   return bar;
 }
 
@@ -158,6 +161,12 @@ function refreshPresence(){
   });
 }
 
+function isEditableTarget(t){
+  if(!t) return false;
+  if(['INPUT','TEXTAREA','SELECT'].includes(t.tagName)) return true;
+  return !!t.isContentEditable;
+}
+
 function wireEvents(){
   Sync.on('peers', ()=>{ refreshBadges(); refreshPresence(); if(currentSection==='peers') render(); if(currentSection==='home') render(); });
   Sync.on('stats', ()=>{ if(currentSection==='activity'||currentSection==='home') render(); });
@@ -195,6 +204,9 @@ function wireEvents(){
 
   window.addEventListener('keydown', e=>{
     if((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='k'){ e.preventDefault(); openGlobalSearch(ctx); }
+    else if(e.key==='?' && !e.ctrlKey && !e.metaKey && !e.altKey && !isEditableTarget(e.target)){
+      e.preventDefault(); openShortcuts();
+    }
   });
 }
 

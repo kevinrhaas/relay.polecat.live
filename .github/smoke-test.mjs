@@ -137,6 +137,30 @@ try {
     return (await count('.overlay.show')) === 0;
   });
 
+  console.log('Keyboard shortcuts help');
+  await check('topbar button opens the shortcuts modal, listing grouped shortcuts', async () => {
+    await page.click('button[title="Keyboard shortcuts (?)"]'); await page.waitForTimeout(250);
+    const title = await page.$eval('.modal h3', (h) => h.textContent).catch(() => null);
+    const groups = await count('.shortcuts-group');
+    const rows = await count('.shortcut-row');
+    await closeModal();
+    return title === 'Keyboard shortcuts' && groups >= 3 && rows >= 5;
+  });
+  await check('pressing "?" outside any input opens the shortcuts modal, and Escape closes it', async () => {
+    await page.click('body'); await page.keyboard.press('?'); await page.waitForTimeout(250);
+    const open = (await count('.overlay.show')) === 1 && (await count('.shortcuts')) === 1;
+    await closeModal();
+    return open && (await count('.overlay.show')) === 0;
+  });
+  await check('pressing "?" while typing in a text field types the character instead of opening the modal', async () => {
+    await page.click('button[title="Search everything (Ctrl+K)"]'); await page.waitForTimeout(250);
+    await page.keyboard.type('who?'); await page.waitForTimeout(150);
+    const value = await page.$eval('.gsearch-input input', (i) => i.value).catch(() => '');
+    const onlyOneOverlay = (await count('.overlay.show')) === 1;
+    await closeModal();
+    return value === 'who?' && onlyOneOverlay;
+  });
+
   console.log('Tables — create / row / edit / field / delete');
   await (await $('.rail-item[data-sec="table"]')).click(); await page.waitForTimeout(300);
   await check('create a new table', async () => {

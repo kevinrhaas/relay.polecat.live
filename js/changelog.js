@@ -10,6 +10,17 @@
 // .github/stamp-changelog.mjs regenerates every `date` from its `ts`.
 export const CHANGELOG = [
   {
+    v: 63,
+    title: 'Keyboard shortcuts help panel',
+    ts: '2026-07-04T18:52:53.191Z',
+    date: 'Jul 4, 2026, 1:52 PM CT',
+    items: [
+      'Press "?" anywhere (or click the new keyboard icon in the topbar) to see every shortcut the app supports, grouped by area.',
+      'Covers global search, grid navigation and editing, drag-to-reorder, and messages.',
+      '"?" only opens the panel when you\'re not typing in a field, so it never interrupts text entry.',
+    ],
+  },
+  {
     v: 62,
     title: 'Ctrl+Arrow to navigate out of dropdown, date, and link cells',
     ts: '2026-07-04T18:23:04.712Z',
