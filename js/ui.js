@@ -1,32 +1,20 @@
-// Stateless DOM + UX helpers (toasts, modals, formatting).
+// Relay's UX layer over the vendored Polecat Shell toolkit.
+//
+// The generic DOM/format primitives come straight from the shell (one
+// implementation fleet-wide) and are re-exported here so app code keeps
+// importing from './ui.js'. What stays app-local is relay's richer dialog
+// layer — toast with an action button (Undo), the record sheet
+// (head/extra/onHide), the anchored popover with scroll-reposition, the
+// positional confirmDialog — plus its gradient avatars and compact time
+// helpers. Converging those onto the shell waits for shell v2's
+// views/sheet work (see ROADMAP.md).
 import { icon } from './icons.js';
-
-export const $  = (s, r=document) => r.querySelector(s);
-export const $$ = (s, r=document) => [...r.querySelectorAll(s)];
-
-export function el(tag, attrs={}, children){
-  const n = document.createElement(tag);
-  for(const [k,v] of Object.entries(attrs)){
-    if(k==='class') n.className=v;
-    else if(k==='html') n.innerHTML=v;
-    else if(k==='text') n.textContent=v;
-    else if(k.startsWith('on') && typeof v==='function') n.addEventListener(k.slice(2),v);
-    else if(v!=null&&v!==false) n.setAttribute(k, v===true?'':v);
-  }
-  if(children!=null){
-    (Array.isArray(children)?children:[children]).forEach(c=>{
-      if(c==null) return;
-      n.append(c.nodeType?c:document.createTextNode(c));
-    });
-  }
-  return n;
-}
-
-export function escapeHtml(s){
-  return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-}
+export { $, $$, el, escapeHtml, uuid } from '../vendor/polecat-shell/ui.js';
+import { $, $$, el, escapeHtml } from '../vendor/polecat-shell/ui.js';
+export { initials } from '../vendor/polecat-shell/ui.js';
 
 // ---- deterministic color from a string (avatars / dots) ------------------
+// Relay's avatars are two-tone gradients (richer than the shell's flat hsl).
 export function hue(str){
   let h=0; for(let i=0;i<String(str).length;i++) h=(h*31+str.charCodeAt(i))>>>0;
   return h%360;
@@ -34,9 +22,6 @@ export function hue(str){
 export function avatarColor(id){
   const h=hue(id);
   return `linear-gradient(135deg,hsl(${h} 62% 52%),hsl(${(h+40)%360} 62% 45%))`;
-}
-export function initials(name){
-  return String(name||'?').trim().split(/\s+/).slice(0,2).map(w=>w[0]||'').join('').toUpperCase()||'?';
 }
 
 // ---- time --------------------------------------------------------------
@@ -54,12 +39,6 @@ export function ago(ts){
 export function clock(ts=Date.now()){
   const d=new Date(ts);
   return d.toTimeString().slice(0,8);
-}
-export function uuid(){
-  if(crypto?.randomUUID) return crypto.randomUUID();
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{
-    const r=Math.random()*16|0, v=c==='x'?r:(r&0x3|0x8); return v.toString(16);
-  });
 }
 export function shortId(id){ return String(id).slice(0,8); }
 
