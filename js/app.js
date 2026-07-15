@@ -1,11 +1,17 @@
 // app.js — main controller: boot, routing, topbar, cross-view glue.
+// The app frame (rail + topbar + right panel + app switcher) comes from the
+// vendored Polecat Shell (vendor/polecat-shell/ — READ-ONLY; changes belong
+// in kevinrhaas/polecat-platform and arrive via sync-shell PRs).
 import { Store } from './store.js';
 import { Sync } from './sync.js';
 import { Rendezvous } from './rendezvous.js';
 import { LocalFolder, S3Sync, WebDAVSync, Dropbox, GoogleDrive } from './storage/index.js';
 import { Access } from './access.js';
-import { applyTheme, getThemePref, setTheme } from './theme.js';
-import { buildRail, SECTIONS } from './shell.js';
+import { configure as themeConfigure, applyTheme, toggleMode, effectiveMode } from '../vendor/polecat-shell/theme.js';
+import { initShell, rightPanel, appSwitcher } from '../vendor/polecat-shell/shell.js';
+import { initWhatsNew, hasUnseen } from '../vendor/polecat-shell/whatsnew.js';
+import { FLEET } from '../vendor/polecat-shell/catalog.js';
+import { CHANGELOG, LATEST_VERSION } from './changelog.js';
 import { el, $, escapeHtml, toast, modal, avatarColor, initials } from './ui.js';
 import { icon } from './icons.js';
 import { renderHome } from './views/home.js';
@@ -15,17 +21,33 @@ import { renderActivity, pushLogLine } from './views/activity.js';
 import { renderSettings, importWorkspace, exportWorkspace } from './views/settings.js';
 import { renderMessages } from './views/messages.js';
 import { renderAdmin } from './views/admin.js';
-import { openWhatsNew, hasUnread } from './views/whatsnew.js';
 import { openGlobalSearch } from './views/search.js';
 import { openShortcuts } from './views/shortcuts.js';
 
 const TITLES = { home:'Home', table:'Tables', messages:'Messages', peers:'Peers', activity:'Activity', admin:'Admin', settings:'Settings' };
 const RENDERERS = { home:renderHome, table:renderTable, messages:renderMessages, peers:renderPeers, activity:renderActivity, admin:renderAdmin, settings:renderSettings };
 
-let rail, view, topTitle, presence, avatars;
+export const SECTIONS = [
+  { group:'Workspace' },
+  { key:'home',     label:'Home',     icon:'home' },
+  { key:'table',    label:'Tables',   icon:'table' },
+  { key:'messages', label:'Messages', icon:'chat' },
+  { key:'peers',    label:'Peers',    icon:'peers' },
+  { key:'activity', label:'Activity', icon:'activity' },
+  { group:'System' },
+  { key:'admin',    label:'Admin',    icon:'key', admin:true },
+  { key:'settings', label:'Settings', icon:'settings' },
+];
+
+const WN_KEY = 'relay.whatsnew.seen';
+
+let view, topTitle, presence, avatars, whatsNewBtn;
 let currentSection='home', currentParams={};
 
 async function boot(){
+  // Historical key kept via configure(); the pre-paint snippet in index.html
+  // migrates any legacy bare-mode value ('dark') to 'polecat:dark' in place.
+  themeConfigure({ storageKey:'relay.theme', defaultTheme:'polecat:dark' });
   applyTheme();
 
   // invite-only gate: consume ?invite= then require access
@@ -40,19 +62,7 @@ async function boot(){
   Dropbox.autostart();
   GoogleDrive.autostart();
 
-  const app=$('#app');
-  rail=el('nav',{id:'rail','aria-label':'Navigation'});
-  const main=el('div',{id:'main'});
-  const topbar=buildTopbar();
-  view=el('div',{class:'view', id:'view'});
-  main.append(topbar, view);
-  // backdrop sits between rail and main so `#rail.open ~ .rail-backdrop`
-  // shows it on mobile; tapping it closes the drawer
-  const backdrop=el('div',{class:'rail-backdrop', onclick:()=>window.__rail.setOpen(false)});
-  app.append(rail, backdrop, main);
-
-  window.__rail = buildRail(rail, { onNav:(s)=>go(s), isAdmin:Access.isAdmin() });
-
+  buildShell();
   wireEvents();
   // route from hash
   const initial = (location.hash.replace('#','') || 'home');
@@ -60,13 +70,12 @@ async function boot(){
   refreshBadges(); refreshPresence();
 }
 
-function buildTopbar(){
-  const bar=el('div',{class:'topbar'});
-  const menuBtn=el('button',{class:'btn icon ghost topbar-menu', title:'Menu', 'aria-label':'Open navigation',
-    html:icon('menu'), onclick:()=>window.__rail.setOpen(!rail.classList.contains('open'))});
-  topTitle=el('h1',{text:'Home'});
-  bar.append(menuBtn, topTitle, el('span',{class:'sp'}));
+// Build (or rebuild — e.g. after an admin unlock) the shell frame into #app.
+function buildShell(){
+  const app=$('#app');
+  app.innerHTML='';
 
+  topTitle=el('h1',{text:TITLES[currentSection]||'Home'});
   avatars=el('div',{class:'avatars'});
   presence=el('div',{class:'presence', title:'Changes sync automatically with connected peers', html:`<span class="dot"></span><span class="txt">offline</span>`});
   const searchBtn=el('button',{class:'btn icon ghost', title:'Search everything (Ctrl+K)', 'aria-label':'Search everything',
@@ -74,15 +83,41 @@ function buildTopbar(){
   const shortcutsBtn=el('button',{class:'btn icon ghost', title:'Keyboard shortcuts (?)', 'aria-label':'Keyboard shortcuts',
     html:icon('keyboard'), onclick:()=>openShortcuts()});
   const themeBtn=el('button',{class:'btn icon ghost', title:'Toggle theme',
-    html:icon(getThemePref()==='light'?'moon':'sun'),
-    onclick:()=>{ const next=document.documentElement.getAttribute('data-theme')==='light'?'dark':'light';
-      setTheme(next); themeBtn.innerHTML=icon(next==='light'?'moon':'sun'); }});
-  const whatsNewBtn=el('button',{class:'btn icon ghost wn-btn', title:"What's new",
-    html:icon('sparkle'), onclick:()=>{ openWhatsNew(); whatsNewBtn.classList.remove('has-unread'); }});
-  if(hasUnread()) whatsNewBtn.classList.add('has-unread');
+    html:icon(effectiveMode()==='light'?'moon':'sun'),
+    onclick:()=>{ toggleMode(); themeBtn.innerHTML=icon(effectiveMode()==='light'?'moon':'sun'); }});
+  whatsNewBtn=el('button',{class:'btn icon ghost wn-btn', title:"What's new",
+    html:icon('sparkle'), onclick:()=>openWhatsNew()});
+  if(hasUnseen(WN_KEY, LATEST_VERSION)) whatsNewBtn.classList.add('has-unread');
   const newBtn=el('button',{class:'btn sm primary', html:`${icon('plus')} New`, onclick:()=>newEntity()});
-  bar.append(avatars, presence, searchBtn, shortcutsBtn, whatsNewBtn, themeBtn, newBtn);
-  return bar;
+
+  const shell = initShell({
+    app: { id:'relay', name:'Relay', wordmark:`<img src="/assets/logo.svg" alt=""/>` },
+    sections: SECTIONS.map(s=> s.group ? s : { ...s, icon:icon(s.icon) }),
+    onNav: (s)=>go(s),
+    isAdmin: ()=>Access.isAdmin(),
+    rail: { storageKey:'relay.rail' },   // historical keys: relay.rail.open / relay.rail.width
+    topbar: {
+      left:  [topTitle],
+      right: [avatars, presence, searchBtn, shortcutsBtn, whatsNewBtn, themeBtn,
+              appSwitcher(FLEET, { current:'relay' }), newBtn],
+    },
+    mount: app,
+  });
+  window.__rail = shell;
+
+  // The shell's main region hosts the views; keep the app's historical id +
+  // class so view CSS and tooling keep working unchanged.
+  view = shell.els.main;
+  view.id='view'; view.classList.add('view');
+}
+
+function openWhatsNew(){
+  rightPanel({
+    title:"What's new",
+    body: initWhatsNew({ entries:CHANGELOG, latest:LATEST_VERSION, storageKey:WN_KEY,
+      labels:{ title:'Relay' } }),
+  });
+  whatsNewBtn.classList.remove('has-unread');
 }
 
 // ---- routing -------------------------------------------------------------
@@ -93,15 +128,14 @@ function go(section, params={}){
   location.hash=section;
   topTitle.textContent=TITLES[section]||'Relay';
   window.__rail.setActive(section);
-  if(window.innerWidth<=720) window.__rail.setOpen(false);   // close drawer on mobile
   render();
 }
 function render(){
   RENDERERS[currentSection](view, ctx, currentParams);
 }
 function refresh(){
-  // rebuild rail so the Admin item reflects unlock state, then re-render
-  window.__rail = buildRail(rail, { onNav:(s)=>go(s), isAdmin:Access.isAdmin() });
+  // rebuild the shell so the Admin item reflects unlock state, then re-render
+  buildShell();
   window.__rail.setActive(currentSection);
   render(); refreshBadges(); refreshPresence();
 }
@@ -168,6 +202,16 @@ function isEditableTarget(t){
 }
 
 function wireEvents(){
+  // The shell boots the rail closed in drawer (mobile) mode, but keeps a
+  // desktop `.open` when the viewport crosses INTO drawer range mid-session
+  // (window shrink / phone rotation) — the drawer would pop open over the
+  // content. Mirror the boot rule here without persisting, so the desktop
+  // preference survives. (Candidate upstream fix for polecat-platform
+  // lib/shell.js; keep in sync with shell.css's 860px drawer breakpoint.)
+  window.matchMedia('(max-width: 860px)').addEventListener?.('change', (e)=>{
+    if(e.matches) window.__rail?.els.rail.classList.remove('open');
+  });
+
   Sync.on('peers', ()=>{ refreshBadges(); refreshPresence(); if(currentSection==='peers') render(); if(currentSection==='home') render(); });
   Sync.on('stats', ()=>{ if(currentSection==='activity'||currentSection==='home') render(); });
   Sync.on('perms', ()=>{ if(currentSection==='peers') render(); });

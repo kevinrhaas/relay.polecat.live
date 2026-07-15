@@ -16,7 +16,19 @@ when you finish something, move it to **Done** with the date; add discoveries to
   (last-writer-wins; deletes use tombstones; entity/field ops sync).
 
 ## Now (highest value first)
-1. **Keep the public site sexy.** Periodically refresh the landing page (`/`) to
+1. **Finish the Polecat Shell migration.** The frame (rail, topbar, drawer,
+   right panel, app switcher, theme/palettes, What's-New feed) now comes from
+   `vendor/polecat-shell/` (READ-ONLY — shell changes go to
+   kevinrhaas/polecat-platform and arrive via sync-shell PRs). Remaining
+   slices, per MIGRATION.md's definition of done:
+   - Swap app-local `js/ui.js` / `js/icons.js` for the vendored modules
+     (API deltas to bridge: relay's `sheet({head,extra,…})` vs shell's
+     `sheet({title,…})`; `confirmDialog(title,msg,opts)` positional vs object;
+     `toast` `action` option; `icon(name,cls)` vs `icon(name,size)` +
+     `registerIcons` for relay's app-specific glyphs). Delete the app-local
+     copies only after smoke is green.
+   - Regenerate landing-page screenshots showing the new chrome.
+2. **Keep the public site sexy.** Periodically refresh the landing page (`/`) to
    showcase current features — updated screenshots, subtle animations, short
    loops/GIFs, feature highlights. It should always reflect what the app can do.
 
