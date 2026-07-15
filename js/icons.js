@@ -1,4 +1,10 @@
-// Inline SVG icon set (stroke-based, currentColor). Keep 24x24 viewBox.
+// Relay's icon family, registered into the vendored Polecat Shell registry —
+// one icon() implementation fleet-wide (24×24 viewBox, stroke currentColor).
+// Registered names deliberately OVERRIDE same-named base glyphs so relay's
+// visual identity is unchanged; names relay doesn't define fall through to
+// the shell's base set. Values are bare path data (registerIcons wraps them).
+import { icon, registerIcons } from '../vendor/polecat-shell/icons.js';
+
 export const ICONS = {
   home:      'M3 11.5 12 4l9 7.5M5 10v10h5v-6h4v6h5V10',
   table:     'M3 5h18v14H3zM3 10h18M9 5v14M15 5v14',
@@ -38,8 +44,6 @@ export const ICONS = {
   keyboard:  'M3 6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6ZM6 9h.01M9 9h.01M12 9h.01M15 9h.01M18 9h.01M6 12h.01M18 12h.01M9 12h6',
 };
 
-export function icon(name, cls){
-  const d = ICONS[name] || ICONS.info;
-  return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"
-    stroke-linecap="round" stroke-linejoin="round"${cls?` class="${cls}"`:''}><path d="${d}"/></svg>`;
-}
+registerIcons(ICONS);
+
+export { icon };

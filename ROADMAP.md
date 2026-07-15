@@ -17,16 +17,17 @@ when you finish something, move it to **Done** with the date; add discoveries to
 
 ## Now (highest value first)
 1. **Finish the Polecat Shell migration.** The frame (rail, topbar, drawer,
-   right panel, app switcher, theme/palettes, What's-New feed) now comes from
+   right panel, app switcher, theme/palettes, What's-New feed) comes from
    `vendor/polecat-shell/` (READ-ONLY — shell changes go to
-   kevinrhaas/polecat-platform and arrive via sync-shell PRs). Remaining
-   slices, per MIGRATION.md's definition of done:
-   - Swap app-local `js/ui.js` / `js/icons.js` for the vendored modules
-     (API deltas to bridge: relay's `sheet({head,extra,…})` vs shell's
-     `sheet({title,…})`; `confirmDialog(title,msg,opts)` positional vs object;
-     `toast` `action` option; `icon(name,cls)` vs `icon(name,size)` +
-     `registerIcons` for relay's app-specific glyphs). Delete the app-local
-     copies only after smoke is green.
+   kevinrhaas/polecat-platform and arrive via sync-shell PRs). Icons are
+   registered into the vendored registry (`js/icons.js` is a thin family
+   shim) and `js/ui.js` re-exports the shell's `$ $$ el escapeHtml uuid
+   initials`, keeping only relay's richer dialog layer app-local (toast with
+   Undo action, record sheet head/extra/onHide, scroll-repositioning
+   popover, positional confirmDialog, gradient avatars, ago/clock/shortId).
+   Remaining slices:
+   - Converge the dialog layer onto the shell when shell v2's views/sheet
+     work lands (per the platform plan) — not before.
    - Regenerate landing-page screenshots showing the new chrome.
 2. **Keep the public site sexy.** Periodically refresh the landing page (`/`) to
    showcase current features — updated screenshots, subtle animations, short
