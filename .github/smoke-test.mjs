@@ -71,7 +71,7 @@ try {
   // fixed wait races that under CI load and a lingering full-screen overlay
   // then intercepts the next click. Escape first; if something still lingers,
   // click the backdrop corner as a fallback.
-  const OVERLAYS = '.overlay, .sheet-overlay';
+  const OVERLAYS = '.overlay, .sheet-overlay, .ps-rpanel-back';
   const closeModal = async () => {
     await page.keyboard.press('Escape');
     const gone = () => page.waitForFunction(
@@ -91,17 +91,17 @@ try {
   console.log('App shell');
   await page.goto(`${base}/app/`, { waitUntil: 'networkidle', timeout: 30000 });
   await page.waitForTimeout(1000);
-  await check('nav rail renders (>=5 sections)', async () => (await count('.rail-item')) >= 5);
+  await check('nav rail renders (>=5 sections)', async () => (await count('.ps-rail-item')) >= 5);
   for (const sec of ['home', 'table', 'messages', 'peers', 'activity', 'settings']) {
     await check(`section "${sec}" opens`, async () => {
-      const el = await $(`.rail-item[data-sec="${sec}"]`); if (!el) return false;
+      const el = await $(`.ps-rail-item[data-sec="${sec}"]`); if (!el) return false;
       await el.click(); await page.waitForTimeout(350);
       return (await count('#view *')) > 0;
     });
   }
 
   console.log('Global search (Ctrl+K)');
-  await (await $('.rail-item[data-sec="home"]')).click(); await page.waitForTimeout(300);
+  await (await $('.ps-rail-item[data-sec="home"]')).click(); await page.waitForTimeout(300);
   await check('Ctrl+K opens the search palette, focused and ready to type', async () => {
     await page.keyboard.press('Control+k'); await page.waitForTimeout(250);
     const open = (await count('.overlay.show')) === 1;
@@ -115,7 +115,7 @@ try {
     const row = page.locator('.gsearch-row', { hasText: 'Ada Lovelace' });
     if (!(await row.count())) return false;
     await row.click(); await page.waitForTimeout(600);
-    const activeSec = await page.$eval('.rail-item.active', (e) => e.getAttribute('data-sec')).catch(() => null);
+    const activeSec = await page.$eval('.ps-rail-item.active', (e) => e.getAttribute('data-sec')).catch(() => null);
     const activeTable = await page.$eval('.tree-row.active .tree-label', (e) => e.textContent.trim()).catch(() => null);
     const hasSheet = !!(await $('.record-sheet'));
     await closeModal();
@@ -162,9 +162,9 @@ try {
   });
 
   console.log('Tables — create / row / edit / field / delete');
-  await (await $('.rail-item[data-sec="table"]')).click(); await page.waitForTimeout(300);
+  await (await $('.ps-rail-item[data-sec="table"]')).click(); await page.waitForTimeout(300);
   await check('create a new table', async () => {
-    await (await $('.topbar .btn.primary')).click(); await page.waitForTimeout(300);
+    await (await $('.ps-topbar .btn.primary')).click(); await page.waitForTimeout(300);
     await page.fill('.modal input', 'Smoke Table');
     await page.click('.modal button:has-text("Create")'); await page.waitForTimeout(500);
     return await page.$$eval('.tree-row .tree-label', (t) => t.some((x) => /smoke table/i.test(x.textContent)));
@@ -269,17 +269,17 @@ try {
   await check('icon-only buttons expose an accessible label', async () => {
     const delRow = await $('tbody tr .row-del-btn');
     const delOk = delRow && (await delRow.getAttribute('aria-label'));
-    await (await $('.rail-item[data-sec="home"]')).click(); await page.waitForTimeout(200);
+    await (await $('.ps-rail-item[data-sec="home"]')).click(); await page.waitForTimeout(200);
     const pin = await $('.pin-btn'); const pinOk = pin && (await pin.getAttribute('aria-label'));
-    await (await $('.rail-item[data-sec="table"]')).click(); await page.waitForTimeout(200);
+    await (await $('.ps-rail-item[data-sec="table"]')).click(); await page.waitForTimeout(200);
     return !!(delOk && pinOk);
   });
   await check('home quick-action card is keyboard-activatable (Enter)', async () => {
-    await (await $('.rail-item[data-sec="home"]')).click(); await page.waitForTimeout(300);
+    await (await $('.ps-rail-item[data-sec="home"]')).click(); await page.waitForTimeout(300);
     const card = page.locator('.qa', { hasText: 'Open a table' });
     if (!(await card.getAttribute('tabindex'))) return false;
     await card.focus(); await page.keyboard.press('Enter'); await page.waitForTimeout(300);
-    return !!(await $('.rail-item[data-sec="table"].active'));
+    return !!(await $('.ps-rail-item[data-sec="table"].active'));
   });
   await check('edit a cell (persists to store)', async () => {
     const cell = await $('tbody tr td[contenteditable]'); if (!cell) return false;
@@ -426,19 +426,23 @@ try {
     return remaining.length === 1 && remaining[0] === 'zebra' && !(await $('.bulk-bar'));
   });
   await check('mobile layout: the toolbar and bulk-select bar stay within the viewport (no horizontal overflow)', async () => {
-    await page.setViewportSize({ width: 390, height: 780 }); await page.waitForTimeout(250);
-    const rowCheck = await $('tbody tr .row-check');
-    if (!rowCheck) { await page.setViewportSize({ width: 1280, height: 860 }); return false; }
-    await rowCheck.click(); await page.waitForTimeout(250);
-    const fits = await page.evaluate(() => {
-      const vw = window.innerWidth;
-      const bar = document.querySelector('.bulk-bar');
-      const toolbar = document.querySelector('.tbl-toolbar');
-      return !!bar && document.body.scrollWidth <= vw
-        && bar.getBoundingClientRect().right <= vw + 1 && toolbar.getBoundingClientRect().right <= vw + 1;
-    });
-    await page.setViewportSize({ width: 1280, height: 860 }); await page.waitForTimeout(250);
-    return fits;
+    // restore the desktop viewport even if a click throws mid-check — a
+    // lingering 390px viewport would cascade failures through the whole suite
+    try {
+      await page.setViewportSize({ width: 390, height: 780 }); await page.waitForTimeout(250);
+      const rowCheck = await $('tbody tr .row-check');
+      if (!rowCheck) return false;
+      await rowCheck.click(); await page.waitForTimeout(250);
+      return await page.evaluate(() => {
+        const vw = window.innerWidth;
+        const bar = document.querySelector('.bulk-bar');
+        const toolbar = document.querySelector('.tbl-toolbar');
+        return !!bar && document.body.scrollWidth <= vw
+          && bar.getBoundingClientRect().right <= vw + 1 && toolbar.getBoundingClientRect().right <= vw + 1;
+      });
+    } finally {
+      await page.setViewportSize({ width: 1280, height: 860 }); await page.waitForTimeout(250);
+    }
   });
   await check('bulk-select "Set field…" applies one field\'s value to every checked row', async () => {
     // the mobile-layout check above left "zebra" (the sole surviving row) checked
@@ -629,7 +633,7 @@ try {
   }, id);
   await check('grid: arrow keys navigate between cells (committing on the way), Enter drops to the row below, Escape cancels', async () => {
     // isolated table so this doesn't disturb the fixed row/column shape other checks assume
-    await (await $('.topbar .btn.primary')).click(); await page.waitForTimeout(300);
+    await (await $('.ps-topbar .btn.primary')).click(); await page.waitForTimeout(300);
     await page.fill('.modal input', 'Smoke Nav Table');
     await page.click('.modal button:has-text("Create")'); await page.waitForTimeout(500);
     await page.click('button:has-text("Row")'); await page.waitForTimeout(200); // seeds the default "name" field
@@ -686,7 +690,7 @@ try {
     return k ? Store.records(k)[0]?.fields : null;
   });
   await check('create a table for column-type checks', async () => {
-    await (await $('.topbar .btn.primary')).click(); await page.waitForTimeout(300);
+    await (await $('.ps-topbar .btn.primary')).click(); await page.waitForTimeout(300);
     await page.fill('.modal input', 'Smoke Types Table');
     await page.click('.modal button:has-text("Create")'); await page.waitForTimeout(500);
     await page.click('button:has-text("Row")'); await page.waitForTimeout(300); // seed a row so fields materialize
@@ -1030,7 +1034,7 @@ try {
   });
 
   console.log('Messaging');
-  await (await $('.rail-item[data-sec="messages"]')).click(); await page.waitForTimeout(300);
+  await (await $('.ps-rail-item[data-sec="messages"]')).click(); await page.waitForTimeout(300);
   await check('send a message appears in the feed', async () => {
     const ta = await $('.composer textarea'); if (!ta) return false;
     await ta.click(); await page.keyboard.type('smoke hello'); await page.keyboard.press('Enter');
@@ -1045,8 +1049,8 @@ try {
       const { Sync } = await import('/js/sync.js');
       Sync._rememberPeer('smoke-thread-uid', 'Smoke Thread Peer');
     });
-    await (await $('.rail-item[data-sec="home"]')).click(); await page.waitForTimeout(150);
-    await (await $('.rail-item[data-sec="messages"]')).click(); await page.waitForTimeout(300);
+    await (await $('.ps-rail-item[data-sec="home"]')).click(); await page.waitForTimeout(150);
+    await (await $('.ps-rail-item[data-sec="messages"]')).click(); await page.waitForTimeout(300);
     await page.evaluate(async () => {
       const { Sync } = await import('/js/sync.js');
       Sync._recvChat({ id: 'smoke-msg-1', from: 'smoke-peer-session', uid: 'smoke-thread-uid',
@@ -1057,7 +1061,7 @@ try {
     const badgeBefore = await page.$eval(pillSel, (p) => p.querySelector('.pill-badge')?.textContent.trim());
     if (badgeBefore !== '1') return false;
     // the nav rail's own Messages badge should reflect the same unread total
-    const railBadge = await page.$eval('.rail-item[data-sec="messages"] .badge', (b) => b.hidden ? null : b.textContent.trim());
+    const railBadge = await page.$eval('.ps-rail-item[data-sec="messages"] .badge', (b) => b.hidden ? null : b.textContent.trim());
     if (railBadge !== '1') return false;
     await (await $(pillSel)).click(); await page.waitForTimeout(300);
     const badgeAfter = await page.$eval(pillSel, (p) => p.querySelector('.pill-badge'));
@@ -1066,7 +1070,7 @@ try {
 
   console.log('Global search — messages');
   await check('search matches a chat message by text and jumps to its thread, highlighting the message', async () => {
-    await (await $('.rail-item[data-sec="home"]')).click(); await page.waitForTimeout(200);
+    await (await $('.ps-rail-item[data-sec="home"]')).click(); await page.waitForTimeout(200);
     await page.keyboard.press('Control+k'); await page.waitForTimeout(250);
     await page.keyboard.type('smoke hello'); await page.waitForTimeout(250);
     const groups = await page.$$eval('.gsearch-group', (gs) => gs.map((g) => g.textContent));
@@ -1074,7 +1078,7 @@ try {
     const row = page.locator('.gsearch-row', { hasText: 'smoke hello' });
     if (!(await row.count())) return false;
     await row.click(); await page.waitForTimeout(600);
-    const activeSec = await page.$eval('.rail-item.active', (e) => e.getAttribute('data-sec')).catch(() => null);
+    const activeSec = await page.$eval('.ps-rail-item.active', (e) => e.getAttribute('data-sec')).catch(() => null);
     const flashed = await page.$$eval('.msg.flash .text', (els) => els.some((x) => x.textContent.includes('smoke hello')));
     return activeSec === 'messages' && flashed;
   });
@@ -1087,7 +1091,7 @@ try {
     });
     await page.goto(`${base}/app/`, { waitUntil: 'networkidle', timeout: 30000 });
     await page.waitForTimeout(800);
-    await (await $('.rail-item[data-sec="peers"]')).click(); await page.waitForTimeout(300);
+    await (await $('.ps-rail-item[data-sec="peers"]')).click(); await page.waitForTimeout(300);
     return await page.$$eval('.peer .peer-head b', (bs) => bs.some((b) => b.textContent === 'Smoke Peer'));
   });
   await check('sharing summary defaults to "Everything"', async () => {
@@ -1130,16 +1134,20 @@ try {
 
   console.log('What\'s new');
   await check('what\'s new panel opens, lists entries, searches', async () => {
+    // The feed lives in the vendored shell's right panel (rightPanel +
+    // initWhatsNew) since the Polecat Shell migration.
     await (await $('.wn-btn')).click(); await page.waitForTimeout(300);
-    if (!(await $('.sheet-overlay.show'))) return false;
+    if (!(await $('.ps-rpanel.in'))) return false;
     if ((await count('.wn-entry')) < 1) return false;
-    // timestamps must be real (formatted from ISO ts to Central Time), not blank
+    // timestamps must be real (formatted from ISO ts, Central Time per the
+    // fleet contract): "Jul 4, 2026 · 2 weeks ago" — a year and the
+    // relative-time separator, never blank
     const dateText = await page.evaluate(() => {
       const d = document.querySelector('.wn-entry .wn-date');
       return d ? d.textContent.trim() : '';
     });
-    if (!/\bCT$/.test(dateText)) return false;
-    await page.fill('.sheet .input', 'zzzznomatch'); await page.waitForTimeout(250);
+    if (!/\b20\d\d\b/.test(dateText) || !dateText.includes('·')) return false;
+    await page.fill('.ps-rpanel .input', 'zzzznomatch'); await page.waitForTimeout(250);
     const none = (await count('.wn-entry')) === 0;
     await closeModal();
     return none;
@@ -1194,7 +1202,7 @@ try {
       },
     });
   });
-  await (await $('.rail-item[data-sec="settings"]')).click(); await page.waitForTimeout(300);
+  await (await $('.ps-rail-item[data-sec="settings"]')).click(); await page.waitForTimeout(300);
   await check('advanced (rendezvous) disclosure present', async () => !!(await $('details.adv')));
   await check('TURN server: saving fields persists and feeds RTCPeerConnection config', async () => {
     let details = await $('details.adv'); if (!details) return false;

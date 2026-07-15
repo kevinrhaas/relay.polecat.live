@@ -1,68 +1,20 @@
 /* =========================================================================
    relay.polecat.live — design system
-   Ported from the polecat / analytics.polecat.live look & feel:
-   aurora dark-default theme, brand brown/amber/blush + consensus purple,
-   collapsible "rail" navigation. No build step, no framework.
+   Tokens come from the vendored Polecat Shell (vendor/polecat-shell/
+   tokens.css, loaded first) — the shell's default `polecat` palette IS
+   relay's classic amber/purple look, and the aurora/neon palettes come
+   free. This file keeps relay's app-specific vocabulary and view styling.
+   No build step, no framework.
    ========================================================================= */
 
 :root{
-  /* surfaces */
-  --bg:        #0a0a0f;
-  --surface:   #111118;
-  --surface-2: #18181f;
-  --surface-3: #222230;
-  --border:    #2a2a3c;
-  --text:      #e8e8f2;
-  --text-2:    #8888aa;
-  --text-3:    #4a4a6a;
-
-  /* brand */
-  --consensus: #9333ea;
-  --brand-a:   #9C6B3F;   /* polecat brown */
-  --brand-b:   #d4773b;   /* warm amber   */
-  --brand-c:   #F4A6A6;   /* blush        */
-
-  /* semantic */
-  --success:   #34d399;
-  --danger:    #f87171;
-  --warning:   #f0a830;
-  --info:      #60a5fa;
-
-  /* rail */
-  --rail-bg:   #0d0d14;
-  --rail-bg2:  #17171f;
-  --rail-line: #23233330;
-  --rail-accent: var(--brand-b);
-
-  /* geometry */
-  --radius:    14px;
-  --radius-sm: 9px;
-  --radius-lg: 20px;
-  --shadow:    0 24px 64px rgba(0,0,0,.5);
-  --shadow-sm: 0 6px 20px rgba(0,0,0,.35);
-  --ring: 0 0 0 3px color-mix(in srgb, var(--brand-b) 35%, transparent);
-
-  --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-  --mono: 'SF Mono', 'Fira Code', ui-monospace, 'JetBrains Mono', monospace;
-
-  --rail-w: 64px;
-  --rail-w-open: 232px;
-}
-
-[data-theme="light"]{
-  --bg:        #f4f4fb;
-  --surface:   #ffffff;
-  --surface-2: #ebebf5;
-  --surface-3: #e0e0ee;
-  --border:    #d0d0e4;
-  --text:      #111120;
-  --text-2:    #55556e;
-  --text-3:    #9090b0;
-  --rail-bg:   #ffffff;
-  --rail-bg2:  #eef0f8;
-  --rail-line: #d0d0e480;
-  --shadow:    0 24px 64px rgba(30,30,60,.18);
-  --shadow-sm: 0 6px 20px rgba(30,30,60,.10);
+  /* relay's historical names, mapped onto the active palette so every
+     palette recolors the whole app. Under `polecat` these resolve to the
+     exact pre-migration colors (amber #d4773b, purple #9333ea, blush). */
+  --consensus: var(--accent);
+  --brand-a:   color-mix(in srgb, var(--brand) 72%, #40260f);  /* deep brand (was polecat brown) */
+  --brand-b:   var(--brand);                                    /* primary accent (was warm amber) */
+  --brand-c:   var(--accent-2);                                 /* soft accent (was blush) */
 }
 
 *{box-sizing:border-box}
@@ -90,103 +42,19 @@ body{
   66%{transform:translate(-5vmax,3vmax) scale(.95)}
 }
 
-/* ---- app shell --------------------------------------------------------- */
+/* ---- app shell (vendored Polecat Shell chrome + relay's skin) ----------- */
+/* The rail / topbar / drawer / right panel markup + layout come from
+   vendor/polecat-shell/{shell.js,shell.css}. Rules here only SKIN those
+   ps- surfaces with relay's accents — layout stays the shell's. */
 #app{position:relative;z-index:1;height:100vh;display:flex}
 
-/* ---- rail navigation --------------------------------------------------- */
-#rail{
-  position:relative;flex:0 0 auto;width:var(--rail-w);
-  display:flex;flex-direction:column;
-  background:color-mix(in srgb,var(--rail-bg) 82%, transparent);
-  backdrop-filter:blur(12px);
-  border-right:1px solid var(--border);
-  transition:width .22s cubic-bezier(.4,.0,.2,1);
-  z-index:20;
-}
-#rail.open{width:var(--rail-w-open)}
-#rail.dragging{transition:none;user-select:none}
-
-.rail-brand{
-  display:flex;align-items:center;gap:12px;
-  padding:16px 16px 14px;border:0;background:none;cursor:pointer;
-  color:var(--text);text-align:left;width:100%;white-space:nowrap;
-}
-.rail-brand img{width:30px;height:30px;flex:0 0 auto;
-  filter:drop-shadow(0 3px 8px rgba(147,51,234,.35))}
-.rail-brand .bt{display:flex;flex-direction:column;line-height:1.15;
-  opacity:0;transform:translateX(-6px);transition:.2s;pointer-events:none}
-#rail.open .rail-brand .bt{opacity:1;transform:none}
-.rail-brand .bt b{font-size:14.5px;font-weight:650;letter-spacing:.2px}
-.rail-brand .bt small{font-size:10.5px;color:var(--text-2);letter-spacing:.3px}
-
-.rail-scroll{flex:1;min-height:0;overflow:hidden auto;padding:6px 0;
-  display:flex;flex-direction:column;gap:2px}
-.rail-scroll::-webkit-scrollbar{width:0}
-
-.rail-sec-label{
-  padding:12px 20px 4px;font-size:9.5px;letter-spacing:1.4px;
-  text-transform:uppercase;color:var(--text-3);white-space:nowrap;
-  opacity:0;transition:.2s;height:0;overflow:hidden;
-}
-#rail.open .rail-sec-label{opacity:1;height:auto}
-
-.rail-item{
-  position:relative;display:flex;align-items:center;gap:14px;
-  margin:0 10px;padding:10px 10px;border:0;border-radius:var(--radius-sm);
-  background:none;color:var(--text-2);cursor:pointer;font-size:13px;
-  white-space:nowrap;font-family:inherit;text-align:left;width:calc(100% - 20px);
-  transition:background .15s,color .15s;
-}
-.rail-item svg{width:20px;height:20px;flex:0 0 auto}
-.rail-item .lbl{opacity:0;transform:translateX(-6px);transition:.2s;pointer-events:none}
-#rail.open .rail-item .lbl{opacity:1;transform:none}
-.rail-item:hover{background:var(--rail-bg2);color:var(--text)}
-.rail-item:focus-visible{outline:none;box-shadow:inset var(--ring)}
-.rail-item.active{
-  color:var(--text);background:var(--rail-bg2);
-  box-shadow:inset 3px 0 0 var(--rail-accent);
-}
-.rail-item.active svg{color:var(--brand-b)}
-.rail-item .badge{
-  margin-left:auto;min-width:18px;height:18px;padding:0 5px;border-radius:9px;
-  background:var(--consensus);color:#fff;font-size:10px;font-weight:700;
-  display:flex;align-items:center;justify-content:center;
-  opacity:0;transition:.2s
-}
-#rail.open .rail-item .badge{opacity:1}
-.rail-item .badge[hidden]{display:none}
-
-/* drag-to-resize handle + collapse tab */
-.rail-resize{
-  position:absolute;top:0;right:-3px;width:7px;height:100%;cursor:col-resize;
-  z-index:22;
-}
-.rail-resize::after{content:"";position:absolute;top:0;right:3px;width:2px;height:100%;
-  background:transparent;transition:.15s}
-.rail-resize:hover::after,#rail.dragging .rail-resize::after{background:var(--brand-b)}
-.rail-toggle{
-  position:absolute;top:22px;right:-11px;width:22px;height:22px;border-radius:50%;
-  border:1px solid var(--border);background:var(--surface-2);color:var(--text-2);
-  display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:23;
-  box-shadow:var(--shadow-sm);transition:transform .22s,background .15s,color .15s;
-}
-.rail-toggle:hover{color:var(--text);background:var(--surface-3)}
-.rail-toggle:focus-visible{outline:none;box-shadow:var(--shadow-sm),var(--ring)}
-.rail-toggle svg{width:13px;height:13px;transition:transform .22s}
-#rail.open .rail-toggle svg{transform:rotate(180deg)}
-
-/* ---- main content ------------------------------------------------------ */
-#main{flex:1;min-width:0;height:100%;display:flex;flex-direction:column}
-.topbar{
-  display:flex;align-items:center;gap:14px;padding:14px 26px;
-  border-bottom:1px solid var(--border);
-  background:color-mix(in srgb,var(--surface) 55%, transparent);
-  backdrop-filter:blur(10px);z-index:10;
-}
-.topbar h1{margin:0;font-size:17px;font-weight:650;letter-spacing:.2px}
-.topbar .sp{flex:1}
-.topbar .topbar-menu{display:none}         /* hamburger — mobile only */
-.rail-backdrop{display:none}               /* drawer backdrop — mobile only */
+.ps-rail{background:color-mix(in srgb,var(--rail-bg) 82%, transparent);backdrop-filter:blur(12px)}
+.ps-rail-item svg{width:20px;height:20px;flex:0 0 auto}
+.ps-rail-item.active svg{color:var(--brand-b)}
+.ps-rail-item .badge{background:var(--consensus)}
+.ps-rail-brand img{filter:drop-shadow(0 3px 8px rgba(147,51,234,.35))}
+.ps-topbar{gap:12px;padding:13px 22px;background:color-mix(in srgb,var(--surface) 55%, transparent);backdrop-filter:blur(10px)}
+.ps-topbar h1{font-size:17px;font-weight:650;letter-spacing:.2px}
 
 .view{flex:1;min-height:0;overflow:auto;padding:26px}
 .view::-webkit-scrollbar{width:10px}
@@ -649,15 +517,8 @@ a.link:hover{text-decoration:underline}
 .backlink-src{font-size:11px;color:var(--text-3);margin-bottom:6px}
 .backlink-chips{display:flex;flex-wrap:wrap;gap:6px}
 .backlink-chip{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.wn-entry{padding:16px 0;border-bottom:1px solid var(--border)}
-.wn-entry:last-child{border-bottom:0}
-.wn-top{display:flex;align-items:center;gap:10px}
-.wn-top b{font-size:14.5px}
-.wn-badge{flex:0 0 auto;font-family:var(--mono);font-size:11px;font-weight:700;color:#fff;
-  padding:2px 8px;border-radius:999px;background:linear-gradient(135deg,var(--brand-b),var(--consensus))}
-.wn-date{font-size:11.5px;color:var(--text-3);margin:6px 0 0}
-.wn-entry ul{margin:8px 0 0;padding-left:18px;display:flex;flex-direction:column;gap:5px}
-.wn-entry li{font-size:13px;color:var(--text-2);line-height:1.5}
+/* What's-New feed styling comes from the vendored shell (whatsnew.js +
+   shell.css .wn-*); relay keeps only the topbar button's unseen dot. */
 .wn-btn{position:relative}
 .wn-btn.has-unread::after{content:"";position:absolute;top:5px;right:5px;width:8px;height:8px;
   border-radius:50%;background:var(--brand-c);box-shadow:0 0 0 2px var(--surface),0 0 8px var(--brand-c)}
@@ -743,22 +604,16 @@ a.link:hover{text-decoration:underline}
 .composer textarea{max-height:120px}
 
 /* ---- mobile ------------------------------------------------------------ */
+/* The rail's off-canvas drawer + hamburger come from the vendored shell
+   (shell.css, 860px breakpoint). Rules here condense relay's own topbar
+   widgets and views on small screens. */
+@media (max-width:860px){
+  .ps-rail .ps-rail-item .lbl,.ps-rail .ps-rail-brand .bt,.ps-rail .ps-rail-group{opacity:1!important}
+  .ps-topbar .avatars,.ps-topbar .presence{display:none}  /* condense */
+}
 @media (max-width:720px){
-  /* rail becomes an off-canvas drawer */
-  #rail{position:absolute;top:0;left:0;height:100%;box-shadow:var(--shadow);
-    --rail-w-open:min(78vw,300px)}
-  #rail:not(.open){width:0;border:0;overflow:hidden}
-  #rail.open{width:var(--rail-w-open)}
-  #rail .rail-item .lbl,#rail .rail-brand .bt,#rail .rail-sec-label{opacity:1!important;transform:none!important}
-  .rail-resize{display:none}                 /* no drag-resize on touch */
-  .rail-toggle{display:none}                  /* use the topbar hamburger instead */
-  #rail.open ~ .rail-backdrop{display:block;position:fixed;inset:0;z-index:15;
-    background:rgba(5,5,10,.55);backdrop-filter:blur(2px)}
-
-  .topbar .topbar-menu{display:inline-flex}
-  .topbar{padding:11px 14px;gap:8px}
-  .topbar h1{font-size:15px}
-  .topbar .avatars,.topbar .presence{display:none}  /* condense */
+  .ps-topbar{padding:11px 12px;gap:6px}
+  .ps-topbar h1{font-size:15px}
 
   .view{padding:16px 14px}
   .wrap{max-width:100%}

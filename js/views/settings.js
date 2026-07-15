@@ -1,4 +1,4 @@
-// Settings: identity, appearance (dark/light/system), P2P transport,
+// Settings: identity, appearance (palette × dark/light/system), P2P transport,
 // data export / import / reset.
 import { Store } from '../store.js';
 import { Sync } from '../sync.js';
@@ -7,7 +7,7 @@ import { LocalFolder, S3Sync, WebDAVSync, Dropbox, GoogleDrive } from '../storag
 import { Access } from '../access.js';
 import { el, escapeHtml, toast, confirmDialog, avatarColor, initials, ago } from '../ui.js';
 import { icon } from '../icons.js';
-import { setTheme, getThemePref } from '../theme.js';
+import { setTheme, getTheme, PALETTES } from '../../vendor/polecat-shell/theme.js';
 
 export function renderSettings(root, ctx){
   root.innerHTML='';
@@ -36,13 +36,21 @@ export function renderSettings(root, ctx){
   const appCard=el('div',{class:'card', style:'margin-top:16px'});
   appCard.innerHTML=`<div class="section-title" style="margin-top:0"><h2 style="font-size:14px">Appearance</h2></div>`;
   const seg=el('div',{class:'seg'});
-  const cur=getThemePref();
+  const cur=getTheme();
   [['dark','moon'],['light','sun'],['system','settings']].forEach(([mode,ic])=>{
-    const b=el('button',{class:cur===mode?'on':'', html:`${icon(ic)} ${mode[0].toUpperCase()+mode.slice(1)}`,
-      onclick:()=>{ setTheme(mode); [...seg.children].forEach(x=>x.classList.remove('on')); b.classList.add('on'); }});
+    const b=el('button',{class:cur.mode===mode?'on':'', html:`${icon(ic)} ${mode[0].toUpperCase()+mode.slice(1)}`,
+      onclick:()=>{ setTheme(getTheme().palette, mode); [...seg.children].forEach(x=>x.classList.remove('on')); b.classList.add('on'); }});
     seg.append(b);
   });
   appCard.append(el('div',{class:'field', html:'<label>Theme</label>'}), seg);
+  // palette (from the vendored shell's tokens.css — relay's classic look is `polecat`)
+  const palSeg=el('div',{class:'seg'});
+  PALETTES.forEach(p=>{
+    const b=el('button',{class:getTheme().palette===p.key?'on':'', text:p.label, title:p.hint||'',
+      onclick:()=>{ setTheme(p.key, getTheme().mode); [...palSeg.children].forEach(x=>x.classList.remove('on')); b.classList.add('on'); }});
+    palSeg.append(b);
+  });
+  appCard.append(el('div',{class:'field', style:'margin-top:10px', html:'<label>Palette</label>'}), palSeg);
   wrap.append(appCard);
 
   // ---- Advanced (collapsed): transport + optional auto-discovery -------

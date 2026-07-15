@@ -10,6 +10,18 @@
 // .github/stamp-changelog.mjs regenerates every `date` from its `ts`.
 export const CHANGELOG = [
   {
+    v: 64,
+    title: 'Relay joins the Polecat Shell — app switcher, palettes, richer What\'s new',
+    ts: '2026-07-15T20:52:34.822Z',
+    date: 'Jul 15, 2026, 3:52 PM CT',
+    items: [
+      'The app frame (navigation rail, top bar, mobile drawer) now comes from the shared Polecat Shell used across the polecat.live suite — same drag-to-resize rail, now with the fleet\'s polish.',
+      'New app-switcher waffle in the top bar jumps straight to any other Polecat app.',
+      'Pick a color palette in Settings — Polecat (Relay\'s classic amber), Aurora, or Neon — alongside the existing dark/light/system modes. Your saved theme carries over.',
+      'What\'s new moved into a slide-in panel with search and feature/polish/fix filters.',
+    ],
+  },
+  {
     v: 63,
     title: 'Keyboard shortcuts help panel',
     ts: '2026-07-04T18:52:53.191Z',

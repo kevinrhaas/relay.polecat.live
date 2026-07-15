@@ -1,25 +1,24 @@
-name: Hourly self-improvement
+name: Self-improvement (dispatch-only fallback)
 
-# Runs Claude Code on a schedule to build the next roadmap item (or, every 3rd
-# run, do a polish pass), gate it behind a smoke test, then commit to main and
-# deploy to production automatically. Pause any time by disabling this workflow
-# or removing the CLAUDE_CODE_OAUTH_TOKEN secret.
+# ⚠️ SUPERSEDED by the centralized fleet steward in kevinrhaas/polecat-platform
+# (.github/workflows/steward-improve.yml; see its docs/AUTOMATION.md). Scheduled
+# self-improvement for relay now runs THERE — dispatch steward-improve with
+# app=relay.polecat.live for a relay-focused deep-dive. Per the platform
+# automation playbook, this per-app workflow remains only as a DISPATCH-ONLY
+# FALLBACK — its schedule stays commented out permanently — and is slated for
+# deletion once the steward has ~3 weeks of solid runs.
+#
+# What a dispatched run does: Claude Code builds the next roadmap item (or,
+# every 3rd run, a polish pass), gated behind the smoke test, then commits to
+# main and deploys to production automatically.
 #
 # Note: a push to main by the built-in GITHUB_TOKEN does NOT trigger the normal
 # deploy workflow (GitHub blocks that to avoid loops), so this job deploys Pages
 # itself after committing.
-#
-# ⏸ PAUSED (to save tokens): the hourly `schedule` trigger below is commented
-# out, so the loop no longer runs automatically. It can still be run on demand
-# from the Actions tab (workflow_dispatch). To RESUME hourly runs, uncomment the
-# two `schedule:` lines.
 on:
-  # schedule:
-  #   # Off-peak minutes: GitHub heavily delays/drops scheduled jobs at :00.
-  #   # Two runs/hour improves the odds of a roughly-hourly cadence; the
-  #   # concurrency lock keeps them from overlapping.
+  # schedule:                # ← stays commented: superseded by the platform steward
   #   - cron: '23,53 * * * *'
-  workflow_dispatch: {}    # run manually from the Actions tab
+  workflow_dispatch: {}    # dispatch-only fallback (Actions tab → "Run workflow")
 
 permissions:
   contents: write

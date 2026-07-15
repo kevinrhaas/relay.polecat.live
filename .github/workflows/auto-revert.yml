@@ -1,0 +1,80 @@
+name: Guard main (auto-revert)
+
+# Last line of defence for the live site (Pages deploys main → relay.polecat.live).
+# On every push to main, run a FAST static validation. If main is broken, revert the
+# offending commit and push the revert, so the site self-heals within ~a minute — then
+# dispatch a redeploy so the restored state actually goes live.
+#
+# Fleet pattern (see polecat-platform docs/AUTOMATION.md): smoke stays advisory and never
+# hard-gates deploy; auto-revert heals a broken main instead. Validation here is the fast,
+# browser-free subset — full Playwright smoke (.github/smoke-test.mjs) runs in the
+# self-improve fallback / steward runs, not in this guard.
+#
+# Note: pushes made with the built-in GITHUB_TOKEN do NOT trigger workflows, so the revert
+# push will not re-trigger this job (no infinite loop) and will NOT trigger deploy.yml on
+# its own — which is exactly why the final step dispatches deploy.yml explicitly.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: guard-main
+  cancel-in-progress: false
+
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate main; auto-revert HEAD if it fails
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          validate() {
+            set -e
+            # Syntax-check every source module (skip vendored code and any frozen
+            # /v/<n>/ release snapshots if they ever land — not live source).
+            for f in $(git ls-files '*.js' '*.mjs' | grep -vE '^(vendor|v)/'); do
+              node --input-type=module --check < "$f" || return 1
+            done
+            # The fleet changelog contract: Manager + the launcher read this live, so a
+            # main that can't be parsed is a broken main. Runs the exact manager parser.
+            node .github/check-changelog.mjs || return 1
+          }
+          if validate; then
+            echo "main passes validation."
+            exit 0
+          fi
+          echo "::error::main failed validation."
+          if git log -1 --pretty=%s | grep -q '^Auto-revert:'; then
+            echo "::error::HEAD is already an auto-revert and still failing — not reverting again. Needs a human."
+            exit 1
+          fi
+          bad_subject="$(git log -1 --pretty=%s)"
+          bad_sha="$(git rev-parse --short HEAD)"
+          git config user.name  "relay-bot"
+          git config user.email "bot@users.noreply.github.com"
+          if ! git revert --no-edit HEAD; then
+            git revert --abort || true
+            echo "::error::Auto-revert of $bad_sha failed to apply cleanly — needs a human."
+            exit 1
+          fi
+          git commit --amend -m "Auto-revert: \"$bad_subject\" ($bad_sha) — failed validation"
+          git push origin HEAD:main
+          # The revert push (GITHUB_TOKEN) won't trigger deploy.yml, so publish the healed
+          # state explicitly. Best-effort — the repo is already restored regardless.
+          gh workflow run deploy.yml --ref main || echo "deploy dispatch failed; next push will redeploy"
+          echo "::error::Reverted $bad_sha and dispatched a redeploy. Live site restored to the last passing commit."
+          exit 1
