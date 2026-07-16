@@ -10,6 +10,17 @@
 // .github/stamp-changelog.mjs regenerates every `date` from its `ts`.
 export const CHANGELOG = [
   {
+    v: 66,
+    title: 'Install Relay as an app — offline-ready',
+    ts: '2026-07-16T03:28:57.575Z',
+    date: 'Jul 15, 2026, 10:28 PM CT',
+    items: [
+      'Relay can now be installed from your browser (Install app / Add to Home Screen) and opens in its own window.',
+      'A network-first service worker always loads the freshest build when you\'re online, and serves the cached app when you\'re not.',
+      'Your data already lived in this browser — now the app itself opens without a connection too, so an offline Relay is fully usable until peers are back.',
+    ],
+  },
+  {
     v: 65,
     title: 'Landing page shows the new look',
     ts: '2026-07-16T02:49:17.331Z',

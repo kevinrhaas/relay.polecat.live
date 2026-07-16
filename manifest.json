@@ -1,0 +1,14 @@
+{
+  "name": "Relay",
+  "short_name": "Relay",
+  "description": "A serverless, peer-to-peer collaborative workspace — dynamic tables and messaging that live in your browser and sync directly with the people you trust.",
+  "start_url": "/app/",
+  "scope": "/app/",
+  "display": "standalone",
+  "background_color": "#0a0a0f",
+  "theme_color": "#0a0a0f",
+  "orientation": "any",
+  "icons": [
+    { "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}
