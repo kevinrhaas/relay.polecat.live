@@ -82,6 +82,14 @@ export function initShell({
     rail.querySelector('.ps-rail-toggle')?.setAttribute('aria-expanded', String(v));
     if(persist) localStorage.setItem(K+'.open', v?'1':'0');
   }
+  // The boot rule must also hold mid-session: when the viewport crosses INTO
+  // drawer range (window shrink / phone rotation), a desktop "open" rail
+  // would otherwise pop the drawer over the content. Close it without
+  // persisting, so the desktop preference survives the round trip.
+  // (Found by relay's shell migration — its smoke suite shrinks to 390px.)
+  window.matchMedia(MOBILE).addEventListener?.('change', (e)=>{
+    if(e.matches && rail.classList.contains('open')) setOpen(false, false);
+  });
   // Navigating from the mobile drawer closes it — without persisting, so the
   // desktop rail state survives a phone session.
   function nav(key){
@@ -132,8 +140,12 @@ export function initShell({
 
   return {
     setActive:(key)=>rail.querySelectorAll('.ps-rail-item').forEach(n=>n.classList.toggle('active', n.dataset.sec===key)),
-    setBadge:(key,n)=>{
+    // tone (optional) themes the badge — 'danger' ships in shell.css; apps
+    // may style their own `tone-<name>` classes. Omitted = the default accent.
+    setBadge:(key,n,tone)=>{
       const b = rail.querySelector(`.ps-rail-item[data-sec="${key}"] .badge`); if(!b) return;
+      [...b.classList].filter(c=>c.startsWith('tone-')).forEach(c=>b.classList.remove(c));
+      if(tone) b.classList.add('tone-'+tone);
       if(n>0){ b.textContent = n>99?'99+':String(n); b.hidden=false; } else b.hidden=true;
     },
     setOpen:(v)=>setOpen(v),
