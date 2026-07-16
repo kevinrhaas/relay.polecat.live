@@ -1152,6 +1152,23 @@ try {
     await closeModal();
     return none;
   });
+  console.log('PWA');
+  await check('installable: manifest is valid and the offline service worker activates', async () => {
+    const man = await page.evaluate(async () => {
+      const link = document.querySelector('link[rel="manifest"]'); if (!link) return false;
+      const r = await fetch(link.href); if (!r.ok) return false;
+      const j = await r.json();
+      return j.name === 'Relay' && j.start_url === '/app/' && j.display === 'standalone';
+    });
+    if (!man) return false;
+    // navigator.serviceWorker.ready never rejects — race it so a broken
+    // registration fails the check instead of hanging it
+    return await page.evaluate(() => Promise.race([
+      navigator.serviceWorker.ready.then((reg) => !!reg.active),
+      new Promise((res) => setTimeout(() => res(false), 8000)),
+    ]));
+  });
+
   // Fleet contract: other polecat apps ingest js/changelog.js by extracting the
   // CHANGELOG array literal and converting it to strict JSON (see manager's
   // ingest.js). That converter only requotes SINGLE-quoted strings, so a
