@@ -10,6 +10,15 @@
 // .github/stamp-changelog.mjs regenerates every `date` from its `ts`.
 export const CHANGELOG = [
   {
+    v: 65,
+    title: 'Landing page shows the new look',
+    ts: '2026-07-16T02:49:17.331Z',
+    date: 'Jul 15, 2026, 9:49 PM CT',
+    items: [
+      'The homepage hero screenshot now shows the app in its new Polecat Shell chrome — same Ctrl+K global search scene, fresh frame.',
+    ],
+  },
+  {
     v: 64,
     title: 'Relay joins the Polecat Shell — app switcher, palettes, richer What\'s new',
     ts: '2026-07-15T20:52:34.822Z',
