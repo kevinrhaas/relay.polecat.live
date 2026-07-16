@@ -10,6 +10,16 @@
 // .github/stamp-changelog.mjs regenerates every `date` from its `ts`.
 export const CHANGELOG = [
   {
+    v: 67,
+    title: 'Landing page catches up with the new Relay',
+    ts: '2026-07-16T03:42:32.899Z',
+    date: 'Jul 15, 2026, 10:42 PM CT',
+    items: [
+      'The homepage "what\'s new" pill now leads with installing Relay as an offline-capable app.',
+      'Feature copy mentions the three color palettes and the app install, and the social-preview description says installable and offline up front.',
+    ],
+  },
+  {
     v: 66,
     title: 'Install Relay as an app — offline-ready',
     ts: '2026-07-16T03:28:57.575Z',
