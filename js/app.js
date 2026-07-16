@@ -202,16 +202,6 @@ function isEditableTarget(t){
 }
 
 function wireEvents(){
-  // The shell boots the rail closed in drawer (mobile) mode, but keeps a
-  // desktop `.open` when the viewport crosses INTO drawer range mid-session
-  // (window shrink / phone rotation) — the drawer would pop open over the
-  // content. Mirror the boot rule here without persisting, so the desktop
-  // preference survives. (Candidate upstream fix for polecat-platform
-  // lib/shell.js; keep in sync with shell.css's 860px drawer breakpoint.)
-  window.matchMedia('(max-width: 860px)').addEventListener?.('change', (e)=>{
-    if(e.matches) window.__rail?.els.rail.classList.remove('open');
-  });
-
   Sync.on('peers', ()=>{ refreshBadges(); refreshPresence(); if(currentSection==='peers') render(); if(currentSection==='home') render(); });
   Sync.on('stats', ()=>{ if(currentSection==='activity'||currentSection==='home') render(); });
   Sync.on('perms', ()=>{ if(currentSection==='peers') render(); });
