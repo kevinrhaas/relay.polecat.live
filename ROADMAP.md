@@ -25,10 +25,9 @@ when you finish something, move it to **Done** with the date; add discoveries to
    initials`, keeping only relay's richer dialog layer app-local (toast with
    Undo action, record sheet head/extra/onHide, scroll-repositioning
    popover, positional confirmDialog, gradient avatars, ago/clock/shortId).
-   Remaining slices:
+   Remaining slice:
    - Converge the dialog layer onto the shell when shell v2's views/sheet
      work lands (per the platform plan) — not before.
-   - Regenerate landing-page screenshots showing the new chrome.
 2. **Keep the public site sexy.** Periodically refresh the landing page (`/`) to
    showcase current features — updated screenshots, subtle animations, short
    loops/GIFs, feature highlights. It should always reflect what the app can do.
@@ -67,6 +66,17 @@ when you finish something, move it to **Done** with the date; add discoveries to
 - Multiple workspaces / workspace switcher.
 
 ## Done
+- 2026-07-17 — Regenerated the landing hero screenshot: the previous shot
+  (from #21, the Ctrl+K search scene) predated the "jumps to any Polecat app
+  from the top bar" claim the hero's what's-new pill has made since #24, and
+  never actually showed the waffle app switcher that backs it. New shot opens
+  the switcher from Home, showing the full fleet catalog (Chat, JobTracker,
+  Analytics, AutoSelector, Relay, Games, Manager, Model Server) one click
+  away — recaptured at 2560x1720 like prior hero shots. Alt text updated to
+  match; no SW cache bump needed (sw.js is network-first with no static
+  precache list, so an asset content change alone doesn't require one).
+  Closes out the last open item under "Finish the Polecat Shell migration"
+  (the only remaining slice is now the shell-v2-gated dialog convergence).
 - 2026-07-17 — Vendor catch-up: `vendor/polecat-shell/` synced from platform
   v0.2.1 → v0.4.0 (it never got a follow-up sync after the initial shell
   adoption in #19/#20/#21/#22, same gap jobtracker and manager hit). Additive
