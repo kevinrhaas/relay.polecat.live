@@ -10,6 +10,16 @@
 // .github/stamp-changelog.mjs regenerates every `date` from its `ts`.
 export const CHANGELOG = [
   {
+    v: 68,
+    title: 'Shell toolkit refreshed to v0.4.0',
+    ts: '2026-07-17T14:41:35.064Z',
+    date: 'Jul 17, 2026, 9:41 AM CT',
+    items: [
+      'Synced the vendored Polecat Shell toolkit up to v0.4.0: toasts can now carry an inline "Undo"-style action button, and dialog bodies/footers accept raw HTML strings alongside DOM nodes.',
+      'No visible changes today — these land under the hood for future Relay features to build on.',
+    ],
+  },
+  {
     v: 67,
     title: 'Landing page catches up with the new Relay',
     ts: '2026-07-16T03:42:32.899Z',
