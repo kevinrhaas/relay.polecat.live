@@ -67,6 +67,17 @@ when you finish something, move it to **Done** with the date; add discoveries to
 - Multiple workspaces / workspace switcher.
 
 ## Done
+- 2026-07-17 — Vendor catch-up: `vendor/polecat-shell/` synced from platform
+  v0.2.1 → v0.4.0 (it never got a follow-up sync after the initial shell
+  adoption in #19/#20/#21/#22, same gap jobtracker and manager hit). Additive
+  only: `ui.js` toast gains an optional inline action button and modal/sheet
+  bodies now accept HTML strings; `icons.js` gains the chrome/media icons
+  promoted from Games (`back`/`fullscreen`/`sound`/`muted`); `catalog.js`
+  picks up the refreshed Analytics tagline; `shell.css` gains the toast
+  action button styling. No app code changed — relay's own richer dialog
+  layer (toast Undo, record sheet, popover, confirmDialog) stays app-local
+  per the still-open "converge onto shell v2" item below. `relay-shell` SW
+  cache bumped v1 → v2 since vendored file contents changed.
 - 2026-07-04 — Keyboard shortcuts help panel: the app had quietly accumulated a
   lot of real keyboard functionality (Ctrl+K search, spreadsheet-style grid
   navigation with its Ctrl+Arrow escape hatch, drag-handle arrow-key
