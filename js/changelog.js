@@ -10,6 +10,16 @@
 // .github/stamp-changelog.mjs regenerates every `date` from its `ts`.
 export const CHANGELOG = [
   {
+    v: 69,
+    title: 'Landing hero now shows the app switcher',
+    ts: '2026-07-17T20:33:24.424Z',
+    date: 'Jul 17, 2026, 3:33 PM CT',
+    items: [
+      'The homepage hero screenshot now shows the Polecat apps waffle switcher open, backing up the "jumps to any Polecat app from the top bar" callout with an actual picture of it.',
+      'The previous shot (a Ctrl+K search) predates that feature and never showed it.',
+    ],
+  },
+  {
     v: 68,
     title: 'Shell toolkit refreshed to v0.4.0',
     ts: '2026-07-17T14:41:35.064Z',
