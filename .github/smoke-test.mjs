@@ -100,6 +100,27 @@ try {
     });
   }
 
+  console.log('Home dashboard');
+  await (await $('.ps-rail-item[data-sec="home"]')).click(); await page.waitForTimeout(300);
+  await check('Entities/Records stat tiles link to Tables', async () => {
+    const tiles = await page.$$('.stat');
+    if (tiles.length < 4) return false;
+    await tiles[0].click(); await page.waitForTimeout(350);
+    return (await page.$eval('.ps-rail-item.active', (e) => e.getAttribute('data-sec')).catch(() => null)) === 'table';
+  });
+  await (await $('.ps-rail-item[data-sec="home"]')).click(); await page.waitForTimeout(300);
+  await check('Peers online stat tile links to Peers', async () => {
+    const tiles = await page.$$('.stat');
+    await tiles[2].click(); await page.waitForTimeout(350);
+    return (await page.$eval('.ps-rail-item.active', (e) => e.getAttribute('data-sec')).catch(() => null)) === 'peers';
+  });
+  await (await $('.ps-rail-item[data-sec="home"]')).click(); await page.waitForTimeout(300);
+  await check('Synced stat tile links to Activity, and is keyboard-activatable', async () => {
+    const tile = (await page.$$('.stat'))[3];
+    await tile.focus(); await page.keyboard.press('Enter'); await page.waitForTimeout(350);
+    return (await page.$eval('.ps-rail-item.active', (e) => e.getAttribute('data-sec')).catch(() => null)) === 'activity';
+  });
+
   console.log('Global search (Ctrl+K)');
   await (await $('.ps-rail-item[data-sec="home"]')).click(); await page.waitForTimeout(300);
   await check('Ctrl+K opens the search palette, focused and ready to type', async () => {

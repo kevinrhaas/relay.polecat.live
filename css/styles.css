@@ -105,7 +105,7 @@ body{
 
 /* stat tiles */
 .stats{grid-template-columns:repeat(auto-fill,minmax(180px,1fr))}
-.stat{position:relative;overflow:hidden}
+.stat{position:relative;overflow:hidden;cursor:pointer;text-align:left}
 .stat .k{font-size:11px;letter-spacing:.4px;text-transform:uppercase;color:var(--text-2)}
 .stat .v{font-size:30px;font-weight:700;margin:6px 0 2px;letter-spacing:-.5px;
   font-variant-numeric:tabular-nums}

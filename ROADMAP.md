@@ -66,6 +66,17 @@ when you finish something, move it to **Done** with the date; add discoveries to
 - Multiple workspaces / workspace switcher.
 
 ## Done
+- 2026-07-18 — Home dashboard stat tiles (Entities, Records, Peers online, Synced)
+  are real links now, closing the Medium finding flagged unchanged across three
+  UX sweeps in a row (#25, #27, #29): they were plain `<div class="card stat">`
+  with no href/role/cursor. Now `role="button" tabindex="0"` with click + keyboard
+  (Enter/Space) activation, same pattern as the "Your tables" cards and quick-
+  action tiles — Entities/Records jump to Tables, Peers online to Peers, Synced
+  to Activity (matching `Sync.stats.applied`, the same number Activity's own
+  "Records applied" row shows). `.stat` gained `cursor:pointer` and reuses the
+  existing `.card.hover` hover/focus-ring treatment; no new CSS states needed.
+  Added three smoke checks covering all three destinations and keyboard
+  activation via Tab+Enter.
 - 2026-07-17 — Regenerated the landing hero screenshot: the previous shot
   (from #21, the Ctrl+K search scene) predated the "jumps to any Polecat app
   from the top bar" claim the hero's what's-new pill has made since #24, and
