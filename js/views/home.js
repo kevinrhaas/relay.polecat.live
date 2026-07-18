@@ -32,17 +32,18 @@ export function renderHome(root, ctx){
   // ---- stats -----------------------------------------------------------
   const online = Sync.onlineCount();
   const stats = [
-    ['Entities', Store.entityNames().length, 'shared tables', 'db', 'var(--brand-b)'],
-    ['Records', Store.totalRecords(), 'across all tables', 'grid', 'var(--consensus)'],
-    ['Peers online', online, online?'live now':'none discovered', 'peers', 'var(--success)'],
-    ['Synced', Sync.stats.applied, 'records this session', 'activity', 'var(--brand-c)'],
+    ['Entities', Store.entityNames().length, 'shared tables', 'db', 'var(--brand-b)', ()=>ctx.go('table')],
+    ['Records', Store.totalRecords(), 'across all tables', 'grid', 'var(--consensus)', ()=>ctx.go('table')],
+    ['Peers online', online, online?'live now':'none discovered', 'peers', 'var(--success)', ()=>ctx.go('peers')],
+    ['Synced', Sync.stats.applied, 'records this session', 'activity', 'var(--brand-c)', ()=>ctx.go('activity')],
   ];
   const statGrid = el('div',{class:'grid stats'});
-  stats.forEach(([k,v,d,ic,col])=>{
-    statGrid.append(el('div',{class:'card stat', html:`
-      <div class="glow" style="background:radial-gradient(closest-side, ${col}, transparent)"></div>
+  stats.forEach(([k,v,d,ic,col,fn])=>{
+    const c = el('div',{class:'card stat hover', role:'button', tabindex:'0', onclick:fn, onkeydown:cardKeydown(fn)});
+    c.innerHTML = `<div class="glow" style="background:radial-gradient(closest-side, ${col}, transparent)"></div>
       <div class="k">${k}</div><div class="v">${v}</div><div class="d">${d}</div>
-      <div class="spark" style="color:${col}">${icon(ic)}</div>`}));
+      <div class="spark" style="color:${col}">${icon(ic)}</div>`;
+    statGrid.append(c);
   });
   wrap.append(statGrid);
 

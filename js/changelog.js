@@ -10,6 +10,16 @@
 // .github/stamp-changelog.mjs regenerates every `date` from its `ts`.
 export const CHANGELOG = [
   {
+    v: 70,
+    title: 'Home stat tiles are real links now',
+    ts: '2026-07-18T16:28:08.126Z',
+    date: 'Jul 18, 2026, 11:28 AM CT',
+    items: [
+      'The four dashboard stat tiles (Entities, Records, Peers online, Synced) were plain, unclickable numbers. Each now jumps to its detail — Entities/Records to Tables, Peers online to Peers, Synced to Activity — matching every other card on Home, with hover/focus affordance and full keyboard access (Tab + Enter/Space).',
+      'Closes the one repeatedly-flagged finding from the last three UX sweeps (#25, #27, #29).',
+    ],
+  },
+  {
     v: 69,
     title: 'Landing hero now shows the app switcher',
     ts: '2026-07-17T20:33:24.424Z',
