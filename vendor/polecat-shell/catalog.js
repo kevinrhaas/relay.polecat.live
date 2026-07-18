@@ -16,10 +16,10 @@
 // -----------------------------------------------------------------------
 
 export const FLEET = [
-  { id: 'chat',         name: 'Chat',         url: 'https://app.polecat.live',
+  { id: 'chat',         name: 'Chat',         url: 'https://chat.polecat.live',
     tagline: 'Ask once. Hear from everyone — multi-model consensus.',
     icon: 'chat',       accent: '#8b5cf6', status: 'live', visibility: 'public',
-    changelogUrl: 'https://app.polecat.live/js/changelog.js' },
+    changelogUrl: 'https://chat.polecat.live/js/changelog.js' },
 
   { id: 'jobtracker',   name: 'JobTracker',   url: 'https://jobtracker.polecat.live',
     tagline: 'Creative-work tracking with saved views, boards, and joy.',
