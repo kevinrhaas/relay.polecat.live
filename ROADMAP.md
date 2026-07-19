@@ -66,6 +66,14 @@ when you finish something, move it to **Done** with the date; add discoveries to
 - Multiple workspaces / workspace switcher.
 
 ## Done
+- 2026-07-19 — Vendor catch-up: `vendor/polecat-shell/` synced from platform v0.4.1
+  → v0.4.2. Closes the Medium UX-sweep finding carried unchanged across four
+  straight sweeps (#25/#27/#29/#33): mobile touch targets under ~44px at
+  390×780 (nav drawer items, topbar icon buttons, `.btn.sm` controls). Fixed
+  once at the shell level (platform PR #65) — `.btn:not(.icon)`/`.ps-rail-item`
+  now enforce `min-height:44px`, `.btn.icon` is 44×44px. Vendor sync only, no
+  app code changed. `relay-shell` SW cache bumped v2 → v3 since vendored
+  `shell.css` content changed.
 - 2026-07-18 — Home dashboard stat tiles (Entities, Records, Peers online, Synced)
   are real links now, closing the Medium finding flagged unchanged across three
   UX sweeps in a row (#25, #27, #29): they were plain `<div class="card stat">`

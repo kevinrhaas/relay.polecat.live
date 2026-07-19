@@ -18,7 +18,7 @@
 // ship builds often). The cache only kicks in when the network is
 // unavailable, which is exactly what "installable / offline-capable" needs.
 // -----------------------------------------------------------------------
-const CACHE_VERSION = 'relay-shell-v2';
+const CACHE_VERSION = 'relay-shell-v3';
 
 self.addEventListener('install', (e) => {
   // Take over immediately — waiting would keep the previous worker (and its
