@@ -10,6 +10,17 @@
 // .github/stamp-changelog.mjs regenerates every `date` from its `ts`.
 export const CHANGELOG = [
   {
+    v: 71,
+    title: 'Mobile touch targets bumped to ~44px',
+    ts: '2026-07-19T12:30:14.550Z',
+    date: 'Jul 19, 2026, 7:30 AM CT',
+    items: [
+      'Nav drawer items, topbar icon buttons (hamburger/search/shortcuts/what\'s-new/theme/switch-app), and other `.btn`/`.icon` controls fell under the ~44px touch target minimum (WCAG 2.5.5) at 390×780 — the one Medium finding carried unchanged across four straight UX sweeps (#25/#27/#29/#33).',
+      'Fixed once at the shell level (`vendor/polecat-shell/shell.css`, platform v0.4.1 → v0.4.2): `.btn:not(.icon)` and `.ps-rail-item` now enforce `min-height:44px`, `.btn.icon` is `44×44px`. `.icon.sm` stays compact since it\'s only ever paired with adjacent text/controls. Vendor sync only — no app code changed; relay\'s own dialog layer stays app-local per ROADMAP\'s still-open "converge onto shell v2" item.',
+      '`relay-shell` SW cache bumped v2 → v3 since vendored `shell.css` content changed.',
+    ],
+  },
+  {
     v: 70,
     title: 'Home stat tiles are real links now',
     ts: '2026-07-18T16:28:08.126Z',
