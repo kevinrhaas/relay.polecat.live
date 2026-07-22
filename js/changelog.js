@@ -10,6 +10,16 @@
 // .github/stamp-changelog.mjs regenerates every `date` from its `ts`.
 export const CHANGELOG = [
   {
+    v: 73,
+    title: 'Theme toggle and What\'s New buttons are labeled for screen readers',
+    ts: '2026-07-22T16:43:50.578Z',
+    date: 'Jul 22, 2026, 11:43 AM CT',
+    items: [
+      'The topbar\'s theme toggle and What\'s New (sparkle) icon buttons only exposed a `title` tooltip with no `aria-label` — a screen reader announced them as unlabeled buttons. They now carry the same `aria-label` as their tooltip text, matching the search/shortcuts/switch-app buttons that already had one.',
+      'Carried unchanged across UX sweeps #25/#27/#29/#33 (Low priority) — closed.',
+    ],
+  },
+  {
     v: 72,
     title: 'Relay is open to everyone — the invite gate is gone',
     ts: '2026-07-22T14:12:57.044Z',
