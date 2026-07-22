@@ -10,6 +10,16 @@
 // .github/stamp-changelog.mjs regenerates every `date` from its `ts`.
 export const CHANGELOG = [
   {
+    v: 75,
+    title: 'The landing page now wears the shared fleet header & footer',
+    ts: '2026-07-22T18:43:58.583Z',
+    date: 'Jul 22, 2026, 1:43 PM CT',
+    items: [
+      'Relay’s front door adopts the suite-wide header and footer, so it matches every Polecat app — the same brand tile, a consistent “Polecat” link back to the suite, and the standard footer.',
+      'Built on Polecat Shell v0.5.2 (the shared site-chrome plus the ~44px mobile touch targets).',
+    ],
+  },
+  {
     v: 74,
     title: 'Marketing nav has a mobile menu now',
     ts: '2026-07-22T16:51:10.468Z',

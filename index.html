@@ -8,6 +8,7 @@
   <meta name="theme-color" content="#0a0a0f"/>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg"/>
   <link rel="stylesheet" href="/css/landing.css"/>
+  <link rel="stylesheet" href="/vendor/polecat-shell/site-chrome.css"/>
   <!-- Open Graph -->
   <meta property="og:title" content="Relay — your data, your peers, no server"/>
   <meta property="og:description" content="A serverless, peer-to-peer collaborative table with instant Ctrl+K search, bulk row actions, one-click undo, live chat, and per-table sharing permissions. Open to everyone — installable, works offline, runs entirely in your browser, and syncs directly with the people you trust."/>
@@ -36,21 +37,8 @@
     <g id="i-x" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6 6 18"/></g>
   </defs></svg>
 
-  <header class="nav" id="nav">
-    <div class="wrap nav-in">
-      <a class="brand" href="/"><img src="/assets/logo.svg" alt="Relay"/> Relay <small>polecat.live</small></a>
-      <nav class="nav-links" id="navLinks">
-        <a href="#features">Features</a>
-        <a href="#how">How it works</a>
-        <a href="#architecture">Architecture</a>
-      </nav>
-      <button class="nav-toggle" id="navToggle" aria-label="Toggle menu" aria-expanded="false" aria-controls="navLinks">
-        <svg class="i-open" width="22" height="22" viewBox="0 0 24 24"><use href="#i-menu"/></svg>
-        <svg class="i-close" width="22" height="22" viewBox="0 0 24 24"><use href="#i-x"/></svg>
-      </button>
-      <a class="btn primary" href="/app/">Launch app <svg width="16" height="16" viewBox="0 0 24 24"><use href="#i-arrow"/></svg></a>
-    </div>
-  </header>
+  <!-- Shared fleet header (site-chrome.js) — see polecat-platform docs/BRAND.md -->
+  <header id="siteHeader"></header>
 
   <main>
     <!-- hero -->
@@ -157,29 +145,11 @@
     </section>
   </main>
 
-  <footer>
-    <div class="wrap foot-in">
-      <a class="brand" href="/"><img src="/assets/logo.svg" width="24" height="24" alt=""/> Relay</a>
-      <span>Part of the <a href="https://polecat.live" style="color:var(--brand-b)">polecat.live</a> family · © 2026</span>
-      <div class="foot-links">
-        <a href="/app/">App</a>
-        <a href="https://polecat.live" target="_blank" rel="noopener">polecat.live</a>
-      </div>
-    </div>
-  </footer>
+  <!-- Shared fleet footer (site-chrome.js) — see polecat-platform docs/BRAND.md -->
+  <footer id="siteFooter"></footer>
 
   <script>
-    const nav=document.getElementById('nav');
-    addEventListener('scroll',()=>nav.classList.toggle('scrolled',scrollY>8),{passive:true});
-
-    const navToggle=document.getElementById('navToggle');
-    const closeNav=()=>{ nav.classList.remove('nav-open'); navToggle.setAttribute('aria-expanded','false'); };
-    navToggle.addEventListener('click',()=>{
-      const open=nav.classList.toggle('nav-open');
-      navToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
-    });
-    document.getElementById('navLinks').addEventListener('click',(e)=>{ if(e.target.tagName==='A') closeNav(); });
-    addEventListener('keydown',(e)=>{ if(e.key==='Escape') closeNav(); });
+    // (sticky-header scroll shadow + mobile nav are handled by the shared site-chrome header now)
 
     const reveals=document.querySelectorAll('.reveal');
     if('IntersectionObserver' in window){
@@ -190,6 +160,20 @@
     } else {
       reveals.forEach((el)=>el.classList.add('in'));
     }
+  </script>
+  <!-- Mount the shared header + footer -->
+  <script type="module">
+    import { siteHeader, siteFooter } from '/vendor/polecat-shell/site-chrome.js';
+    siteHeader('#siteHeader', {
+      app: 'relay',
+      nav: [
+        { href: '#features', label: 'Features' },
+        { href: '#how', label: 'How it works' },
+        { href: '#architecture', label: 'Architecture' },
+      ],
+      cta: { href: '/app/', label: 'Launch app' },
+    });
+    siteFooter('#siteFooter', { app: 'relay', appUrl: '/app/', notices: '/THIRD-PARTY-NOTICES.md' });
   </script>
 </body>
 </html>
