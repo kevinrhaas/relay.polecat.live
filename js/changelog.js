@@ -10,6 +10,17 @@
 // .github/stamp-changelog.mjs regenerates every `date` from its `ts`.
 export const CHANGELOG = [
   {
+    v: 76,
+    title: 'The app rail now wears Relay’s own mark',
+    ts: '2026-07-22T19:53:02.278Z',
+    date: 'Jul 22, 2026, 2:53 PM CT',
+    items: [
+      'The rail brand is now Relay’s network glyph — the same mark you see on its polecat.live launcher tile and its landing-page header — so the app reads as one identity everywhere.',
+      'A faint “polecat.live” link sits just under the name in the rail: a quiet way back to the suite.',
+      'Built on Polecat Shell v0.5.3.',
+    ],
+  },
+  {
     v: 75,
     title: 'The landing page now wears the shared fleet header & footer',
     ts: '2026-07-22T18:43:58.583Z',
