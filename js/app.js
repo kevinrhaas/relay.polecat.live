@@ -91,7 +91,7 @@ function buildShell(){
   const newBtn=el('button',{class:'btn sm primary', html:`${icon('plus')} New`, onclick:()=>newEntity()});
 
   const shell = initShell({
-    app: { id:'relay', name:'Relay', wordmark:`<img src="/assets/logo.svg" alt=""/>` },
+    app: { id:'relay', name:'Relay', icon: icon('network',22) },
     sections: SECTIONS.map(s=> s.group ? s : { ...s, icon:icon(s.icon) }),
     onNav: (s)=>go(s),
     isAdmin: ()=>Access.isAdmin(),
