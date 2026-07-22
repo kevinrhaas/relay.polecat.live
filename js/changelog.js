@@ -10,6 +10,18 @@
 // .github/stamp-changelog.mjs regenerates every `date` from its `ts`.
 export const CHANGELOG = [
   {
+    v: 72,
+    title: 'Relay is open to everyone — the invite gate is gone',
+    ts: '2026-07-22T14:12:57.044Z',
+    date: 'Jul 22, 2026, 9:12 AM CT',
+    items: [
+      'No more invite code or admin token to get in — open relay.polecat.live/app and you\'re working immediately.',
+      'Invite links you\'ve already shared still work — they now simply preconfigure auto-connect for the person opening them.',
+      'Sharing stays on your terms — per-peer, per-table read/write permissions are unchanged, and nothing syncs to anyone you haven\'t connected.',
+      'The homepage now says it plainly — open to everyone, share on your terms.',
+    ],
+  },
+  {
     v: 71,
     title: 'Mobile touch targets bumped to ~44px',
     ts: '2026-07-19T12:30:14.550Z',

@@ -66,6 +66,14 @@ when you finish something, move it to **Done** with the date; add discoveries to
 - Multiple workspaces / workspace switcher.
 
 ## Done
+- 2026-07-22 — Relay is OPEN: removed the invite/admin entry gate (Kevin's
+  call). The gate screen and its CSS are gone; the app boots for everyone.
+  `js/access.js` stays for what still matters — ?invite= links preconfigure
+  auto-connect (rdv/room) for the recipient, and the admin key still unlocks
+  the Admin area (mint/revoke tooling for signed auto-connect links). Landing
+  copy reworked ("Open to everyone" chip, "Share on your terms" card, meta
+  descriptions); smoke suite now boots with NO access stub, making open entry
+  a permanent regression test. Per-peer, per-table permissions unchanged.
 - 2026-07-19 — Vendor catch-up: `vendor/polecat-shell/` synced from platform v0.4.1
   → v0.4.2. Closes the Medium UX-sweep finding carried unchanged across four
   straight sweeps (#25/#27/#29/#33): mobile touch targets under ~44px at

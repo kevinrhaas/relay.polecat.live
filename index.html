@@ -4,13 +4,13 @@
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
   <title>Relay — a serverless, peer-to-peer collaborative table · polecat.live</title>
-  <meta name="description" content="Relay is a collaborative database that lives in your browser. Create dynamic, typed tables — including fields that link to another table's rows, one or many — (import or export a CSV in one click), find anything instantly with Ctrl+K search across every table, bulk-edit or export a batch of rows, undo any delete, chat, see who's viewing a table live, and invite the people you trust with signed invite-only links — synced directly, peer to peer, with optional backups to your own local folder, S3, WebDAV, Dropbox, or Google Drive. No accounts, no backend, no servers."/>
+  <meta name="description" content="Relay is a collaborative database that lives in your browser. Create dynamic, typed tables — including fields that link to another table's rows, one or many — (import or export a CSV in one click), find anything instantly with Ctrl+K search across every table, bulk-edit or export a batch of rows, undo any delete, chat, see who's viewing a table live, and set per-peer, per-table permissions for the people you share with — synced directly, peer to peer, with optional backups to your own local folder, S3, WebDAV, Dropbox, or Google Drive. No accounts, no backend, no servers."/>
   <meta name="theme-color" content="#0a0a0f"/>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg"/>
   <link rel="stylesheet" href="/css/landing.css"/>
   <!-- Open Graph -->
   <meta property="og:title" content="Relay — your data, your peers, no server"/>
-  <meta property="og:description" content="A serverless, peer-to-peer collaborative table with instant Ctrl+K search, bulk row actions, one-click undo, live chat, and invite-only access. Installable, works offline, runs entirely in your browser, and syncs directly with the people you trust."/>
+  <meta property="og:description" content="A serverless, peer-to-peer collaborative table with instant Ctrl+K search, bulk row actions, one-click undo, live chat, and per-table sharing permissions. Open to everyone — installable, works offline, runs entirely in your browser, and syncs directly with the people you trust."/>
   <meta property="og:type" content="website"/>
   <meta property="og:url" content="https://relay.polecat.live"/>
   <meta property="og:image" content="https://relay.polecat.live/assets/screenshot-app.png"/>
@@ -62,7 +62,7 @@
         <div class="trust">
           <span class="chip"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg> No backend</span>
           <span class="chip"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg> No accounts</span>
-          <span class="chip"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg> Invite-only</span>
+          <span class="chip"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg> Open to everyone</span>
           <span class="chip"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg> No tracking</span>
           <span class="chip"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg> Works offline</span>
         </div>
@@ -90,7 +90,7 @@
           <div class="card reveal"><div class="ic" style="background:linear-gradient(135deg,#34d399,#0f7d5b)"><svg viewBox="0 0 24 24"><use href="#i-refresh"/></svg></div>
             <h3>Conflict-free sync</h3><p>Last-writer-wins with version metadata and tombstone deletes. Two peers editing at once always converge.</p></div>
           <div class="card reveal"><div class="ic" style="background:linear-gradient(135deg,#F4A6A6,#b45c5c)"><svg viewBox="0 0 24 24"><use href="#i-key"/></svg></div>
-            <h3>Invite-only, by design</h3><p>A signed invite link is the only way in. Mint and revoke access from a private admin area, then set per-peer, per-table read/write permissions.</p></div>
+            <h3>Share on your terms</h3><p>Relay is open — no invite, no account, no waiting. What stays locked down is your data: you grant per-peer, per-table read/write permissions, and nothing syncs to anyone you haven’t connected.</p></div>
           <div class="card reveal"><div class="ic" style="background:linear-gradient(135deg,#60a5fa,#2b5fb0)"><svg viewBox="0 0 24 24"><use href="#i-message"/></svg></div>
             <h3>Live chat &amp; presence</h3><p>A broadcast room plus 1:1 direct messages, delivered over the same encrypted channel as your tables. See who's online, who's looking at a table right now, and watch every sync stream by.</p></div>
           <div class="card reveal"><div class="ic" style="background:linear-gradient(135deg,#f0a830,#a86e12)"><svg viewBox="0 0 24 24"><use href="#i-download"/></svg></div>
@@ -114,7 +114,7 @@
             <p>Spin up an <em>entity</em> — a shared table of dynamic rows. Add fields as you go; it's just JSON under the hood.</p></div></div>
           <div class="step reveal"><div class="n"></div><div>
             <h3>Invite a peer</h3>
-            <p>Send a signed invite link to let someone in, then connect over instant local-mesh discovery, an auto-connecting rendezvous, or a manual <code>WebRTC invite</code> — directly, no server relaying your data.</p></div></div>
+            <p>Just send them relay.polecat.live, then connect over instant local-mesh discovery, an auto-connecting rendezvous, or a manual <code>WebRTC invite</code> — directly, no server relaying your data.</p></div></div>
           <div class="step reveal"><div class="n"></div><div>
             <h3>Sync, both ways</h3>
             <p>Edits and messages flow the moment you connect — no sync button, no waiting. Grant <code>read</code> / <code>write</code> per table to control exactly what's shared.</p></div></div>
