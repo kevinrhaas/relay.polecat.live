@@ -38,8 +38,8 @@ await new Promise((r) => server.listen(PORT, r));
 const browser = await chromium.launch({ executablePath: process.env.PW_EXECUTABLE || undefined });
 try {
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 860 } });
-  // pre-grant the invite gate so the app boots in CI
-  await ctx.addInitScript(`try{localStorage.setItem('relay.access',JSON.stringify({grantedAt:Date.now(),via:'ci'}));}catch(e){}`);
+  // No access stub: relay is open to everyone, and the suite booting with a
+  // clean profile IS the regression test for that.
   // The app auto-joins the baked-in default rendezvous room on boot (see
   // js/config.js) — that's the real, LIVE, shared production room. A runner
   // with internet egress would otherwise merge real peer data into the page

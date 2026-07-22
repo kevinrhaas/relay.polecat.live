@@ -11,8 +11,10 @@ Vanilla **HTML/CSS/JS, no build step, no framework**. Landing page at `/`
 `localStorage` (`js/store.js`) with last-writer-wins sync. Peers connect over a
 local `BroadcastChannel` mesh, manual-invite WebRTC, and an optional Cloudflare
 Worker "rendezvous" for auto-discovery (`js/sync.js`, `js/rendezvous.js`).
-Access is an invite-only gate using ECDSA-signed links (`js/access.js`); there's
-an Admin area (`js/views/admin.js`). Read `README.md` and `ROADMAP.md` first.
+Relay is OPEN — no entry gate. `js/access.js` keeps the ECDSA invite tooling
+only because signed links can preconfigure auto-connect, and the admin key
+still unlocks the Admin area (`js/views/admin.js`). Read `README.md` and
+`ROADMAP.md` first.
 
 ## What to do this run
 1. **Read `ROADMAP.md`.**

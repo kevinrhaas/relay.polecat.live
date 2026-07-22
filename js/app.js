@@ -50,9 +50,9 @@ async function boot(){
   themeConfigure({ storageKey:'relay.theme', defaultTheme:'polecat:dark' });
   applyTheme();
 
-  // invite-only gate: consume ?invite= then require access
-  const gate = await Access.init();
-  if(!gate.granted){ renderGate(gate.inviteError); return; }
+  // Relay is open to everyone — no gate. Access.init() still consumes
+  // ?invite= / ?rdv= links so a shared link can preconfigure auto-connect.
+  await Access.init();
 
   Sync.start();
   Rendezvous.autostart();
@@ -242,35 +242,6 @@ function wireEvents(){
       e.preventDefault(); openShortcuts();
     }
   });
-}
-
-// ---- invite-only gate screen --------------------------------------------
-function renderGate(errMsg){
-  const app=$('#app');
-  app.innerHTML='';
-  const g=el('div',{class:'gate'});
-  const card=el('div',{class:'gate-card'});
-  card.innerHTML=`
-    <img src="/assets/logo.svg" width="48" height="48" alt=""/>
-    <h1>Relay preview</h1>
-    <p class="muted">This is an invite-only preview. Paste an invite code or your admin token to continue — or open the invite link someone sent you.</p>`;
-  const ta=el('textarea',{class:'input', rows:'3', placeholder:'Paste invite code or admin token…', spellcheck:'false'});
-  const err=el('div',{class:'gate-err'+(errMsg?'':' hide'), text: errMsg?`That invite is ${errMsg}.`:''});
-  const btn=el('button',{class:'btn primary', style:'width:100%', html:`${icon('shield')} Unlock`, onclick:enter});
-  const back=el('a',{class:'link tiny', href:'/', text:'← Back to relay.polecat.live'});
-  card.append(ta, err, btn, back);
-  g.append(card); app.append(g);
-  async function enter(){
-    const v=ta.value.trim(); if(!v) return;
-    btn.disabled=true; err.classList.add('hide');
-    if(await Access.verifyAdminToken(v)){ await Access.unlockAdmin(v); location.reload(); return; }
-    const r=await Access.verifyInvite(v);
-    if(r.ok){ Access.grant('invite', r.payload.label||''); location.reload(); return; }
-    btn.disabled=false; err.textContent = r.reason==='expired' ? 'That invite has expired.' : 'That code is not valid.';
-    err.classList.remove('hide');
-  }
-  ta.addEventListener('keydown',e=>{ if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); enter(); } });
-  setTimeout(()=>ta.focus(),50);
 }
 
 document.addEventListener('DOMContentLoaded', boot);

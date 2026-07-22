@@ -1,15 +1,15 @@
 // -----------------------------------------------------------------------
-// access.js — invite-only gate (serverless, tamper-resistant).
+// access.js — access utilities. Relay is OPEN: there is no entry gate and
+// nothing here blocks anyone from using the app.
 //
-// The app is public source, so a shared secret would be forgeable. Instead
-// we use asymmetric signatures: the PUBLIC key is embedded here (anyone can
-// VERIFY an invite), while the PRIVATE key is the admin token (only the
-// admin can MINT invites). Invites are ECDSA-P256 signed tokens, shared as
-// links (…/app/?invite=<token>). Nothing is checked against a server.
-//
-// This is a preview/invite gate, not hard security — a determined user can
-// read the source and remove the gate. It stops casual access and gives a
-// clean invite flow, which is what "invite-only preview" needs.
+// What remains and why:
+// - ?invite= links still parse (ECDSA-P256 signed tokens, verified against
+//   the embedded PUBLIC key) because an invite can carry a rendezvous
+//   (rdv/room) that preconfigures auto-connect for the recipient — that's
+//   their remaining value now that entry is open.
+// - The admin PRIVATE key still unlocks the in-app Admin area (invite
+//   minting/revocation tooling, kept for signed auto-connect links).
+// Nothing is checked against a server.
 // -----------------------------------------------------------------------
 
 import { REVOKED } from './revoked.js';
