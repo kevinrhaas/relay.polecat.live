@@ -66,6 +66,11 @@ when you finish something, move it to **Done** with the date; add discoveries to
 - Multiple workspaces / workspace switcher.
 
 ## Done
+- 2026-07-22 — Topbar theme-toggle and What's New icon buttons now carry an
+  `aria-label` (previously only a `title` tooltip, so a screen reader announced
+  them as unlabeled). Matches the search/shortcuts/switch-app buttons, which
+  already had one. Closes the Low UX-sweep finding carried unchanged across
+  #25/#27/#29/#33.
 - 2026-07-22 — Relay is OPEN: removed the invite/admin entry gate (Kevin's
   call). The gate screen and its CSS are gone; the app boots for everyone.
   `js/access.js` stays for what still matters — ?invite= links preconfigure

@@ -82,10 +82,10 @@ function buildShell(){
     html:icon('search'), onclick:()=>openGlobalSearch(ctx)});
   const shortcutsBtn=el('button',{class:'btn icon ghost', title:'Keyboard shortcuts (?)', 'aria-label':'Keyboard shortcuts',
     html:icon('keyboard'), onclick:()=>openShortcuts()});
-  const themeBtn=el('button',{class:'btn icon ghost', title:'Toggle theme',
+  const themeBtn=el('button',{class:'btn icon ghost', title:'Toggle theme', 'aria-label':'Toggle theme',
     html:icon(effectiveMode()==='light'?'moon':'sun'),
     onclick:()=>{ toggleMode(); themeBtn.innerHTML=icon(effectiveMode()==='light'?'moon':'sun'); }});
-  whatsNewBtn=el('button',{class:'btn icon ghost wn-btn', title:"What's new",
+  whatsNewBtn=el('button',{class:'btn icon ghost wn-btn', title:"What's new", 'aria-label':"What's new",
     html:icon('sparkle'), onclick:()=>openWhatsNew()});
   if(hasUnseen(WN_KEY, LATEST_VERSION)) whatsNewBtn.classList.add('has-unread');
   const newBtn=el('button',{class:'btn sm primary', html:`${icon('plus')} New`, onclick:()=>newEntity()});
