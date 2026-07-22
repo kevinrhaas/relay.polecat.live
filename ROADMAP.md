@@ -66,6 +66,12 @@ when you finish something, move it to **Done** with the date; add discoveries to
 - Multiple workspaces / workspace switcher.
 
 ## Done
+- 2026-07-22 — Marketing nav gained a mobile hamburger menu: "Features"/"How it
+  works"/"Architecture" were present in the DOM but hidden with no way to
+  reach them at 390×780 (only "Launch app" showed). A `.nav-toggle` button now
+  opens a dropdown listing all three, closing on link click, Escape, or
+  toggling again. Closes the structural finding carried unchanged since UX
+  sweep #25. New smoke check covers open/close and closing on link click.
 - 2026-07-22 — Topbar theme-toggle and What's New icon buttons now carry an
   `aria-label` (previously only a `title` tooltip, so a screen reader announced
   them as unlabeled). Matches the search/shortcuts/switch-app buttons, which

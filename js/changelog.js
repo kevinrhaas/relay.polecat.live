@@ -10,6 +10,16 @@
 // .github/stamp-changelog.mjs regenerates every `date` from its `ts`.
 export const CHANGELOG = [
   {
+    v: 74,
+    title: 'Marketing nav has a mobile menu now',
+    ts: '2026-07-22T16:51:10.468Z',
+    date: 'Jul 22, 2026, 11:51 AM CT',
+    items: [
+      'On phones, "Features", "How it works", and "Architecture" were hidden with no way to reach them — only "Launch app" showed in the header. A hamburger button now opens a dropdown with all three links; it closes on link click, Escape, or toggling again.',
+      'Structural finding carried unchanged since UX sweep #25 — closed.',
+    ],
+  },
+  {
     v: 73,
     title: 'Theme toggle and What\'s New buttons are labeled for screen readers',
     ts: '2026-07-22T16:43:50.578Z',

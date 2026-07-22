@@ -87,6 +87,22 @@ try {
   await check('landing renders a headline', async () => !!(await $('h1')));
   await check('landing has a Launch link to /app/', async () =>
     (await page.$$eval('a', (as) => as.some((a) => /\/app\/?$/.test(a.getAttribute('href') || '')))));
+  await check('landing mobile nav: hamburger reveals hidden links, and closes on link click', async () => {
+    try {
+      await page.setViewportSize({ width: 390, height: 780 }); await page.waitForTimeout(250);
+      const linksHiddenBefore = await page.$eval('#navLinks', (n) => getComputedStyle(n).display === 'none');
+      if (!linksHiddenBefore) return false;
+      await page.click('#navToggle'); await page.waitForTimeout(150);
+      const openNow = await page.$eval('#navLinks', (n) => getComputedStyle(n).display !== 'none');
+      const expanded = await page.$eval('#navToggle', (b) => b.getAttribute('aria-expanded') === 'true');
+      if (!openNow || !expanded) return false;
+      await page.click('#navLinks a[href="#features"]'); await page.waitForTimeout(150);
+      const closedAfter = await page.$eval('#navLinks', (n) => getComputedStyle(n).display === 'none');
+      return closedAfter;
+    } finally {
+      await page.setViewportSize({ width: 1280, height: 860 }); await page.waitForTimeout(250);
+    }
+  });
 
   console.log('App shell');
   await page.goto(`${base}/app/`, { waitUntil: 'networkidle', timeout: 30000 });
