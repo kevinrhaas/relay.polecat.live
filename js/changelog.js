@@ -10,6 +10,16 @@
 // .github/stamp-changelog.mjs regenerates every `date` from its `ts`.
 export const CHANGELOG = [
   {
+    v: 77,
+    title: 'Relay is green everywhere now',
+    ts: '2026-07-22T20:56:52.948Z',
+    date: 'Jul 22, 2026, 3:56 PM CT',
+    items: [
+      'The in-app rail mark and the app-switcher tiles now wear Relay’s green brand gradient — the same color as its polecat.live launcher tile and landing page, instead of the old off-brand rail color.',
+      'Built on Polecat Shell v0.5.4.',
+    ],
+  },
+  {
     v: 76,
     title: 'The app rail now wears Relay’s own mark',
     ts: '2026-07-22T19:53:02.278Z',
