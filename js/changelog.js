@@ -10,6 +10,16 @@
 // .github/stamp-changelog.mjs regenerates every `date` from its `ts`.
 export const CHANGELOG = [
   {
+    v: 78,
+    title: 'Relay’s front door and favicon go green',
+    ts: '2026-07-22T21:21:28.206Z',
+    date: 'Jul 22, 2026, 4:21 PM CT',
+    items: [
+      'The landing page now wears Relay’s green brand color throughout — the drifting backdrop, the headline, and the buttons — instead of the old amber-and-purple, so the marketing site matches the app’s green mark.',
+      'The browser-tab icon (favicon) is now the same green network mark you see on the launcher and in the app.',
+    ],
+  },
+  {
     v: 77,
     title: 'Relay is green everywhere now',
     ts: '2026-07-22T20:56:52.948Z',

@@ -1,9 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" fill="none" role="img" aria-label="Relay">
   <defs>
     <linearGradient id="relayGrad" x1="8" y1="8" x2="56" y2="56" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#d4773b"/>
-      <stop offset=".55" stop-color="#9333ea"/>
-      <stop offset="1" stop-color="#F4A6A6"/>
+      <stop offset="0" stop-color="#21c7a8"/>
+      <stop offset="1" stop-color="#12b3a0"/>
     </linearGradient>
   </defs>
   <!-- relay mesh: three peers linked through a hub -->
